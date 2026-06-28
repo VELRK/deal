@@ -10,21 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy
-        uses: appleboy/ssh-action@master
+      - name: Deploy to Hostinger (public_html/deal)
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY_ILF }}
           port: 65002
           script: |
-            TARGET=/home/u221026474/domains/indianladiesfashion.com/public_html
-            cd $TARGET
+            set -e
+            TARGET="${{ secrets.DEPLOY_PATH }}"
+            if [ -z "$TARGET" ]; then
+              echo "Set GitHub secret DEPLOY_PATH to your Hostinger SSH path, e.g. /home/u123456789/domains/yourdomain.com/public_html/deal"
+              exit 1
+            fi
+            mkdir -p "$TARGET"
+            cd "$TARGET"
             if [ ! -d ".git" ]; then
               git init
-              git remote add origin https://github.com/VELRK/ilfecomm.git
-              git fetch origin main
-              git reset --hard origin/main
+              git remote add origin https://github.com/VELRK/deal.git
             else
-              git pull origin main
+              git remote set-url origin https://github.com/VELRK/deal.git
             fi
+            git fetch origin main
+            git reset --hard origin/main
