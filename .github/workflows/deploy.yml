@@ -1,0 +1,30 @@
+name: Auto Deploy Hostinger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY_ILF }}
+          port: 65002
+          script: |
+            TARGET=/home/u221026474/domains/indianladiesfashion.com/public_html
+            cd $TARGET
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/VELRK/ilfecomm.git
+              git fetch origin main
+              git reset --hard origin/main
+            else
+              git pull origin main
+            fi
