@@ -1,0 +1,113 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  deal — backend + frontend BUILD only (no React source)      ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ── IDE / Editor ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+nbproject/
+*.swp
+*.swo
+*~
+
+# ── CodeIgniter cache & logs ──────────────────────────────────
+application/cache/*
+!application/cache/index.html
+!application/cache/.htaccess
+
+application/logs/*
+!application/logs/index.html
+!application/logs/.htaccess
+
+application/cache/api/
+
+# ── PHP / Composer ────────────────────────────────────────────
+vendor/
+composer.lock
+
+# Database credentials — copy database.php.example → database.php locally
+application/config/database.php
+
+# ── Environment / Secrets ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+config.local.php
+
+# ── Frontend React SOURCE (build locally; only output is committed) ──
+frontend/amercereactjs/
+
+# Stray lockfile next to build output
+frontend/package-lock.json
+
+# ── Old frontend locations ────────────────────────────────────
+frontend1/
+react-frontend/
+frontend-dist/
+
+# Root-level build folders (not frontend/assets)
+/dist/
+/build/
+
+# ── Archives ──────────────────────────────────────────────────
+frontend.zip
+assets.zip
+*.zip
+
+# ── Python scripts & cache ────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+download_ai_saree_images.py
+download_product_images.py
+download_saree_images.py
+fill_product_html.sql
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── CodeIgniter user guide / test artefacts ───────────────────
+user_guide_src/
+tests/tests/
+tests/results/
+tests/mocks/database/ci_test.sqlite
+
+# ── Sublime Text cache ────────────────────────────────────────
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+
+# ── Misc project-specific ─────────────────────────────────────
+artifacts/
+docs/
+/api/
+vercel.json
+fix_encoding.php
+about.html
+blog.html
+contact.html
+projects.html
+seed_colors.php
+seed_colors.sql
+seed_multicolor.php
+verify_colors.php
+
+# ── AI tooling ────────────────────────────────────────────────
+.claude/

@@ -1,0 +1,1 @@
+import{t as e}from"./react-XHOEVCdX.js";var t=e(e=>({productKey:null,openView:t=>e({productKey:t}),closeView:()=>e({productKey:null})}));export{t};

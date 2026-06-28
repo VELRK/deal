@@ -1,0 +1,58 @@
+RewriteEngine On
+RewriteBase /deal1/
+
+# ── CORS — allow Netlify & any browser origin ─────────────────
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-Session-ID"
+</IfModule>
+
+# Return 200 immediately for preflight OPTIONS requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Allow direct access to uploads directory and all files in it
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^uploads/ - [L]
+
+# Handle service worker requests
+RewriteRule ^firebase-messaging-sw\.js$ firebase-messaging-sw.php [L]
+
+# Set proper headers for service worker
+<Files "firebase-messaging-sw.php">
+    Header set Content-Type "application/javascript"
+    Header set Service-Worker-Allowed "/"
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</Files>
+
+# Legacy path redirects (ilf/ecomm → deal)
+RewriteRule ^ilf/frontend/assets/(.*)$ frontend/assets/$1 [R=301,L]
+RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
+RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
+
+# Canonical admin URL — legacy /shopkart panel paths → /admin
+RewriteRule ^shopkart/?$ admin [R=302,L]
+RewriteRule ^shopkart/(.+)$ admin/$1 [R=302,L]
+
+# Serve static dirs directly (no CodeIgniter, no SPA fallback)
+RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
+
+# Route PHP API (shopkart-api) to CodeIgniter
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^shopkart-api/(.*)$ index.php/shopkart-api/$1 [L]
+
+# Admin panel at /deal1/admin
+RewriteRule ^admin/?$ index.php/admin [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^admin/(.+)$ index.php/admin/$1 [L]
+
+# Route root and all SPA paths to the React frontend
+RewriteRule ^$ frontend/index.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(?!shopkart-api|shopkart|admin|uploads).*$ frontend/index.html [L]

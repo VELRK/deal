@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS `blogs` (
+  `id`         INT(11) NOT NULL AUTO_INCREMENT,
+  `title`      VARCHAR(255) NOT NULL,
+  `slug`       VARCHAR(255) NOT NULL,
+  `excerpt`    TEXT,
+  `content`    LONGTEXT,
+  `image`      VARCHAR(500) DEFAULT NULL,
+  `author`     VARCHAR(100) DEFAULT 'Admin',
+  `tags`       VARCHAR(500) DEFAULT NULL,
+  `status`     TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
