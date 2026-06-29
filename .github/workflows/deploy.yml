@@ -22,7 +22,7 @@ jobs:
             set -e
             TARGET="${{ secrets.DEPLOY_PATH }}"
             if [ -z "$TARGET" ]; then
-              echo "Set GitHub secret DEPLOY_PATH to your Hostinger SSH path, e.g. /home/u123456789/domains/yourdomain.com/public_html/deal"
+              echo "Set GitHub secret DEPLOY_PATH to your Hostinger SSH path, e.g. /home/u221026474/domains/superfinelabels.in/public_html/deal"
               exit 1
             fi
             mkdir -p "$TARGET"

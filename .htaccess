@@ -1,5 +1,4 @@
 RewriteEngine On
-RewriteBase /deal1/
 
 # ── CORS — allow Netlify & any browser origin ─────────────────
 <IfModule mod_headers.c>
@@ -45,7 +44,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^shopkart-api/(.*)$ index.php/shopkart-api/$1 [L]
 
-# Admin panel at /deal1/admin
+# Admin panel at /deal/admin
 RewriteRule ^admin/?$ index.php/admin [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

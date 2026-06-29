@@ -30,7 +30,9 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal1/';
     } else {
-        $config['base_url'] = 'https://' . $host . '/';
+        $path = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+        $path = ($path === '/' || $path === '') ? '/' : rtrim($path, '/') . '/';
+        $config['base_url'] = $scheme . '://' . $host . $path;
     }
 } else {
     $config['base_url'] = 'http://localhost:8080/deal1/';
