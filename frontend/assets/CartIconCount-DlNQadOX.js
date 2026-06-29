@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DdEXjPBp.js";import{t}from"./Context-BKHGIPHO.js";var n=e();function r({className:e=`count`}){let{cartProducts:r}=t();return(0,n.jsxs)(`span`,{className:e,children:[` `,r.reduce((e,t)=>e+t.quantity,0),` `]})}export{r as t};
