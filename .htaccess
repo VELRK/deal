@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteBase /deal/
 
 # ── CORS — allow Netlify & any browser origin ─────────────────
 <IfModule mod_headers.c>

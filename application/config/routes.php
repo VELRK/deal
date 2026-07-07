@@ -494,6 +494,8 @@ $route['shopkart-api/user/addresses']['GET']              = 'api/Sk_User/address
 $route['shopkart-api/user/addresses']['POST']             = 'api/Sk_User/save_address';
 $route['shopkart-api/user/addresses/(:num)']['DELETE']    = 'api/Sk_User/delete_address/$1';
 $route['shopkart-api/user/wallet']['GET']                   = 'api/Sk_User/wallet';
+$route['shopkart-api/user/wallet/transactions']['GET']      = 'api/Sk_User/wallet_transactions';
+$route['shopkart-api/user/wallet/topup']['POST']            = 'api/Sk_User/wallet_topup';
 // Newsletter
 $route['shopkart-api/newsletter']['POST'] = 'api/Sk_User/newsletter';
 // Testimonials (public)

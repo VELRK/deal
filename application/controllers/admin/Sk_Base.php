@@ -115,7 +115,8 @@ class Sk_Base extends CI_Controller {
         $this->upload->initialize($config);
 
         if ($this->upload->do_upload($field)) {
-            return 'assets/uploads/' . $dir . '/' . $this->upload->data('file_name');
+            $uploaded_data = $this->upload->data();
+            return 'assets/uploads/' . $dir . '/' . basename($uploaded_data['file_name']);
         }
         return null;
     }

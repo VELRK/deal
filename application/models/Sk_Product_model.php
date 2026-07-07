@@ -81,6 +81,7 @@ class Sk_Product_model extends CI_Model {
         $products = $this->db->get()->result_array();
 
         foreach ($products as &$p) {
+            $p['thumbnail'] = $this->_validate_image_path($p['id'], $p['thumbnail']);
             $p['images'] = $this->get_images($p['id']);
             $this->_decode_json_fields($p);
             $this->apply_sale_timing($p);
@@ -97,6 +98,7 @@ class Sk_Product_model extends CI_Model {
                             ->where('p.id', $id)
                             ->get()->row_array();
         if ($product) {
+            $product['thumbnail'] = $this->_validate_image_path($product['id'], $product['thumbnail']);
             $product['images'] = $this->get_images($id);
             $product['videos'] = $this->get_videos($id);
             $this->_decode_json_fields($product);
@@ -114,6 +116,7 @@ class Sk_Product_model extends CI_Model {
                             ->where('p.status', 'active')
                             ->get()->row_array();
         if ($product) {
+            $product['thumbnail'] = $this->_validate_image_path($product['id'], $product['thumbnail']);
             $product['images'] = $this->get_images($product['id']);
             $product['videos'] = $this->get_videos($product['id']);
             $this->_decode_json_fields($product);
@@ -140,10 +143,34 @@ class Sk_Product_model extends CI_Model {
         }
     }
 
+    public function _validate_image_path($product_id, $path) {
+        if (empty($path)) {
+            return 'assets/images/no-image.png';
+        }
+        
+        // If it's just a filename, prepend the correct path
+        if (strpos($path, '/') === false) {
+            $path = 'assets/uploads/products/' . $path;
+        }
+        
+        // Verify file exists
+        if (!file_exists(FCPATH . $path)) {
+            log_message('error', "Missing image file for Product ID {$product_id}. Expected path: {$path}");
+            return 'assets/images/no-image.png';
+        }
+        
+        return $path;
+    }
+
     public function get_images($product_id) {
-        return $this->db->where('product_id', $product_id)
+        $images = $this->db->where('product_id', $product_id)
                         ->order_by('sort_order', 'ASC')
                         ->get('product_images')->result_array();
+                        
+        foreach ($images as &$img) {
+            $img['image'] = $this->_validate_image_path($product_id, $img['image']);
+        }
+        return $images;
     }
 
     public function create($data) {

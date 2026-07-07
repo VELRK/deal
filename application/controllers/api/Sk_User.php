@@ -149,4 +149,38 @@ class Sk_User extends Sk_Base_Api {
         $this->load->model('Sk_Customer_wallet_model');
         $this->success($this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']));
     }
+
+    public function wallet_transactions() {
+        $this->auth_required();
+        $this->load->model('Sk_Customer_wallet_model');
+        $limit  = (int)($this->input->get('limit') ?: 20);
+        $offset = (int)($this->input->get('offset') ?: 0);
+        $this->success($this->Sk_Customer_wallet_model->get_transactions($this->user['user_id'], $limit, $offset));
+    }
+
+    public function wallet_topup() {
+        $this->auth_required();
+        $this->load->model('Sk_Customer_wallet_model');
+        
+        $data = json_decode($this->input->raw_input_stream, true) ?: [];
+        $amount = (float)($data['amount'] ?? 0);
+        
+        if ($amount <= 0) {
+            return $this->error('Please enter a valid amount greater than 0.');
+        }
+        
+        $success = $this->Sk_Customer_wallet_model->add_funds(
+            $this->user['user_id'],
+            $amount,
+            'Wallet Top-up (Online Deposit)',
+            null
+        );
+        
+        if ($success) {
+            $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']);
+            return $this->success($wallet, 'RM ' . number_format($amount, 2) . ' added to your wallet.');
+        } else {
+            return $this->error('Failed to add funds. Please try again.');
+        }
+    }
 }

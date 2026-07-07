@@ -1,0 +1,1 @@
+import{c as e}from"./index-Bz0JOd7n.js";var t=e();function n({onSubmit:e,...n}){return(0,t.jsx)(`form`,{...n,onSubmit:t=>{t.preventDefault(),e?.(t)}})}export{n as t};
