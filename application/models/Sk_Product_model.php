@@ -162,9 +162,20 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function delete($id) {
-        $this->db->where('id', $id)->delete('product_images');
-        $this->db->where('id', $id)->delete('products');
-        return $this->db->affected_rows();
+        $db_debug = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
+        $this->db->where('product_id', $id)->delete('product_images');
+        $result = $this->db->where('id', $id)->delete('products');
+        $error = $this->db->error();
+
+        $this->db->db_debug = $db_debug;
+
+        if (!$result && $error['code'] == 1451) {
+            return ['status' => false, 'message' => 'Cannot delete this product because it has been ordered.'];
+        }
+
+        return ['status' => $result, 'message' => ''];
     }
 
     public function save_images($product_id, $images) {

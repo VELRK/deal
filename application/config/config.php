@@ -28,14 +28,14 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host   = $_SERVER['HTTP_HOST'];
     if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
-        $config['base_url'] = $scheme . '://' . $host . '/deal1/';
+        $config['base_url'] = $scheme . '://' . $host . '/deal/';
     } else {
         $path = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
         $path = ($path === '/' || $path === '') ? '/' : rtrim($path, '/') . '/';
         $config['base_url'] = $scheme . '://' . $host . $path;
     }
 } else {
-    $config['base_url'] = 'http://localhost:8080/deal1/';
+    $config['base_url'] = 'http://localhost/deal/';
 }
 
 

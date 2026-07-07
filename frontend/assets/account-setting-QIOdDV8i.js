@@ -1,4 +1,12 @@
+<<<<<<< HEAD:frontend/assets/account-setting-QIOdDV8i.js
 import{r as e}from"./rolldown-runtime-QTnfLwEv.js";import{t}from"./react-CZI7_Jkm.js";import{h as n}from"./api-BFkhFdfc.js";import{s as r,x as i}from"./index-BCCbMu8Y.js";import{n as a,t as o}from"./AccountSection-Dz0vXpzl.js";import{t as s}from"./PageMeta-CyS8ELM3.js";var c=e(t(),1),l=r();function u(){let{user:e,setUser:t}=i(),[r,a]=(0,c.useState)(e?.name??``),[s,u]=(0,c.useState)(e?.phone??``),d=e?.email??``,f=d.startsWith(`ph_`)||d.includes(`@Indian Ladies Fashion.app`),[p,m]=(0,c.useState)(f?``:d),[h,g]=(0,c.useState)(!1),[_,v]=(0,c.useState)(null);async function y(e){if(e.preventDefault(),!r.trim())return v({type:`error`,text:`Full name is required.`});v(null),g(!0);try{let e={name:r.trim(),phone:s.trim()};f&&p.trim()&&(e.email=p.trim());let i=(await n.updateProfile(e)).data.data;i&&t(i),v({type:`success`,text:`Profile updated successfully.`})}catch(e){let t=e?.response?.data?.message;v({type:`error`,text:t??`Failed to save changes. Please try again.`})}finally{g(!1)}}return(0,l.jsx)(o,{title:`Account Details`,children:(0,l.jsxs)(`div`,{className:`settings-container-custom`,children:[(0,l.jsx)(`style`,{children:`
+=======
+import { r as e } from "./chunk-DECur_0Z.js"; import { t } from "./react-DhTzgwgF.js"; import { t as n } from "./authStore-cePwo9pG.js"; import { h as r } from "./api-CLcNGb5M.js"; import { t as i } from "./jsx-runtime-DdEXjPBp.js"; import { n as a, t as o } from "./AccountSection-CIbDtcCp.js"; import { t as s } from "./PageMeta-6gZ1jYam.js"; var c = e(t(), 1), l = i(); function u() {
+  let { user: e, setUser: t } = n(), [i, a] = (0, c.useState)(e?.name ?? ``), [s, u] = (0, c.useState)(e?.phone ?? ``), d = e?.email ?? ``, f = d.startsWith(`ph_`) || d.includes(`@Indian Ladies Fashion.app`), [p, m] = (0, c.useState)(f ? `` : d), [h, g] = (0, c.useState)(!1), [_, v] = (0, c.useState)(null); async function y(e) { if (e.preventDefault(), !i.trim()) return v({ type: `error`, text: `Full name is required.` }); v(null), g(!0); try { let e = { name: i.trim(), phone: s.trim() }; f && p.trim() && (e.email = p.trim()); let n = (await r.updateProfile(e)).data.data; n && t(n), v({ type: `success`, text: `Profile updated successfully.` }) } catch (e) { let t = e?.response?.data?.message; v({ type: `error`, text: t ?? `Failed to save changes. Please try again.` }) } finally { g(!1) } } return (0, l.jsx)(o, {
+    title: `Account Details`, children: (0, l.jsxs)(`div`, {
+      className: `settings-container-custom`, children: [(0, l.jsx)(`style`, {
+        children: `
+>>>>>>> 9ccf39f (added inital ui changes):frontend/assets/account-setting-qfPPcjFd.js
           .settings-container-custom {
             font-family: 'Inter', sans-serif;
             color: #111111;
@@ -48,7 +56,11 @@ import{r as e}from"./rolldown-runtime-QTnfLwEv.js";import{t}from"./react-CZI7_Jk
           }
 
           .form-input-custom:focus {
+<<<<<<< HEAD:frontend/assets/account-setting-QIOdDV8i.js
             border-color: #3EC1BC;
+=======
+            border-color: #3ec1bc;
+>>>>>>> 9ccf39f (added inital ui changes):frontend/assets/account-setting-qfPPcjFd.js
             box-shadow: 0 0 0 3px rgba(193, 16, 105, 0.1);
           }
 
@@ -89,9 +101,15 @@ import{r as e}from"./rolldown-runtime-QTnfLwEv.js";import{t}from"./react-CZI7_Jk
           }
 
           .btn-primary-custom {
+<<<<<<< HEAD:frontend/assets/account-setting-QIOdDV8i.js
             background: #3EC1BC;
             color: #ffffff;
             border: 1px solid #3EC1BC;
+=======
+            background: #3ec1bc;
+            color: #ffffff;
+            border: 1px solid #3ec1bc;
+>>>>>>> 9ccf39f (added inital ui changes):frontend/assets/account-setting-qfPPcjFd.js
             border-radius: 10px;
             padding: 12px 28px;
             font-weight: 600;
@@ -118,4 +136,11 @@ import{r as e}from"./rolldown-runtime-QTnfLwEv.js";import{t}from"./react-CZI7_Jk
             color: #64748b;
             font-size: 12px;
           }
+<<<<<<< HEAD:frontend/assets/account-setting-QIOdDV8i.js
         `}),(0,l.jsxs)(`div`,{className:`settings-card-custom`,children:[(0,l.jsx)(`h5`,{className:`settings-title-custom`,children:`Personal Details`}),f&&(0,l.jsxs)(`div`,{className:`alert-custom warning`,children:[(0,l.jsx)(`span`,{children:`📧`}),(0,l.jsx)(`span`,{children:`Your account doesn't have an email address yet. Add one below to enable email login.`})]}),_&&(0,l.jsxs)(`div`,{className:`alert-custom ${_.type===`success`?`success`:`danger`}`,children:[(0,l.jsx)(`span`,{children:_.type===`success`?`✓`:`✕`}),(0,l.jsx)(`span`,{children:_.text})]}),(0,l.jsxs)(`form`,{onSubmit:y,children:[(0,l.jsxs)(`div`,{className:`row`,children:[(0,l.jsxs)(`div`,{className:`col-12 mb-4`,children:[(0,l.jsxs)(`label`,{className:`form-label-custom`,children:[`Full Name `,(0,l.jsx)(`span`,{style:{color:`#dc2626`},children:`*`})]}),(0,l.jsx)(`input`,{className:`form-input-custom`,type:`text`,value:r,onChange:e=>a(e.target.value),placeholder:`Your full name`,required:!0})]}),(0,l.jsxs)(`div`,{className:`col-12 mb-4`,children:[(0,l.jsx)(`label`,{className:`form-label-custom`,children:`Phone Number`}),(0,l.jsx)(`input`,{className:`form-input-custom`,type:`tel`,value:s,onChange:e=>u(e.target.value.replace(/\D/g,``).slice(0,10)),placeholder:`10-digit mobile number`})]}),(0,l.jsxs)(`div`,{className:`col-12 mb-4`,children:[(0,l.jsxs)(`label`,{className:`form-label-custom`,children:[`Email Address `,f?(0,l.jsx)(`span`,{className:`text-muted fw-normal`,children:`(optional — enables email login)`}):`(Read-only)`]}),f?(0,l.jsx)(`input`,{className:`form-input-custom`,type:`email`,value:p,onChange:e=>m(e.target.value),placeholder:`your@email.com`}):(0,l.jsx)(`input`,{className:`form-input-custom`,type:`email`,value:d,readOnly:!0}),!f&&(0,l.jsx)(`p`,{className:`form-desc-custom`,children:`Account email address cannot be modified.`})]})]}),(0,l.jsx)(`div`,{className:`mt-4`,children:(0,l.jsx)(`button`,{type:`submit`,className:`btn-primary-custom`,disabled:h,children:h?`Saving Changes...`:`Save Changes`})})]})]})]})})}var d=()=>(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(s,{title:`Setting |2Deal- Online Saree & Ethnic Wear Store`,description:`2Deal - Online Saree & Ethnic Wear Store`}),(0,l.jsx)(a,{}),(0,l.jsx)(u,{})]});export{d as default};
+=======
+        `}), (0, l.jsxs)(`div`, { className: `settings-card-custom`, children: [(0, l.jsx)(`h5`, { className: `settings-title-custom`, children: `Personal Details` }), f && (0, l.jsxs)(`div`, { className: `alert-custom warning`, children: [(0, l.jsx)(`span`, { children: `📧` }), (0, l.jsx)(`span`, { children: `Your account doesn't have an email address yet. Add one below to enable email login.` })] }), _ && (0, l.jsxs)(`div`, { className: `alert-custom ${_.type === `success` ? `success` : `danger`}`, children: [(0, l.jsx)(`span`, { children: _.type === `success` ? `✓` : `✕` }), (0, l.jsx)(`span`, { children: _.text })] }), (0, l.jsxs)(`form`, { onSubmit: y, children: [(0, l.jsxs)(`div`, { className: `row`, children: [(0, l.jsxs)(`div`, { className: `col-12 mb-4`, children: [(0, l.jsxs)(`label`, { className: `form-label-custom`, children: [`Full Name `, (0, l.jsx)(`span`, { style: { color: `#dc2626` }, children: `*` })] }), (0, l.jsx)(`input`, { className: `form-input-custom`, type: `text`, value: i, onChange: e => a(e.target.value), placeholder: `Your full name`, required: !0 })] }), (0, l.jsxs)(`div`, { className: `col-12 mb-4`, children: [(0, l.jsx)(`label`, { className: `form-label-custom`, children: `Phone Number` }), (0, l.jsx)(`input`, { className: `form-input-custom`, type: `tel`, value: s, onChange: e => u(e.target.value.replace(/\D/g, ``).slice(0, 10)), placeholder: `10-digit mobile number` })] }), (0, l.jsxs)(`div`, { className: `col-12 mb-4`, children: [(0, l.jsxs)(`label`, { className: `form-label-custom`, children: [`Email Address `, f ? (0, l.jsx)(`span`, { className: `text-muted fw-normal`, children: `(optional — enables email login)` }) : `(Read-only)`] }), f ? (0, l.jsx)(`input`, { className: `form-input-custom`, type: `email`, value: p, onChange: e => m(e.target.value), placeholder: `your@email.com` }) : (0, l.jsx)(`input`, { className: `form-input-custom`, type: `email`, value: d, readOnly: !0 }), !f && (0, l.jsx)(`p`, { className: `form-desc-custom`, children: `Account email address cannot be modified.` })] })] }), (0, l.jsx)(`div`, { className: `mt-4`, children: (0, l.jsx)(`button`, { type: `submit`, className: `btn-primary-custom`, disabled: h, children: h ? `Saving Changes...` : `Save Changes` }) })] })] })]
+    })
+  })
+} var d = () => (0, l.jsxs)(l.Fragment, { children: [(0, l.jsx)(s, { title: `Setting | Indian Ladies Fashion - Online Saree & Ethnic Wear Store`, description: `Indian Ladies Fashion - Online Saree & Ethnic Wear Store` }), (0, l.jsx)(a, {}), (0, l.jsx)(u, {})] }); export { d as default };
+>>>>>>> 9ccf39f (added inital ui changes):frontend/assets/account-setting-qfPPcjFd.js

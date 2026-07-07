@@ -28,13 +28,21 @@ RewriteRule ^firebase-messaging-sw\.js$ firebase-messaging-sw.php [L]
 </Files>
 
 # Legacy path redirects (ilf/ecomm → deal)
-RewriteRule ^ilf/frontend/assets/(.*)$ frontend/assets/$1 [R=301,L]
-RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
-RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
+RewriteCond %{REQUEST_URI} ^(.*?)/ilf/
+RewriteRule ^ilf/frontend/assets/(.*)$ %1/frontend/assets/$1 [R=301,L]
+
+RewriteCond %{REQUEST_URI} ^(.*?)/ilf/
+RewriteRule ^ilf/assets/(.*)$ %1/assets/$1 [R=301,L]
+
+RewriteCond %{REQUEST_URI} ^(.*?)/ecomm/
+RewriteRule ^ecomm/(.*)$ %1/$1 [R=301,L]
 
 # Canonical admin URL — legacy /shopkart panel paths → /admin
-RewriteRule ^shopkart/?$ admin [R=302,L]
-RewriteRule ^shopkart/(.+)$ admin/$1 [R=302,L]
+RewriteCond %{REQUEST_URI} ^(.*?)/shopkart
+RewriteRule ^shopkart/?$ %1/admin [R=302,L]
+
+RewriteCond %{REQUEST_URI} ^(.*?)/shopkart/
+RewriteRule ^shopkart/(.+)$ %1/admin/$1 [R=302,L]
 
 # Serve static dirs directly (no CodeIgniter, no SPA fallback)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]

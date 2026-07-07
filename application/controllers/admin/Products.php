@@ -276,7 +276,11 @@ class Products extends Sk_Base {
     public function delete($id) {
         $product = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($product);
-        $this->Sk_Product_model->delete($id);
+        $res = $this->Sk_Product_model->delete($id);
+        if (is_array($res) && !$res['status']) {
+            $this->json(['success' => false, 'message' => $res['message']]);
+            return;
+        }
         $this->_clear_product_api_cache();
         $this->json(['success' => true]);
     }

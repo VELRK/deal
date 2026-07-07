@@ -1,4 +1,4 @@
-@use "../../abstracts/index"as *;
+@use "../../abstracts/index" as *;
 
 .my-account-nav {
     display: grid;
@@ -231,7 +231,7 @@
 
     &.stt-canceled {
         background: #DB44441A;
-        color: #DC4646;
+        color: #3ec1bc;
     }
 }
 
