@@ -58,6 +58,61 @@ class Sk_Order_model extends CI_Model {
         $this->db->where('id', $order_id)->update('orders', $data);
     }
 
+    public function update_jt_shipment($order_id, array $data) {
+        $this->ensure_jt_schema();
+        $allowed = [
+            'courier_provider', 'jt_txlogistic_id', 'jt_bill_code', 'jt_courier_status',
+            'jt_label_data', 'jt_track_data', 'jt_shipment_created_at', 'tracking_number', 'status',
+        ];
+        $update = [];
+        foreach ($allowed as $k) {
+            if (array_key_exists($k, $data)) {
+                $update[$k] = $data[$k];
+            }
+        }
+        if (!$update) {
+            return;
+        }
+        $this->db->where('id', (int)$order_id)->update('orders', $update);
+    }
+
+    public function clear_jt_shipment($order_id) {
+        $this->ensure_jt_schema();
+        $this->db->where('id', (int)$order_id)->update('orders', [
+            'courier_provider'        => null,
+            'jt_txlogistic_id'        => null,
+            'jt_bill_code'            => null,
+            'jt_courier_status'       => 'cancelled',
+            'jt_label_data'           => null,
+            'jt_track_data'           => null,
+            'jt_shipment_created_at'  => null,
+        ]);
+    }
+
+    public function get_by_tracking($tracking_number) {
+        if ($tracking_number === '') {
+            return null;
+        }
+        $this->ensure_jt_schema();
+        $order = $this->db->group_start()
+            ->where('tracking_number', $tracking_number)
+            ->or_where('jt_bill_code', $tracking_number)
+            ->group_end()
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('orders')->row_array();
+        if (!$order) {
+            return null;
+        }
+        $order['items'] = $this->get_items($order['id']);
+        return $order;
+    }
+
+    public function ensure_jt_schema() {
+        $this->load->helper('sk_jt_express');
+        sk_jt_express_ensure_schema();
+    }
+
     public function update_payment_status($order_id, $status) {
         $this->db->where('id', $order_id)->update('orders', ['payment_status' => $status]);
     }

@@ -227,9 +227,37 @@ class Sk_Order extends Sk_Base_Api {
         if ($order['status'] !== 'pending') {
             return $this->error('Only pending orders can be cancelled.');
         }
+
+        $this->_jt_cancel_if_needed($order);
+
         $this->Sk_Order_model->update_status((int)$id, 'cancelled');
         $this->Sk_Order_model->update_payment_status((int)$id, 'failed');
         $this->success([], 'Order cancelled.');
+    }
+
+    private function _jt_cancel_if_needed(array $order) {
+        $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
+        if ($txId === '' && empty($order['jt_bill_code'])) {
+            return;
+        }
+        if (($order['jt_courier_status'] ?? '') === 'cancelled') {
+            return;
+        }
+        $settings = $this->get_settings();
+        if (empty($settings['jt_express_enabled']) || $settings['jt_express_enabled'] === '0') {
+            return;
+        }
+        $this->load->library('Jt_express', $settings);
+        if (!$this->jt_express->is_enabled()) {
+            return;
+        }
+        $result = $this->jt_express->cancel_order($txId, 'Cancelled by customer');
+        if (!empty($result['success'])) {
+            $this->Sk_Order_model->update_jt_shipment((int)$order['id'], [
+                'jt_courier_status' => 'cancelled',
+                'jt_bill_code'      => null,
+            ]);
+        }
     }
 
     private function _ensure_order_billing_schema(): void {

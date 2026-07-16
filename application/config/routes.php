@@ -422,6 +422,10 @@ $route['shopkart/orders/view/(:num)'] = 'admin/Orders/view/$1';
 $route['shopkart/orders/update_status/(:num)'] = 'admin/Orders/update_status/$1';
 $route['shopkart/orders/invoice/(:num)'] = 'admin/Orders/invoice/$1';
 $route['shopkart/orders/send_invoice/(:num)'] = 'admin/Orders/send_invoice/$1';
+$route['shopkart/orders/jt_create/(:num)'] = 'admin/Orders/jt_create/$1';
+$route['shopkart/orders/jt_print/(:num)'] = 'admin/Orders/jt_print/$1';
+$route['shopkart/orders/jt_track/(:num)'] = 'admin/Orders/jt_track/$1';
+$route['shopkart/orders/jt_cancel/(:num)'] = 'admin/Orders/jt_cancel/$1';
 // Customers
 $route['shopkart/customers'] = 'admin/Customers/index';
 $route['shopkart/customers/view/(:num)'] = 'admin/Customers/view/$1';
@@ -507,6 +511,7 @@ $route['shopkart-api/checkout']['POST'] = 'api/Sk_Order/checkout';
 $route['shopkart-api/orders']['GET'] = 'api/Sk_Order/index';
 $route['shopkart-api/order/(:num)']['GET']          = 'api/Sk_Order/show/$1';
 $route['shopkart-api/order/(:num)/cancel']['POST']   = 'api/Sk_Order/cancel/$1';
+$route['shopkart-api/shipping/track']['POST'] = 'api/Sk_Shipping/track';
 // Promo
 $route['shopkart-api/apply-coupon']['POST'] = 'api/Sk_Promo/apply';
 // Payment

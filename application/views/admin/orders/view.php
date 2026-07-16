@@ -158,6 +158,50 @@
       </div>
     </div>
 
+    <?php if (!empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0'): ?>
+    <!-- JT Express -->
+    <div class="card sk-table-card shadow-sm mb-3 border-warning">
+      <div class="card-header bg-white border-0 py-3 fw-semibold">
+        <i class="bi bi-truck me-2 text-warning"></i>JT Express
+        <?php if (!empty($settings['jt_express_sandbox']) && $settings['jt_express_sandbox'] !== '0'): ?>
+          <span class="badge bg-secondary ms-1">Sandbox</span>
+        <?php endif; ?>
+      </div>
+      <div class="card-body">
+        <div class="small mb-3">
+          <div><span class="text-muted">AWB:</span> <strong id="jtAwb"><?= htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—') ?></strong></div>
+          <div><span class="text-muted">Courier status:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
+          <?php if (!empty($order['jt_shipment_created_at'])): ?>
+          <div><span class="text-muted">Created:</span> <?= date('d M Y, h:i A', strtotime($order['jt_shipment_created_at'])) ?></div>
+          <?php endif; ?>
+        </div>
+        <div class="d-grid gap-2">
+          <?php if (empty($order['jt_bill_code'])): ?>
+          <button type="button" class="btn btn-warning btn-sm fw-semibold" onclick="jtAction('create', <?= (int)$order['id'] ?>)">
+            <i class="bi bi-box-seam me-1"></i> Create JT Shipment
+          </button>
+          <?php else: ?>
+          <a href="<?= site_url('admin/orders/jt_print/'.$order['id']) ?>" target="_blank" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-printer me-1"></i> Print Label
+          </a>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="jtAction('track', <?= (int)$order['id'] ?>)">
+            <i class="bi bi-geo-alt me-1"></i> Track Shipment
+          </button>
+          <?php if (($order['jt_courier_status'] ?? '') !== 'cancelled'): ?>
+          <button type="button" class="btn btn-outline-danger btn-sm" onclick="jtAction('cancel', <?= (int)$order['id'] ?>)">
+            <i class="bi bi-x-circle me-1"></i> Cancel JT Shipment
+          </button>
+          <?php endif; ?>
+          <?php endif; ?>
+        </div>
+        <div id="jtTrackBox" class="mt-3 small d-none">
+          <div class="fw-semibold mb-1">Tracking events</div>
+          <ul id="jtTrackList" class="list-unstyled mb-0"></ul>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Customer Info -->
     <div class="card sk-table-card shadow-sm mb-3">
       <div class="card-header bg-white border-0 py-3 fw-semibold">Customer</div>
@@ -227,5 +271,34 @@ function updateStatus(orderId) {
     if (btn) { btn.disabled = false; btn.textContent = 'Update Status'; }
     alert('Network error. Please try again.');
   });
+}
+function jtAction(action, orderId) {
+  var urls = {
+    create: '<?= site_url('admin/orders/jt_create') ?>/' + orderId,
+    track:  '<?= site_url('admin/orders/jt_track') ?>/' + orderId,
+    cancel: '<?= site_url('admin/orders/jt_cancel') ?>/' + orderId
+  };
+  if (action === 'cancel' && !confirm('Cancel this JT Express shipment?')) return;
+  var payload = {};
+  if (action === 'cancel') payload.reason = 'Cancelled from admin panel';
+  $.post(urls[action], payload, function(res) {
+    if (action === 'track' && res.success && res.tracks && res.tracks.length) {
+      var box = document.getElementById('jtTrackBox');
+      var list = document.getElementById('jtTrackList');
+      list.innerHTML = '';
+      res.tracks.forEach(function(ev) {
+        var li = document.createElement('li');
+        li.className = 'border-bottom py-1';
+        var time = ev.scanTime || ev.time || ev.acceptTime || '';
+        var desc = ev.desc || ev.remark || ev.scanType || JSON.stringify(ev);
+        li.textContent = (time ? time + ' — ' : '') + desc;
+        list.appendChild(li);
+      });
+      box.classList.remove('d-none');
+      return;
+    }
+    alert(res.message || (res.success ? 'Done.' : 'Request failed.'));
+    if (res.success && action !== 'track') location.reload();
+  }, 'json').fail(function() { alert('Network error.'); });
 }
 </script>

@@ -10,6 +10,7 @@
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-invoice">Invoice</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-payment">Payment</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-email">Email</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-shipping">JT Express</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo">SEO</button></li>
   </ul>
 
@@ -200,6 +201,103 @@
             <div class="col-md-6">
               <label class="form-label">SMTP Password</label>
               <input type="password" name="smtp_pass" class="form-control" value="<?= htmlspecialchars($settings['smtp_pass'] ?? '') ?>">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JT Express Shipping -->
+    <div class="tab-pane fade" id="tab-shipping">
+      <div class="card sk-table-card shadow-sm">
+        <div class="card-body">
+          <div class="alert alert-info small">
+            <i class="bi bi-truck me-1"></i>
+            JT Express Malaysia Open Platform — create AWB, print label, track &amp; cancel shipments from Admin → Orders.
+            Use <strong>Sandbox</strong> with demo credentials first; switch off sandbox for production (<code>ylopenapi.jtexpress.my</code>).
+            <br><span class="text-muted">Database setup runs automatically when you open this page (no PHP CLI needed). Or import <code>database/jt_express.sql</code> in phpMyAdmin.</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="jt_express_enabled" value="1" id="jtEnabled"
+                  <?= !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="jtEnabled">Enable JT Express</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="jt_express_sandbox" value="1" id="jtSandbox"
+                  <?= empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="jtSandbox">Sandbox (demo API)</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Default parcel weight (kg)</label>
+              <input type="text" name="jt_express_default_weight" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_default_weight'] ?? '1') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">API Account</label>
+              <input type="text" name="jt_express_api_account" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['jt_express_api_account'] ?? '') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Private Key</label>
+              <input type="password" name="jt_express_private_key" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['jt_express_private_key'] ?? '') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Customer / Source Code</label>
+              <input type="text" name="jt_express_customer_code" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['jt_express_customer_code'] ?? '') ?>" placeholder="GOLDENEAGLEIMPORTS">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Source Name</label>
+              <input type="text" name="jt_express_customer_name" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_customer_name'] ?? '') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Customer Password <span class="text-muted">(optional)</span></label>
+              <input type="password" name="jt_express_customer_password" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['jt_express_customer_password'] ?? '') ?>">
+              <div class="form-text">If JT provided a separate business password, enter it here for bizContent digest.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Demo UUID <span class="text-muted">(sandbox only)</span></label>
+              <input type="text" name="jt_express_demo_uuid" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['jt_express_demo_uuid'] ?? '5ba402abcfdc4dff9cb1c589afcf9682') ?>">
+            </div>
+            <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Sender (pickup) address</h6></div>
+            <div class="col-md-6">
+              <label class="form-label">Sender Name</label>
+              <input type="text" name="jt_express_sender_name" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_name'] ?? '') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sender Phone</label>
+              <input type="text" name="jt_express_sender_phone" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_phone'] ?? '') ?>" placeholder="60123456789">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Sender Address</label>
+              <input type="text" name="jt_express_sender_address" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_address'] ?? '') ?>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City</label>
+              <input type="text" name="jt_express_sender_city" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_city'] ?? '') ?>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">State</label>
+              <input type="text" name="jt_express_sender_state" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_state'] ?? '') ?>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Postcode</label>
+              <input type="text" name="jt_express_sender_postcode" class="form-control"
+                     value="<?= htmlspecialchars($settings['jt_express_sender_postcode'] ?? '') ?>">
             </div>
           </div>
         </div>
