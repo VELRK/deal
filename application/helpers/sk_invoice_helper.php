@@ -72,15 +72,19 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'currency'     => $currency,
         'seller'       => $seller,
         'buyer'        => [
-            'name'    => $order['customer_name'] ?? $order['shipping_name'] ?? '',
+            'name'    => !empty($order['billing_company'])
+                ? $order['billing_company']
+                : ($order['billing_name'] ?? $order['customer_name'] ?? $order['shipping_name'] ?? ''),
+            'person'  => $order['billing_name'] ?? $order['customer_name'] ?? $order['shipping_name'] ?? '',
+            'company' => $order['billing_company'] ?? '',
             'email'   => $order['customer_email'] ?? '',
-            'phone'   => $order['shipping_phone'] ?? '',
-            'line1'   => $order['shipping_line1'] ?? '',
-            'line2'   => $order['shipping_line2'] ?? '',
-            'city'    => $order['shipping_city'] ?? '',
-            'state'   => $order['shipping_state'] ?? '',
-            'pincode' => $order['shipping_pincode'] ?? '',
-            'country' => $order['shipping_country'] ?? 'India',
+            'phone'   => $order['billing_phone'] ?? $order['shipping_phone'] ?? '',
+            'line1'   => $order['billing_line1'] ?? $order['shipping_line1'] ?? '',
+            'line2'   => $order['billing_line2'] ?? $order['shipping_line2'] ?? '',
+            'city'    => $order['billing_city'] ?? $order['shipping_city'] ?? '',
+            'state'   => $order['billing_state'] ?? $order['shipping_state'] ?? '',
+            'pincode' => $order['billing_pincode'] ?? $order['shipping_pincode'] ?? '',
+            'country' => $order['billing_country'] ?? $order['shipping_country'] ?? 'Malaysia',
         ],
         'items'          => $items,
         'subtotal'       => $subtotal,
@@ -225,14 +229,22 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
     ]);
     $sellerMetaHtml = implode(' &nbsp;|&nbsp; ', $sellerMeta);
 
-    $buyerAddr = array_filter([
-        htmlspecialchars($b['name']),
-        htmlspecialchars($b['phone']),
-        htmlspecialchars($b['line1']),
-        htmlspecialchars($b['line2']),
-        htmlspecialchars(trim($b['city'] . ', ' . $b['state'] . ' - ' . $b['pincode'])),
-        htmlspecialchars($b['country']),
-    ]);
+    $buyerNameLines = [];
+    if (!empty($b['company'])) {
+        $buyerNameLines[] = htmlspecialchars($b['company']);
+        if (!empty($b['person']) && $b['person'] !== $b['company']) {
+            $buyerNameLines[] = 'Attn: ' . htmlspecialchars($b['person']);
+        }
+    } else {
+        $buyerNameLines[] = htmlspecialchars($b['name'] ?: ($b['person'] ?? ''));
+    }
+    $buyerAddr = array_filter(array_merge($buyerNameLines, [
+        htmlspecialchars($b['phone'] ?? ''),
+        htmlspecialchars($b['line1'] ?? ''),
+        htmlspecialchars($b['line2'] ?? ''),
+        htmlspecialchars(trim(($b['city'] ?? '') . ', ' . ($b['state'] ?? '') . ' - ' . ($b['pincode'] ?? ''))),
+        htmlspecialchars($b['country'] ?? ''),
+    ]));
     $buyerAddrHtml = implode('<br>', $buyerAddr);
 
     $printBtns = $forEmail ? '' : "
@@ -269,7 +281,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
   <div style='padding:28px 32px;'>
     <div style='display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px;'>
       <div style='flex:1;min-width:240px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;'>
-        <div style='font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:8px;font-weight:700;'>Bill To / Ship To</div>
+        <div style='font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:8px;font-weight:700;'>Bill To</div>
         <div style='line-height:1.7;font-size:13px;'>{$buyerAddrHtml}</div>
       </div>
       <div style='flex:1;min-width:200px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;'>

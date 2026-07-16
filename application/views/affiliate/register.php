@@ -28,8 +28,10 @@
 </div>
 <script>
 function suggestPromo() {
-  var n = (document.getElementById('regName').value || '').replace(/[^a-zA-Z]/g,'').substring(0,4).toUpperCase().padEnd(4,'X');
-  var p = (document.getElementById('regPhone').value || '').replace(/\D/g,'').slice(-4) || '0000';
+  var nameLetters = (document.getElementById('regName').value || '').replace(/[^a-zA-Z]/g,'').substring(0,4).toUpperCase();
+  var n = nameLetters.padEnd(4, '0');
+  var digits = (document.getElementById('regPhone').value || '').replace(/\D/g,'');
+  var p = digits.length >= 4 ? digits.slice(-4) : digits.padStart(4, '0') || '0000';
   document.getElementById('promoHint').textContent = 'Suggested: ' + n + p;
 }
 document.getElementById('regName').addEventListener('input', suggestPromo);

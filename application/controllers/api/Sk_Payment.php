@@ -28,11 +28,15 @@ class Sk_Payment extends Sk_Base_Api {
         }
 
         $amount_paise = (int)round($order['total'] * 100);
+        $currency = strtoupper($settings['currency_code'] ?? 'MYR');
+        if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
+            $currency = 'MYR';
+        }
 
         // Call Razorpay Orders API
         $payload = json_encode([
             'amount'          => $amount_paise,
-            'currency'        => 'INR',
+            'currency'        => $currency,
             'receipt'         => $order['order_number'],
             'payment_capture' => 1,
         ]);
@@ -67,14 +71,14 @@ class Sk_Payment extends Sk_Base_Api {
             'order_id'          => $order_id,
             'razorpay_order_id' => $rzp['id'],
             'amount'            => $order['total'],
-            'currency'          => 'INR',
+            'currency'          => $currency,
             'status'            => 'created',
         ]);
 
         $this->success([
             'razorpay_order_id' => $rzp['id'],
             'amount'            => $amount_paise,
-            'currency'          => 'INR',
+            'currency'          => $currency,
             'key_id'            => $key_id,
             'order_number'      => $order['order_number'],
             'prefill' => [
@@ -133,5 +137,29 @@ class Sk_Payment extends Sk_Base_Api {
         }
 
         $this->success(['order' => $order], 'Payment successful! Your order is confirmed.');
+    }
+
+    /** ToyyibPay browser return after wallet top-up / order pay */
+    public function toyyibpay_return() {
+        $ref = $this->input->get('order_id') ?: $this->input->get('billExternalReferenceNo');
+        $status = (int)($this->input->get('status_id') ?: 0);
+        $this->load->model('Sk_Customer_wallet_model');
+        if ($ref && strpos($ref, 'TOPUP-') === 0 && $status === 1) {
+            $this->Sk_Customer_wallet_model->complete_topup_by_reference($ref);
+        }
+        $frontend = rtrim(config_item('frontend_url') ?: base_url('frontend/'), '/') . '/account-wallet';
+        redirect($frontend);
+    }
+
+    /** ToyyibPay server callback */
+    public function toyyibpay_callback() {
+        $ref = $this->input->post('order_id') ?: $this->input->get('order_id')
+            ?: $this->input->post('billExternalReferenceNo') ?: $this->input->get('billExternalReferenceNo');
+        $status = (int)($this->input->post('status_id') ?: $this->input->get('status_id') ?: 0);
+        $this->load->model('Sk_Customer_wallet_model');
+        if ($ref && strpos($ref, 'TOPUP-') === 0 && $status === 1) {
+            $this->Sk_Customer_wallet_model->complete_topup_by_reference($ref);
+        }
+        echo 'OK';
     }
 }

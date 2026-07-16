@@ -83,6 +83,12 @@ class Customer_wallets extends Sk_Base {
             $this->Sk_Admin_model->save_settings([
                 'customer_wallet_enabled'          => $this->input->post('customer_wallet_enabled') ? '1' : '0',
                 'customer_wallet_discount_percent' => $this->input->post('customer_wallet_discount_percent') ?: '0',
+                'wallet_points_per_rm'             => $this->input->post('wallet_points_per_rm') ?: '5',
+                'currency_symbol'                  => $this->input->post('currency_symbol') ?: 'RM',
+                'currency_code'                    => $this->input->post('currency_code') ?: 'MYR',
+                'toyyibpay_secret_key'             => $this->input->post('toyyibpay_secret_key') ?: '',
+                'toyyibpay_category_code'          => $this->input->post('toyyibpay_category_code') ?: '',
+                'toyyibpay_sandbox'                => $this->input->post('toyyibpay_sandbox') ? '1' : '0',
             ]);
             $this->session->set_flashdata('success', 'Wallet settings saved.');
             redirect('admin/customer-wallets');

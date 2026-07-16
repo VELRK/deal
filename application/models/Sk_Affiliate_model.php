@@ -52,11 +52,19 @@ class Sk_Affiliate_model extends CI_Model {
     public function generate_promo_code(string $name, string $phone): string {
         $letters = preg_replace('/[^a-zA-Z]/', '', $name);
         $four    = strtoupper(substr($letters, 0, 4));
+        // Pad short names on the right: Amy→AMY0, Li→LI00, A→A000, (no letters)→0000
         if (strlen($four) < 4) {
-            $four = str_pad($four, 4, 'X');
+            $four = str_pad($four, 4, '0', STR_PAD_RIGHT);
         }
         $digits = preg_replace('/\D/', '', $phone);
-        $last4  = substr($digits, -4) ?: '0000';
+        // Last 4 phone digits; pad on the left when fewer than 4: 123→0123, empty→0000
+        if ($digits === '') {
+            $last4 = '0000';
+        } elseif (strlen($digits) >= 4) {
+            $last4 = substr($digits, -4);
+        } else {
+            $last4 = str_pad($digits, 4, '0', STR_PAD_LEFT);
+        }
         return $four . $last4;
     }
 
@@ -190,6 +198,70 @@ class Sk_Affiliate_model extends CI_Model {
             $code,
             $settings,
             'Affiliate Portal'
+        );
+    }
+
+    /** Ensure invite columns exist (safe for older DBs). */
+    public function ensure_invite_schema(): void {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        if (!$this->db->field_exists('must_set_password', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `must_set_password` TINYINT(1) NOT NULL DEFAULT 0 AFTER `password`");
+        }
+        if (!$this->db->field_exists('invite_token', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `invite_token` VARCHAR(64) NULL DEFAULT NULL AFTER `must_set_password`");
+        }
+        if (!$this->db->field_exists('invite_expires', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `invite_expires` DATETIME NULL DEFAULT NULL AFTER `invite_token`");
+        }
+    }
+
+    public function create_invite_token(int $id): string {
+        $this->ensure_invite_schema();
+        $token = bin2hex(random_bytes(32));
+        $this->db->where('id', $id)->update($this->table, [
+            'must_set_password' => 1,
+            'invite_token'      => $token,
+            'invite_expires'    => date('Y-m-d H:i:s', strtotime('+7 days')),
+            'updated_at'        => date('Y-m-d H:i:s'),
+        ]);
+        return $token;
+    }
+
+    public function get_by_invite_token(string $email, string $token): ?array {
+        $this->ensure_invite_schema();
+        if (!$email || !$token || strlen($token) < 32) return null;
+        $row = $this->db->where('email', $email)
+            ->where('invite_token', $token)
+            ->where('invite_expires >', date('Y-m-d H:i:s'))
+            ->where('deleted_at IS NULL', null, false)
+            ->get($this->table)->row_array();
+        return $row ?: null;
+    }
+
+    public function complete_invite_password(string $email, string $token, string $password): bool {
+        $aff = $this->get_by_invite_token($email, $token);
+        if (!$aff) return false;
+        $this->db->where('id', $aff['id'])->update($this->table, [
+            'password'          => password_hash($password, PASSWORD_BCRYPT),
+            'must_set_password' => 0,
+            'invite_token'      => null,
+            'invite_expires'    => null,
+            'updated_at'        => date('Y-m-d H:i:s'),
+        ]);
+        return true;
+    }
+
+    public function send_invite_email(array $affiliate, string $token): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $link = site_url('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($affiliate['email']));
+        return sk_mail_affiliate_invite(
+            ['email' => $affiliate['email'], 'name' => $affiliate['name'], 'promo_code' => $affiliate['promo_code'] ?? ''],
+            $link,
+            $settings
         );
     }
 

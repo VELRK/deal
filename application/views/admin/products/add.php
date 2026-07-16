@@ -13,7 +13,7 @@ function opt($list, $val) {
 ?>
 
 <div class="sk-page-header">
-  <h5 class="sk-page-title"><i class="bi bi-plus-circle me-2 text-warning"></i>Add Saree Product</h5>
+  <h5 class="sk-page-title"><i class="bi bi-plus-circle me-2 text-warning"></i>Add Product</h5>
   <a href="<?= site_url('admin/products') ?>" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i> Back
   </a>
@@ -46,9 +46,9 @@ function opt($list, $val) {
           <input type="hidden" name="vendor_id" value="<?= (int)$vendor_id ?>">
           <?php endif; ?>
           <div class="mb-3">
-            <label class="form-label">Product / Saree Name <span class="text-danger">*</span></label>
+            <label class="form-label">Product Name <span class="text-danger">*</span></label>
             <input type="text" name="name" id="product_name" class="form-control"
-                   placeholder="e.g. Pure Kanjivaram Silk Saree in Ruby Red" required>
+                   placeholder="e.g. Organic Turmeric Powder 500g" required>
           </div>
           <div class="row g-2">
             <div class="col-md-4">
@@ -103,8 +103,8 @@ function opt($list, $val) {
         </div>
       </div>
 
-      <!-- Saree Attributes -->
-      <div class="card sk-table-card shadow-sm mb-3" style="border-left:4px solid #f59e0b;">
+      <!-- Saree Attributes (hidden — legacy fields kept for DB compatibility) -->
+      <div class="card sk-table-card shadow-sm mb-3 d-none" id="saree-attributes-card" style="border-left:4px solid #f59e0b;">
         <div class="card-header bg-white border-0 py-3 fw-semibold">
           <i class="bi bi-stars me-1 text-warning"></i> Saree Attributes
         </div>
@@ -442,6 +442,8 @@ function opt($list, $val) {
         </div>
       </div>
 
+      <?php $product_variants = $product_variants ?? []; $this->load->view('admin/products/_variant_fields', compact('variant_units', 'product_variants')); ?>
+
       <!-- Pricing & Stock -->
       <div class="card sk-table-card shadow-sm mb-3">
         <div class="card-header bg-white border-0 py-3 fw-semibold">
@@ -546,7 +548,7 @@ function opt($list, $val) {
       <div class="card sk-table-card shadow-sm mb-3">
         <div class="card-header bg-white border-0 py-3 fw-semibold">Gallery Images</div>
         <div class="card-body">
-          <small class="text-muted d-block mb-2">Add multiple saree photos (drape, closeup, border, blouse)</small>
+          <small class="text-muted d-block mb-2">Add multiple product photos</small>
           <input type="file" name="images[]" class="form-control form-control-sm" multiple accept="image/*">
         </div>
       </div>
@@ -554,13 +556,12 @@ function opt($list, $val) {
       <!-- Quick Tips -->
       <div class="card border-0 bg-warning bg-opacity-10">
         <div class="card-body py-3">
-          <p class="fw-semibold text-warning mb-2 small"><i class="bi bi-lightbulb me-1"></i>Tips for Sarees</p>
+          <p class="fw-semibold text-warning mb-2 small"><i class="bi bi-lightbulb me-1"></i>Product Tips</p>
           <ul class="small text-muted mb-0 ps-3">
-            <li>Add all 5–6 drape photos</li>
-            <li>Mention exact zari type (real vs artificial)</li>
-            <li>Specify blouse separately</li>
-            <li>State wash care clearly</li>
-            <li>Use regional keywords in tags</li>
+            <li>Select the correct unit (kg, gram, box, bottle, etc.)</li>
+            <li>Set price and stock in Pricing &amp; Inventory</li>
+            <li>Use clear product photos</li>
+            <li>Fill HSN and tax for compliance</li>
           </ul>
         </div>
       </div>
@@ -570,7 +571,7 @@ function opt($list, $val) {
 
   <div class="mt-3 d-flex gap-2 pb-4">
     <button type="submit" class="btn btn-warning fw-semibold px-5 py-2">
-      <i class="bi bi-check-lg me-1"></i> Save Saree
+      <i class="bi bi-check-lg me-1"></i> Save Product
     </button>
     <a href="<?= site_url('admin/products') ?>" class="btn btn-outline-secondary py-2">Cancel</a>
   </div>

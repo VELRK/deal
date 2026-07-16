@@ -13,7 +13,11 @@ class Sk_Order_model extends CI_Model {
             $item['order_id'] = $order_id;
             $this->db->insert('order_items', $item);
             $this->load->model('Sk_Product_model');
-            $this->Sk_Product_model->reduce_stock($item['product_id'], $item['quantity']);
+            $this->Sk_Product_model->reduce_stock(
+                $item['product_id'],
+                $item['quantity'],
+                !empty($item['variant_id']) ? (int)$item['variant_id'] : null
+            );
         }
         return $order_id;
     }

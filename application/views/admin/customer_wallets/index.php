@@ -1,9 +1,10 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; $is_vendor = !empty($is_vendor_scope); ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; $is_vendor = !empty($is_vendor_scope); ?>
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
   <div>
     <h5 class="sk-page-title mb-1"><i class="bi bi-wallet2 me-2 text-primary"></i>Customer Wallets</h5>
-    <small class="text-muted">Wallet payments apply <?= $discount_percent ?>% discount at checkout · No withdrawals</small>
+    <small class="text-muted">MYR · 500 pts = RM 100 · Wallet pay discount <?= $discount_percent ?>%</small>
   </div>
+  <a href="<?= site_url('admin/wallet-recharge') ?>" class="btn btn-sm btn-outline-success">Recharge Report</a>
 </div>
 
 <?php if (!$is_vendor): ?>
@@ -16,9 +17,35 @@
           <label class="form-check-label" for="wEnabled">Enabled</label>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label small">Discount % on wallet pay</label>
         <input type="number" step="0.01" name="customer_wallet_discount_percent" class="form-control form-control-sm" value="<?= htmlspecialchars($discount_percent) ?>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Points per RM</label>
+        <input type="number" step="0.01" name="wallet_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['wallet_points_per_rm'] ?? '5') ?>" title="500 pts / 100 RM = 5">
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small">Symbol</label>
+        <input type="text" name="currency_symbol" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['currency_symbol'] ?? 'RM') ?>">
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small">Code</label>
+        <input type="text" name="currency_code" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['currency_code'] ?? 'MYR') ?>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">ToyyibPay Secret</label>
+        <input type="text" name="toyyibpay_secret_key" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['toyyibpay_secret_key'] ?? '') ?>" placeholder="Malaysia FPX">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Category Code</label>
+        <input type="text" name="toyyibpay_category_code" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['toyyibpay_category_code'] ?? '') ?>">
+      </div>
+      <div class="col-md-2">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="toyyibpay_sandbox" id="tpSandbox" value="1" <?= ($settings['toyyibpay_sandbox'] ?? '1') === '1' ? 'checked' : '' ?>>
+          <label class="form-check-label" for="tpSandbox">ToyyibPay sandbox</label>
+        </div>
       </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>
@@ -42,7 +69,7 @@
 <div class="card sk-table-card shadow-sm">
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Customer</th><th>Email</th><th>Balance</th><th>Updated</th><th></th></tr></thead>
+      <thead><tr><th>Customer</th><th>Email</th><th>Balance (RM)</th><th>Updated</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($wallets as $w): ?>
         <tr>

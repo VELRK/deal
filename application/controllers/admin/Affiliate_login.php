@@ -87,6 +87,10 @@ class Affiliate_login extends CI_Controller {
             $this->session->set_flashdata('error', 'Account is ' . $aff['status'] . '. Contact support.');
             redirect('admin/affiliate/login');
         }
+        if (!empty($aff['must_set_password'])) {
+            $this->session->set_flashdata('error', 'Please set your password using the verification link sent to your email.');
+            redirect('admin/affiliate/login');
+        }
 
         $this->session->set_userdata([
             'sk_affiliate_login' => true,
@@ -94,6 +98,51 @@ class Affiliate_login extends CI_Controller {
             'sk_affiliate_name'  => $aff['name'],
         ]);
         redirect('admin/affiliate/dashboard');
+    }
+
+    public function set_password() {
+        if ($this->session->userdata('sk_affiliate_login')) {
+            redirect('admin/affiliate/dashboard');
+        }
+        $this->Sk_Affiliate_model->ensure_invite_schema();
+        $email = trim($this->input->get('email', TRUE) ?: '');
+        $token = trim($this->input->get('token', TRUE) ?: '');
+        $aff = $this->Sk_Affiliate_model->get_by_invite_token($email, $token);
+        if (!$aff) {
+            $this->session->set_flashdata('error', 'Invalid or expired verification link. Ask admin to resend invite.');
+            redirect('admin/affiliate/login');
+        }
+        $data['title'] = 'Set Affiliate Password';
+        $data['email'] = $email;
+        $data['token'] = $token;
+        $this->load->view('affiliate/set_password', $data);
+    }
+
+    public function set_password_submit() {
+        $email = trim($this->input->post('email', TRUE));
+        $token = trim($this->input->post('token', TRUE));
+        $pass  = $this->input->post('password', TRUE);
+        $confirm = $this->input->post('password_confirm', TRUE);
+
+        if (!$email || !$token || !$pass) {
+            $this->session->set_flashdata('error', 'All fields are required.');
+            redirect('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($email));
+        }
+        if (strlen($pass) < 6) {
+            $this->session->set_flashdata('error', 'Password must be at least 6 characters.');
+            redirect('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($email));
+        }
+        if ($pass !== $confirm) {
+            $this->session->set_flashdata('error', 'Passwords do not match.');
+            redirect('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($email));
+        }
+        if (!$this->Sk_Affiliate_model->complete_invite_password($email, $token, $pass)) {
+            $this->session->set_flashdata('error', 'Invalid or expired link. Contact admin.');
+            redirect('admin/affiliate/login');
+        }
+
+        $this->session->set_flashdata('success', 'Password saved. You can sign in now.');
+        redirect('admin/affiliate/login');
     }
 
     public function logout() {

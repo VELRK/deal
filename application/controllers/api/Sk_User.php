@@ -55,8 +55,13 @@ class Sk_User extends Sk_Base_Api {
         foreach ($required as $f) {
             if (empty($data[$f])) return $this->error("Field '$f' is required.");
         }
+        $this->Sk_User_model->ensure_address_schema();
         $data['user_id'] = $this->user['user_id'];
         $data['label']   = $data['label'] ?? 'Home';
+        $data['country'] = $data['country'] ?? 'Malaysia';
+        $data['company_name'] = trim($data['company_name'] ?? '') ?: null;
+        $data['address_type'] = in_array(($data['address_type'] ?? 'shipping'), ['shipping', 'billing'], true)
+            ? $data['address_type'] : 'shipping';
         $id = $this->Sk_User_model->save_address($data);
         $addrs = $this->Sk_User_model->get_addresses($this->user['user_id']);
         $this->success(['id' => $id, 'addresses' => $addrs], 'Address saved.');
@@ -148,5 +153,43 @@ class Sk_User extends Sk_Base_Api {
         $this->auth_required();
         $this->load->model('Sk_Customer_wallet_model');
         $this->success($this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']));
+    }
+
+    public function wallet_transactions() {
+        $this->auth_required();
+        $this->load->model('Sk_Customer_wallet_model');
+        $limit  = min(50, max(1, (int)($this->input->get('limit') ?: 20)));
+        $offset = max(0, (int)($this->input->get('offset') ?: 0));
+        $result = $this->Sk_Customer_wallet_model->get_transactions($this->user['user_id'], $limit, $offset);
+        $this->success(['rows' => $result['rows'], 'transactions' => $result['rows'], 'total' => $result['total']]);
+    }
+
+    public function wallet_topup() {
+        $this->auth_required();
+        $this->load->model('Sk_Customer_wallet_model');
+        if (!$this->Sk_Customer_wallet_model->is_enabled()) {
+            return $this->error('Wallet is disabled.');
+        }
+        $data = $this->body();
+        $amountRm = (float)($data['amount'] ?? 0);
+        if ($amountRm <= 0) return $this->error('Enter a valid amount in RM.');
+
+        // Create pending top-up then redirect to Malaysian payment (ToyyibPay)
+        $ref = $this->Sk_Customer_wallet_model->create_topup_intent($this->user['user_id'], $amountRm);
+        if (!$ref) return $this->error('Could not start top-up.');
+
+        $pay = $this->Sk_Customer_wallet_model->start_toyyibpay_topup($this->user['user_id'], $amountRm, $ref);
+        if (!empty($pay['error'])) return $this->error($pay['error']);
+
+        $this->success([
+            'reference'   => $ref,
+            'amount_rm'   => $amountRm,
+            'points'      => $this->Sk_Customer_wallet_model->rm_to_points($amountRm),
+            'payment_url' => $pay['url'] ?? null,
+            'bill_code'   => $pay['bill_code'] ?? null,
+            // Dev fallback when gateway not configured: credit immediately
+            'credited'    => !empty($pay['credited']),
+            'balance'     => $pay['balance'] ?? null,
+        ], !empty($pay['credited']) ? 'Wallet topped up (sandbox).' : 'Redirect to payment.');
     }
 }

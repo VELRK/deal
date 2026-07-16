@@ -26,20 +26,54 @@ class Sk_Order extends Sk_Base_Api {
 
         foreach ($items as $item) {
             $p = $this->Sk_Product_model->get_by_id($item['product_id']);
-            if (!$p || $p['status'] !== 'active') return $this->error("Product '{$p['name']}' is no longer available.");
-            if ($p['stock'] < $item['quantity']) return $this->error("Insufficient stock for '{$p['name']}'.");
-            $price    = $p['effective_price'] ?? $p['sale_price'] ?? $p['price'];
+            if (!$p || $p['status'] !== 'active') {
+                $name = $p['name'] ?? 'Product';
+                return $this->error("Product '{$name}' is no longer available.");
+            }
+
+            $variant = null;
+            $variant_id = !empty($item['variant_id']) ? (int)$item['variant_id'] : null;
+            if ($variant_id) {
+                $this->load->model('Sk_Product_variant_model');
+                $variant = $this->Sk_Product_variant_model->get_by_id($variant_id);
+                if (!$variant || (int)$variant['product_id'] !== (int)$p['id']) {
+                    return $this->error("Invalid variant for '{$p['name']}'.");
+                }
+            } elseif (!empty($p['variants'])) {
+                foreach ($p['variants'] as $v) {
+                    if (!empty($v['is_default'])) { $variant = $v; break; }
+                }
+                if (!$variant) $variant = $p['variants'][0];
+            }
+
+            $stock = $variant ? (int)$variant['stock'] : (int)$p['stock'];
+            if ($stock < $item['quantity']) {
+                return $this->error("Insufficient stock for '{$p['name']}'.");
+            }
+
+            $price = $variant
+                ? ($variant['effective_price'] ?? $variant['sale_price'] ?? $variant['price'])
+                : ($p['effective_price'] ?? $p['sale_price'] ?? $p['price']);
             $sub      = round($price * $item['quantity'], 2);
             $subtotal += $sub;
-            $order_items[] = [
+
+            $variant_label = $variant['label'] ?? ($p['unit_label'] ?? null);
+            $line = [
                 'product_id'   => $p['id'],
-                'product_name' => $p['name'],
-                'product_sku'  => $p['sku'],
+                'product_name' => $p['name'] . ($variant_label ? ' (' . $variant_label . ')' : ''),
+                'product_sku'  => $variant['sku'] ?? $p['sku'],
                 'thumbnail'    => $p['thumbnail'],
                 'price'        => $price,
                 'quantity'     => $item['quantity'],
                 'subtotal'     => $sub,
             ];
+            if ($this->db->field_exists('variant_id', 'order_items')) {
+                $line['variant_id'] = $variant['id'] ?? null;
+            }
+            if ($this->db->field_exists('variant_label', 'order_items')) {
+                $line['variant_label'] = $variant_label;
+            }
+            $order_items[] = $line;
         }
 
         // Promo — regular coupon or affiliate market code
@@ -111,8 +145,22 @@ class Sk_Order extends Sk_Base_Api {
             'shipping_city'    => $addr['city'],
             'shipping_state'   => $addr['state'],
             'shipping_pincode' => $addr['pincode'],
-            'shipping_country' => $addr['country'] ?? 'India',
+            'shipping_country' => $addr['country'] ?? ($settings['default_country'] ?? 'Malaysia'),
         ];
+
+        // Billing address (optional) — checkbox "same as shipping" sends billing_same=true
+        $billingSame = !empty($data['billing_same']) || empty($data['billing_address']);
+        $bill = $billingSame ? $addr : ($data['billing_address'] ?? $addr);
+        $this->_ensure_order_billing_schema();
+        $order_data['billing_name']     = $bill['full_name'] ?? $addr['full_name'];
+        $order_data['billing_company']  = trim($bill['company_name'] ?? '') ?: null;
+        $order_data['billing_phone']    = $bill['phone'] ?? ($addr['phone'] ?? '');
+        $order_data['billing_line1']    = $bill['line1'] ?? $addr['line1'];
+        $order_data['billing_line2']    = $bill['line2'] ?? ($addr['line2'] ?? '');
+        $order_data['billing_city']     = $bill['city'] ?? $addr['city'];
+        $order_data['billing_state']    = $bill['state'] ?? $addr['state'];
+        $order_data['billing_pincode']  = $bill['pincode'] ?? $addr['pincode'];
+        $order_data['billing_country']  = $bill['country'] ?? ($addr['country'] ?? 'Malaysia');
 
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
@@ -182,5 +230,27 @@ class Sk_Order extends Sk_Base_Api {
         $this->Sk_Order_model->update_status((int)$id, 'cancelled');
         $this->Sk_Order_model->update_payment_status((int)$id, 'failed');
         $this->success([], 'Order cancelled.');
+    }
+
+    private function _ensure_order_billing_schema(): void {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        $cols = [
+            'billing_name' => "VARCHAR(150) NULL",
+            'billing_company' => "VARCHAR(150) NULL",
+            'billing_phone' => "VARCHAR(30) NULL",
+            'billing_line1' => "VARCHAR(255) NULL",
+            'billing_line2' => "VARCHAR(255) NULL",
+            'billing_city' => "VARCHAR(100) NULL",
+            'billing_state' => "VARCHAR(100) NULL",
+            'billing_pincode' => "VARCHAR(20) NULL",
+            'billing_country' => "VARCHAR(80) NULL DEFAULT 'Malaysia'",
+        ];
+        foreach ($cols as $col => $def) {
+            if (!$this->db->field_exists($col, 'orders')) {
+                $this->db->query("ALTER TABLE `orders` ADD COLUMN `{$col}` {$def}");
+            }
+        }
     }
 }

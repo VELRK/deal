@@ -25,7 +25,7 @@ class Sk_Promo extends Sk_Base_Api {
                     'type'     => $affResult['type'],
                     'value'    => $affResult['value'],
                     'source'   => 'affiliate',
-                ], 'Affiliate code applied! You save ₹' . number_format($affResult['discount'], 2));
+                ], 'Affiliate code applied! You save RM ' . number_format($affResult['discount'], 2));
             }
             return $this->error($affResult['message'] ?? $result['message']);
         }
@@ -36,6 +36,6 @@ class Sk_Promo extends Sk_Base_Api {
             'type'     => $result['promo']['type'],
             'value'    => $result['promo']['value'],
             'source'   => 'promo',
-        ], 'Promo code applied! You save ₹' . number_format($result['discount'], 2));
+        ], 'Promo code applied! You save RM ' . number_format($result['discount'], 2));
     }
 }

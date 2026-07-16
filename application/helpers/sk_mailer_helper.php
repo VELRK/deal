@@ -278,3 +278,46 @@ function sk_mail_password_reset_code($user, $code, $settings = [], $portalLabel 
 
     return sk_send_mail($to_email, $to_name, $subject, $body);
 }
+
+/** Affiliate invite: set password via verification link. */
+function sk_mail_affiliate_invite($affiliate, $link, $settings = []) {
+    $to_email  = $affiliate['email'] ?? '';
+    $to_name   = $affiliate['name'] ?? 'Affiliate';
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
+    $safeLink  = htmlspecialchars($link);
+    $safeName  = htmlspecialchars($to_name);
+    $subject   = 'Set your Affiliate Portal password – ' . $site_name;
+
+    $promoHtml = $promo
+        ? "<p style='color:#334155;'>Your promo code: <strong style='letter-spacing:1px;'>{$promo}</strong></p>"
+        : '';
+
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;'>
+<div style='max-width:520px;margin:30px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.07);'>
+  <div style='background:#065f46;padding:28px 32px;text-align:center;'>
+    <h1 style='color:#fff;margin:0;font-size:22px;'>{$site_name}</h1>
+    <p style='color:#a7f3d0;margin:6px 0 0;font-size:13px;'>Affiliate Portal – Welcome</p>
+  </div>
+  <div style='padding:36px 32px;'>
+    <p style='color:#334155;font-size:16px;'>Hi <strong>{$safeName}</strong>,</p>
+    <p style='color:#334155;'>Your affiliate account has been created. Please set your password to activate login.</p>
+    {$promoHtml}
+    <div style='text-align:center;margin:28px 0;'>
+      <a href='{$safeLink}' style='display:inline-block;background:#059669;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;'>Set Password</a>
+    </div>
+    <p style='color:#64748b;font-size:13px;'>This link expires in 7 days. If the button does not work, copy this URL:<br><span style='word-break:break-all;'>{$safeLink}</span></p>
+  </div>
+  <div style='background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;'>
+    <p style='margin:0;color:#94a3b8;font-size:13px;'>{$site_name} &copy; " . date('Y') . "</p>
+  </div>
+</div>
+</body>
+</html>";
+
+    return sk_send_mail($to_email, $to_name, $subject, $body);
+}

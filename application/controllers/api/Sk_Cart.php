@@ -12,6 +12,39 @@ class Sk_Cart extends Sk_Base_Api {
             : ['user_id' => null, 'session_id' => $this->input->get_request_header('X-Session-ID') ?? session_id()];
     }
 
+    private function _resolve_variant($product, $variant_id = null) {
+        $this->load->model('Sk_Product_variant_model');
+        if ($variant_id) {
+            $variant = $this->Sk_Product_variant_model->get_by_id((int)$variant_id);
+            if (!$variant || (int)$variant['product_id'] !== (int)$product['id']) return null;
+            return $variant;
+        }
+        if (!empty($product['variants'])) {
+            foreach ($product['variants'] as $v) {
+                if (!empty($v['is_default'])) return $v;
+            }
+            return $product['variants'][0];
+        }
+        return null;
+    }
+
+    private function _apply_cart_filters($key, $product_id, $variant_id = null) {
+        $this->db->where(array_filter($key));
+        $this->db->where('product_id', (int)$product_id);
+        if ($this->db->field_exists('variant_id', 'cart')) {
+            if ($variant_id) {
+                $this->db->where('variant_id', (int)$variant_id);
+            } else {
+                $this->db->where('variant_id IS NULL', null, false);
+            }
+        }
+    }
+
+    private function _find_cart_row($key, $product_id, $variant_id = null) {
+        $this->_apply_cart_filters($key, $product_id, $variant_id);
+        return $this->db->get('cart')->row_array();
+    }
+
     public function index() {
         $key   = $this->_cart_key();
         $items = $this->_get_cart_items($key);
@@ -19,28 +52,35 @@ class Sk_Cart extends Sk_Base_Api {
     }
 
     public function add() {
-        $data       = $this->body();
-        $product_id = (int)($data['product_id'] ?? 0);
-        $quantity   = max(1, (int)($data['quantity'] ?? 1));
+        $data        = $this->body();
+        $product_id  = (int)($data['product_id'] ?? 0);
+        $variant_id  = !empty($data['variant_id']) ? (int)$data['variant_id'] : null;
+        $quantity    = max(1, (int)($data['quantity'] ?? 1));
 
         $product = $this->Sk_Product_model->get_by_id($product_id);
         if (!$product || $product['status'] !== 'active') return $this->error('Product not found.');
-        if ($product['stock'] < $quantity) return $this->error('Not enough stock.');
+
+        $variant = $this->_resolve_variant($product, $variant_id);
+        $stock = $variant ? (int)$variant['stock'] : (int)$product['stock'];
+        if ($stock < $quantity) return $this->error('Not enough stock.');
 
         $key = $this->_cart_key();
-        $where = array_filter($key) + ['product_id' => $product_id];
-        $existing = $this->db->where($where)->get('cart')->row_array();
+        $existing = $this->_find_cart_row($key, $product_id, $variant ? (int)$variant['id'] : null);
 
         if ($existing) {
             $new_qty = $existing['quantity'] + $quantity;
-            if ($product['stock'] < $new_qty) return $this->error('Not enough stock.');
+            if ($stock < $new_qty) return $this->error('Not enough stock.');
             $this->db->where('id', $existing['id'])->update('cart', ['quantity' => $new_qty]);
         } else {
-            $this->db->insert('cart', array_filter($key) + [
+            $insert = array_filter($key) + [
                 'product_id' => $product_id,
                 'quantity'   => $quantity,
                 'created_at' => date('Y-m-d H:i:s'),
-            ]);
+            ];
+            if ($this->db->field_exists('variant_id', 'cart') && $variant) {
+                $insert['variant_id'] = (int)$variant['id'];
+            }
+            $this->db->insert('cart', $insert);
         }
 
         $items = $this->_get_cart_items($key);
@@ -48,18 +88,22 @@ class Sk_Cart extends Sk_Base_Api {
     }
 
     public function update() {
-        $data       = $this->body();
-        $product_id = (int)($data['product_id'] ?? 0);
-        $quantity   = (int)($data['quantity'] ?? 0);
-        $key        = $this->_cart_key();
+        $data        = $this->body();
+        $product_id  = (int)($data['product_id'] ?? 0);
+        $variant_id  = !empty($data['variant_id']) ? (int)$data['variant_id'] : null;
+        $quantity    = (int)($data['quantity'] ?? 0);
+        $key         = $this->_cart_key();
 
         if ($quantity <= 0) {
-            $this->db->where(array_filter($key) + ['product_id' => $product_id])->delete('cart');
+            $this->_apply_cart_filters($key, $product_id, $variant_id);
+            $this->db->delete('cart');
         } else {
             $product = $this->Sk_Product_model->get_by_id($product_id);
-            if ($product['stock'] < $quantity) return $this->error('Not enough stock.');
-            $this->db->where(array_filter($key) + ['product_id' => $product_id])
-                     ->update('cart', ['quantity' => $quantity]);
+            $variant = $this->_resolve_variant($product, $variant_id);
+            $stock = $variant ? (int)$variant['stock'] : (int)$product['stock'];
+            if ($stock < $quantity) return $this->error('Not enough stock.');
+            $this->_apply_cart_filters($key, $product_id, $variant_id);
+            $this->db->update('cart', ['quantity' => $quantity]);
         }
 
         $items = $this->_get_cart_items($key);
@@ -67,10 +111,12 @@ class Sk_Cart extends Sk_Base_Api {
     }
 
     public function remove() {
-        $data       = $this->body();
-        $product_id = (int)($data['product_id'] ?? 0);
-        $key        = $this->_cart_key();
-        $this->db->where(array_filter($key) + ['product_id' => $product_id])->delete('cart');
+        $data        = $this->body();
+        $product_id  = (int)($data['product_id'] ?? 0);
+        $variant_id  = !empty($data['variant_id']) ? (int)$data['variant_id'] : null;
+        $key         = $this->_cart_key();
+        $this->_apply_cart_filters($key, $product_id, $variant_id);
+        $this->db->delete('cart');
         $items = $this->_get_cart_items($key);
         $this->success(['items' => $items, 'summary' => $this->_summary($items)], 'Removed from cart.');
     }
@@ -88,18 +134,33 @@ class Sk_Cart extends Sk_Base_Api {
         foreach ($rows as $row) {
             $p = $this->Sk_Product_model->get_by_id($row['product_id']);
             if (!$p) continue;
+
+            $variant = null;
+            if (!empty($row['variant_id'])) {
+                $variant = $this->_resolve_variant($p, (int)$row['variant_id']);
+            } elseif (!empty($p['variants'])) {
+                $variant = $this->_resolve_variant($p, null);
+            }
+
+            $price = $variant ? (float)$variant['price'] : (float)$p['price'];
+            $sale  = $variant ? ($variant['sale_price'] ?? null) : ($p['sale_price'] ?? null);
+            $effective = ($sale && $sale > 0 && $sale < $price) ? (float)$sale : $price;
+            $label = $variant['label'] ?? ($p['unit_label'] ?? null);
+
             $items[] = [
                 'cart_id'         => $row['id'],
                 'product_id'      => $p['id'],
-                'name'            => $p['name'],
+                'variant_id'      => $variant['id'] ?? null,
+                'variant_label'   => $label,
+                'name'            => $p['name'] . ($label ? ' (' . $label . ')' : ''),
                 'thumbnail'       => $p['thumbnail'],
                 'slug'            => $p['slug'],
-                'price'           => $p['price'],
-                'sale_price'      => $p['sale_price'],
-                'effective_price' => $p['sale_price'] ?? $p['price'],
-                'stock'           => $p['stock'],
+                'price'           => $price,
+                'sale_price'      => $sale,
+                'effective_price' => $effective,
+                'stock'           => $variant ? (int)$variant['stock'] : (int)$p['stock'],
                 'quantity'        => (int)$row['quantity'],
-                'subtotal'        => round(($p['sale_price'] ?? $p['price']) * $row['quantity'], 2),
+                'subtotal'        => round($effective * $row['quantity'], 2),
             ];
         }
         return $items;

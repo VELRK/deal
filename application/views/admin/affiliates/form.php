@@ -34,10 +34,14 @@
       <div class="mb-3">
         <label class="form-label">Promo Code</label>
         <div class="input-group">
-          <input type="text" name="promo_code" id="affPromo" class="form-control text-uppercase" value="<?= htmlspecialchars($a['promo_code']??'') ?>" placeholder="Auto-generated if empty">
+          <input type="text" name="promo_code" id="affPromo" class="form-control text-uppercase" value="<?= htmlspecialchars($a['promo_code']??'') ?>" placeholder="Auto: first 4 of name + last 4 of phone" <?= $is_edit ? '' : 'readonly' ?>>
+          <?php if ($is_edit): ?>
           <button type="button" class="btn btn-outline-secondary" id="checkPromoBtn">Check</button>
+          <?php else: ?>
+          <button type="button" class="btn btn-outline-secondary" id="genPromoBtn" title="Regenerate">Auto</button>
+          <?php endif; ?>
         </div>
-        <small id="promoStatus" class="text-muted"></small>
+        <small id="promoStatus" class="text-muted"><?= $is_edit ? '' : 'Generated from name (first 4 letters, padded with 0) + phone (last 4 digits).' ?></small>
       </div>
       <div class="row">
         <div class="col-md-4 mb-3"><label class="form-label">Affiliate Commission %</label><input type="number" step="0.01" name="commission_rate" class="form-control" value="<?= htmlspecialchars($a['commission_rate']??'5') ?>"><small class="text-muted">Earned by affiliate on each sale</small></div>
@@ -68,7 +72,18 @@
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="mb-3"><label class="form-label">Password <?= $is_edit ? '(leave blank to keep)' : '' ?></label><input type="password" name="password" class="form-control" <?= $is_edit ? '' : 'required' ?>></div>
+      <?php if ($is_edit): ?>
+      <div class="mb-3">
+        <label class="form-label">Password <span class="text-muted small">(leave blank to keep)</span></label>
+        <input type="password" name="password" class="form-control" autocomplete="new-password">
+        <small class="text-muted">Prefer sending an invite link instead of setting a password here.</small>
+      </div>
+      <?php else: ?>
+      <div class="alert alert-info py-2 small mb-3">
+        <i class="bi bi-envelope-check me-1"></i>
+        No password needed. After create, a <strong>verification link</strong> is emailed so the affiliate sets their own password on first login.
+      </div>
+      <?php endif; ?>
       <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"><?= htmlspecialchars($a['notes']??'') ?></textarea></div>
       <button type="submit" class="btn btn-success"><?= $is_edit ? 'Update' : 'Create' ?></button>
       <a href="<?= site_url('admin/affiliates') ?>" class="btn btn-outline-secondary">Cancel</a>
@@ -76,6 +91,25 @@
   </div>
 </div>
 <script>
+function buildPromo() {
+  var name = (document.getElementById('affName')?.value || '').replace(/[^a-zA-Z]/g, '');
+  var four = name.substring(0, 4).toUpperCase();
+  while (four.length < 4) four += '0';
+  var digits = (document.getElementById('affPhone')?.value || '').replace(/\D/g, '');
+  var last4 = digits.length >= 4 ? digits.slice(-4) : digits.padStart(4, '0');
+  if (!last4) last4 = '0000';
+  return four + last4;
+}
+function refreshPromo() {
+  var el = document.getElementById('affPromo');
+  if (!el || el.readOnly === false && <?= $is_edit ? 'true' : 'false' ?>) return;
+  if (!<?= $is_edit ? 'true' : 'false' ?>) el.value = buildPromo();
+}
+document.getElementById('affName')?.addEventListener('input', refreshPromo);
+document.getElementById('affPhone')?.addEventListener('input', refreshPromo);
+document.getElementById('genPromoBtn')?.addEventListener('click', function() {
+  document.getElementById('affPromo').value = buildPromo();
+});
 document.getElementById('checkPromoBtn')?.addEventListener('click', function() {
   var code = document.getElementById('affPromo').value.trim();
   if (!code) { document.getElementById('promoStatus').textContent = 'Enter a code first.'; return; }
@@ -85,4 +119,5 @@ document.getElementById('checkPromoBtn')?.addEventListener('click', function() {
       document.getElementById('promoStatus').className = d.available ? 'text-success' : 'text-danger';
     });
 });
+<?php if (!$is_edit): ?>refreshPromo();<?php endif; ?>
 </script>

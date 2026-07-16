@@ -32,9 +32,9 @@ RewriteRule ^ilf/frontend/assets/(.*)$ frontend/assets/$1 [R=301,L]
 RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
 RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
 
-# Canonical admin URL — legacy /shopkart panel paths → /admin
-RewriteRule ^shopkart/?$ admin [R=302,L]
-RewriteRule ^shopkart/(.+)$ admin/$1 [R=302,L]
+# Canonical admin URL — legacy /shopkart panel paths → /admin (internal rewrite, not 302)
+RewriteRule ^shopkart/?$ admin/ [L]
+RewriteRule ^shopkart/(.+)$ admin/$1 [L]
 
 # Serve static dirs directly (no CodeIgniter, no SPA fallback)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]

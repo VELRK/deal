@@ -30,9 +30,15 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal1/';
     } else {
-        $path = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-        $path = ($path === '/' || $path === '') ? '/' : rtrim($path, '/') . '/';
-        $config['base_url'] = $scheme . '://' . $host . $path;
+        $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
+        // XAMPP on Windows can expose a filesystem path in SCRIPT_NAME — never use that in URLs
+        if (preg_match('#^/?[A-Za-z]:/#', $script)) {
+            $config['base_url'] = $scheme . '://' . $host . '/deal1/';
+        } else {
+            $path = dirname($script);
+            $path = ($path === '/' || $path === '' || $path === '.') ? '/' : rtrim($path, '/') . '/';
+            $config['base_url'] = $scheme . '://' . $host . $path;
+        }
     }
 } else {
     $config['base_url'] = 'http://localhost:8080/deal1/';

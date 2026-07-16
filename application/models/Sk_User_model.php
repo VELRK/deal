@@ -100,25 +100,41 @@ class Sk_User_model extends CI_Model {
     }
 
     // Addresses
+    public function ensure_address_schema(): void {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        if (!$this->db->field_exists('company_name', 'addresses')) {
+            $this->db->query("ALTER TABLE `addresses` ADD COLUMN `company_name` VARCHAR(150) NULL DEFAULT NULL AFTER `full_name`");
+        }
+        if (!$this->db->field_exists('address_type', 'addresses')) {
+            $this->db->query("ALTER TABLE `addresses` ADD COLUMN `address_type` VARCHAR(20) NOT NULL DEFAULT 'shipping' AFTER `label`");
+        }
+    }
+
     public function get_addresses($user_id) {
-        return $this->db->where('user_id', $user_id)->get('addresses')->result_array();
+        $this->ensure_address_schema();
+        return $this->db->where('user_id', $user_id)->order_by('is_default', 'DESC')->order_by('id', 'DESC')->get('addresses')->result_array();
     }
 
     public function get_address($id, $user_id) {
+        $this->ensure_address_schema();
         return $this->db->where(['id' => $id, 'user_id' => $user_id])->get('addresses')->row_array();
     }
 
     public function save_address($data) {
-        if (!empty($data['is_default'])) {
-            $this->db->where('user_id', $data['user_id'])->update('addresses', ['is_default' => 0]);
+        $this->ensure_address_schema();
+        $id = !empty($data['id']) ? (int)$data['id'] : 0;
+        $allowed = ['user_id','full_name','company_name','phone','line1','line2','city','state','pincode','country','label','is_default','address_type'];
+        $row = array_intersect_key($data, array_flip($allowed));
+        if (!empty($row['is_default'])) {
+            $this->db->where('user_id', $row['user_id'])->update('addresses', ['is_default' => 0]);
         }
-        if (!empty($data['id'])) {
-            $id = $data['id'];
-            unset($data['id']);
-            $this->db->where(['id' => $id, 'user_id' => $data['user_id']])->update('addresses', $data);
+        if ($id) {
+            $this->db->where(['id' => $id, 'user_id' => $row['user_id']])->update('addresses', $row);
             return $id;
         }
-        $this->db->insert('addresses', $data);
+        $this->db->insert('addresses', $row);
         return $this->db->insert_id();
     }
 

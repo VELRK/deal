@@ -5,6 +5,7 @@ class Sk_Product_model extends CI_Model {
 
     public function __construct() {
         parent::__construct();
+        $this->load->model('Sk_Product_variant_model');
     }
 
     // ── Get paginated product list with filters ──────────────────────────────
@@ -83,6 +84,7 @@ class Sk_Product_model extends CI_Model {
         foreach ($products as &$p) {
             $p['images'] = $this->get_images($p['id']);
             $this->_decode_json_fields($p);
+            $this->attach_variants($p);
             $this->apply_sale_timing($p);
         }
 
@@ -100,6 +102,7 @@ class Sk_Product_model extends CI_Model {
             $product['images'] = $this->get_images($id);
             $product['videos'] = $this->get_videos($id);
             $this->_decode_json_fields($product);
+            $this->attach_variants($product);
             $this->apply_sale_timing($product);
         }
         return $product;
@@ -117,6 +120,7 @@ class Sk_Product_model extends CI_Model {
             $product['images'] = $this->get_images($product['id']);
             $product['videos'] = $this->get_videos($product['id']);
             $this->_decode_json_fields($product);
+            $this->attach_variants($product);
             $this->apply_sale_timing($product);
         }
         return $product;
@@ -183,11 +187,43 @@ class Sk_Product_model extends CI_Model {
                         ->delete('product_images');
     }
 
-    public function reduce_stock($product_id, $qty) {
+    public function reduce_stock($product_id, $qty, $variant_id = null) {
+        if ($variant_id) {
+            $this->db->set('stock', 'stock - ' . (int)$qty, FALSE)
+                     ->where('id', (int)$variant_id)
+                     ->where('product_id', (int)$product_id)
+                     ->update('product_variants');
+        }
         $this->db->set('stock', 'stock - ' . (int)$qty, FALSE)
                  ->set('total_sold', 'total_sold + ' . (int)$qty, FALSE)
                  ->where('id', $product_id)
                  ->update('products');
+    }
+
+    public function attach_variants(&$product) {
+        if (empty($product['id'])) return;
+        $variants = $this->Sk_Product_variant_model->get_by_product($product['id']);
+        $product['variants'] = $variants;
+
+        if (!empty($variants)) {
+            $default = null;
+            foreach ($variants as $v) {
+                if (!empty($v['is_default'])) { $default = $v; break; }
+            }
+            if (!$default) $default = $variants[0];
+
+            $product['default_variant_id'] = (int)$default['id'];
+            $product['unit_label'] = $default['label'];
+            $product['unit_name'] = $default['unit_name'] ?? '';
+            $product['unit_symbol'] = $default['unit_symbol'] ?? '';
+            $product['unit_value'] = $default['unit_value'] ?? 1;
+            $product['price'] = (float)$default['price'];
+            $product['sale_price'] = $default['sale_price'] ?? null;
+            $product['stock'] = (int)$default['stock'];
+            if (!empty($default['sku'])) $product['sku'] = $default['sku'];
+            if (!empty($default['image'])) $product['thumbnail'] = $default['image'];
+            $product['variant_count'] = count($variants);
+        }
     }
 
     public function get_related($product_id, $category_id, $limit = 6) {

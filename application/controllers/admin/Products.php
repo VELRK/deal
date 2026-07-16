@@ -5,6 +5,11 @@ require_once APPPATH . 'controllers/admin/Sk_Base.php';
 
 class Products extends Sk_Base {
 
+    public function __construct() {
+        parent::__construct();
+        $this->load->model(['Sk_Variant_unit_model', 'Sk_Product_variant_model']);
+    }
+
     public function index() {
         $search    = $this->input->get('search', TRUE);
         $vendor_id = $this->current_vendor_id() ?: ((int)$this->input->get('vendor_id') ?: null);
@@ -26,9 +31,11 @@ class Products extends Sk_Base {
     }
 
     public function add() {
-        $data['title']        = 'Add Saree Product';
+        $data['title']        = 'Add Product';
         $data['categories']   = $this->Sk_Admin_model->get_categories(null, 1);
         $data['brands']       = $this->db->get('brands')->result_array();
+        $data['variant_units']= $this->Sk_Variant_unit_model->get_all_active();
+        $data['product_variants'] = [];
         $data['saree_styles'] = $this->Sk_Admin_model->get_saree_styles();
         $data['fabrics']      = Sk_Admin_model::fabric_options();
         $data['occasions']    = Sk_Admin_model::occasion_options();
@@ -143,6 +150,8 @@ class Products extends Sk_Base {
 
         $product_id = $this->Sk_Product_model->create($data);
 
+        $this->_save_product_variants($product_id);
+
         // Additional images
         if (!empty($_FILES['images']['name'][0])) {
             $this->_save_product_images($product_id);
@@ -153,12 +162,14 @@ class Products extends Sk_Base {
     }
 
     public function edit($id) {
-        $data['title']         = 'Edit Saree Product';
+        $data['title']         = 'Edit Product';
         $data['product']       = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($data['product']);
         $data['categories']    = $this->Sk_Admin_model->get_categories(null, 1);
         $data['subcategories'] = $this->Sk_Admin_model->get_subcategories($data['product']['category_id'], 1);
         $data['brands']        = $this->db->get('brands')->result_array();
+        $data['variant_units'] = $this->Sk_Variant_unit_model->get_all_active();
+        $data['product_variants'] = $this->Sk_Product_variant_model->get_by_product($id, false);
         $data['saree_styles']  = $this->Sk_Admin_model->get_saree_styles();
         $data['fabrics']       = Sk_Admin_model::fabric_options();
         $data['occasions']     = Sk_Admin_model::occasion_options();
@@ -264,6 +275,8 @@ class Products extends Sk_Base {
 
         $this->Sk_Product_model->update($id, $data);
 
+        $this->_save_product_variants($id);
+
         if (!empty($_FILES['images']['name'][0])) {
             $this->_save_product_images($id);
         }
@@ -296,6 +309,77 @@ class Products extends Sk_Base {
         $this->assert_product_vendor_access($product);
         $this->Sk_Product_model->delete_image((int)$image_id, (int)$product_id);
         $this->json(['success' => true]);
+    }
+
+    private function _save_product_variants($product_id) {
+        $rows = $this->input->post('product_variants') ?? [];
+        $parsed = [];
+        $main_price = (float)$this->input->post('price');
+        $main_sale  = $this->input->post('sale_price') ?: null;
+        $main_stock = (int)$this->input->post('stock');
+        $main_sku   = $this->input->post('sku', TRUE);
+        $product_thumb = null;
+
+        foreach ($rows as $i => $row) {
+            $unit_id = (int)($row['unit_id'] ?? 0);
+            if (!$unit_id) continue;
+
+            $image = trim($row['existing_image'] ?? '');
+            if (!empty($_FILES['variant_images']['name'][$i]) && $_FILES['variant_images']['error'][$i] === UPLOAD_ERR_OK) {
+                $_FILES['variant_image_single'] = [
+                    'name'     => $_FILES['variant_images']['name'][$i],
+                    'type'     => $_FILES['variant_images']['type'][$i],
+                    'tmp_name' => $_FILES['variant_images']['tmp_name'][$i],
+                    'error'    => $_FILES['variant_images']['error'][$i],
+                    'size'     => $_FILES['variant_images']['size'][$i],
+                ];
+                $uploaded = $this->upload_file('variant_image_single', 'products');
+                if ($uploaded) $image = $uploaded;
+            }
+
+            $price = ($row['price'] ?? '') !== '' ? (float)$row['price'] : $main_price;
+            $sale  = ($row['sale_price'] ?? '') !== '' ? (float)$row['sale_price'] : ($main_sale !== null ? (float)$main_sale : null);
+            $stock = ($row['stock'] ?? '') !== '' ? (int)$row['stock'] : $main_stock;
+
+            $parsed[] = [
+                'unit_id'     => $unit_id,
+                'unit_value'  => (float)($row['unit_value'] ?? 1),
+                'label'       => trim($row['label'] ?? ''),
+                'price'       => $price,
+                'sale_price'  => $sale,
+                'stock'       => $stock,
+                'sku'         => ($row['sku'] ?? '') !== '' ? $row['sku'] : $main_sku,
+                'image'       => $image ?: null,
+                'is_default'  => !empty($row['is_default']),
+            ];
+
+            if (!empty($row['is_default']) && $image) {
+                $product_thumb = $image;
+            }
+        }
+
+        if (empty($parsed)) {
+            $default_unit = (int)$this->input->post('default_unit_id');
+            if ($default_unit) {
+                $parsed[] = [
+                    'unit_id'     => $default_unit,
+                    'unit_value'  => (float)($this->input->post('default_unit_value') ?: 1),
+                    'label'       => '',
+                    'price'       => $main_price,
+                    'sale_price'  => $main_sale,
+                    'stock'       => $main_stock,
+                    'sku'         => $main_sku,
+                    'image'       => null,
+                    'is_default'  => true,
+                ];
+            }
+        }
+
+        $this->Sk_Product_variant_model->replace_for_product((int)$product_id, $parsed);
+
+        if ($product_thumb) {
+            $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $product_thumb]);
+        }
     }
 
     private function _clear_product_api_cache() {

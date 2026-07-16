@@ -78,6 +78,14 @@ class Affiliates extends Sk_Base {
         $phone = trim($this->input->post('phone', TRUE));
         $promo = strtoupper(trim($this->input->post('promo_code', TRUE) ?: $this->Sk_Affiliate_model->generate_promo_code($name, $phone)));
 
+        if (!$name || !$email || !$phone) {
+            $this->session->set_flashdata('error', 'Name, email and phone are required.');
+            redirect('admin/affiliates/add');
+        }
+        if ($this->Sk_Affiliate_model->get_by_email($email)) {
+            $this->session->set_flashdata('error', 'Email already registered.');
+            redirect('admin/affiliates/add');
+        }
         if (!$this->Sk_Affiliate_model->is_promo_code_available($promo)) {
             $this->session->set_flashdata('error', 'Promo code already exists in affiliates or promo codes.');
             redirect('admin/affiliates/add');
@@ -85,7 +93,6 @@ class Affiliates extends Sk_Base {
 
         $payload = array_merge($this->_profile_input(), [
             'email'                     => $email,
-            'password'                  => $this->input->post('password') ?: 'password',
             'promo_code'                => $promo,
             'commission_rate'           => $this->input->post('commission_rate') ?: 5,
             'customer_discount_percent' => $this->input->post('customer_discount_percent') ?: 0,
@@ -93,7 +100,10 @@ class Affiliates extends Sk_Base {
             'status'                    => $this->input->post('status') ?: 'approved',
             'kyc_status'                => $this->input->post('kyc_status') ?: 'pending',
             'notes'                     => $this->input->post('notes'),
+            'must_set_password'         => 1,
         ]);
+        // Temporary unusable password until invite link is used
+        $payload['password'] = bin2hex(random_bytes(16));
 
         if ($vid = $this->scoped_vendor_id()) {
             $payload['vendor_id'] = $vid;
@@ -104,9 +114,21 @@ class Affiliates extends Sk_Base {
             }
         }
 
+        $this->Sk_Affiliate_model->ensure_invite_schema();
         $id = $this->Sk_Affiliate_model->create($payload);
+        $token = $this->Sk_Affiliate_model->create_invite_token($id);
+        $aff = $this->Sk_Affiliate_model->get_by_id($id);
+        $sent = $this->Sk_Affiliate_model->send_invite_email($aff, $token);
+
         $this->activity_log->log_admin('affiliates', 'create', $id);
-        $this->session->set_flashdata('success', 'Affiliate created. Promo: ' . $promo);
+        $msg = 'Affiliate created. Promo: ' . $promo . '.';
+        if ($sent) {
+            $msg .= ' Verification link emailed — they must set a password before login.';
+        } else {
+            $setUrl = site_url('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($email));
+            $msg .= ' Email not sent (check SMTP). Share this link: ' . $setUrl;
+        }
+        $this->session->set_flashdata('success', $msg);
         redirect('admin/affiliates/view/' . $id);
     }
 

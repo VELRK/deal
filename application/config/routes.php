@@ -281,6 +281,19 @@ $route['shopkart/affiliate/forgot-password'] = 'admin/Affiliate_login/forgot_pas
 $route['shopkart/affiliate/forgot-password/submit'] = 'admin/Affiliate_login/forgot_submit';
 $route['shopkart/affiliate/reset-password'] = 'admin/Affiliate_login/reset_password';
 $route['shopkart/affiliate/reset-password/submit'] = 'admin/Affiliate_login/reset_submit';
+$route['shopkart/affiliate/set-password'] = 'admin/Affiliate_login/set_password';
+$route['shopkart/affiliate/set-password/submit'] = 'admin/Affiliate_login/set_password_submit';
+$route['admin/affiliate/login'] = 'admin/Affiliate_login/index';
+$route['admin/affiliate/login/submit'] = 'admin/Affiliate_login/submit';
+$route['admin/affiliate/register'] = 'admin/Affiliate_login/register';
+$route['admin/affiliate/register/submit'] = 'admin/Affiliate_login/register_submit';
+$route['admin/affiliate/logout'] = 'admin/Affiliate_login/logout';
+$route['admin/affiliate/forgot-password'] = 'admin/Affiliate_login/forgot_password';
+$route['admin/affiliate/forgot-password/submit'] = 'admin/Affiliate_login/forgot_submit';
+$route['admin/affiliate/reset-password'] = 'admin/Affiliate_login/reset_password';
+$route['admin/affiliate/reset-password/submit'] = 'admin/Affiliate_login/reset_submit';
+$route['admin/affiliate/set-password'] = 'admin/Affiliate_login/set_password';
+$route['admin/affiliate/set-password/submit'] = 'admin/Affiliate_login/set_password_submit';
 $route['shopkart/affiliate/dashboard'] = 'admin/Affiliate_portal/dashboard';
 $route['shopkart/affiliate/commissions'] = 'admin/Affiliate_portal/commissions';
 $route['shopkart/affiliate/payouts'] = 'admin/Affiliate_portal/payouts';
@@ -315,6 +328,8 @@ $route['shopkart/customer-wallets'] = 'admin/Customer_wallets/index';
 $route['shopkart/customer-wallets/view/(:num)'] = 'admin/Customer_wallets/view/$1';
 $route['shopkart/customer-wallets/add_funds/(:num)'] = 'admin/Customer_wallets/add_funds/$1';
 $route['shopkart/customer-wallets/settings'] = 'admin/Customer_wallets/settings';
+$route['shopkart/wallet-recharge'] = 'admin/Wallet_recharge/index';
+$route['admin/wallet-recharge'] = 'admin/Wallet_recharge/index';
 
 $route['shopkart/affiliate-reports'] = 'admin/Affiliate_reports/index';
 $route['shopkart/affiliate-reports/export'] = 'admin/Affiliate_reports/export';
@@ -368,6 +383,17 @@ $route['shopkart/brands/store'] = 'admin/Brands/store';
 $route['shopkart/brands/edit/(:num)'] = 'admin/Brands/edit/$1';
 $route['shopkart/brands/update/(:num)'] = 'admin/Brands/update/$1';
 $route['shopkart/brands/delete/(:num)'] = 'admin/Brands/delete/$1';
+// Variant units
+$route['shopkart/variant-units'] = 'admin/Variant_units/index';
+$route['shopkart/variant-units/store'] = 'admin/Variant_units/store';
+$route['shopkart/variant-units/edit/(:num)'] = 'admin/Variant_units/edit/$1';
+$route['shopkart/variant-units/update/(:num)'] = 'admin/Variant_units/update/$1';
+$route['shopkart/variant-units/delete/(:num)'] = 'admin/Variant_units/delete/$1';
+$route['admin/variant-units'] = 'admin/Variant_units/index';
+$route['admin/variant-units/store'] = 'admin/Variant_units/store';
+$route['admin/variant-units/edit/(:num)'] = 'admin/Variant_units/edit/$1';
+$route['admin/variant-units/update/(:num)'] = 'admin/Variant_units/update/$1';
+$route['admin/variant-units/delete/(:num)'] = 'admin/Variant_units/delete/$1';
 // Categories
 $route['shopkart/categories'] = 'admin/Categories/index';
 $route['shopkart/categories/store'] = 'admin/Categories/store';
@@ -458,6 +484,7 @@ $route['shopkart-api/forgot-password']['POST'] = 'api/Sk_Auth/forgot_password';
 $route['shopkart-api/forgot-password/verify']['POST'] = 'api/Sk_Auth/verify_reset_code';
 $route['shopkart-api/reset-password']['POST'] = 'api/Sk_Auth/reset_password';
 // Products
+$route['shopkart-api/variant-units']['GET'] = 'api/Sk_Variant_unit/index';
 $route['shopkart-api/products']['GET'] = 'api/Sk_Product/index';
 $route['shopkart-api/product/(:any)']['GET'] = 'api/Sk_Product/show/$1';
 $route['shopkart-api/categories']['GET'] = 'api/Sk_Category/index';
@@ -494,6 +521,11 @@ $route['shopkart-api/user/addresses']['GET']              = 'api/Sk_User/address
 $route['shopkart-api/user/addresses']['POST']             = 'api/Sk_User/save_address';
 $route['shopkart-api/user/addresses/(:num)']['DELETE']    = 'api/Sk_User/delete_address/$1';
 $route['shopkart-api/user/wallet']['GET']                   = 'api/Sk_User/wallet';
+$route['shopkart-api/user/wallet/transactions']['GET']      = 'api/Sk_User/wallet_transactions';
+$route['shopkart-api/user/wallet/topup']['POST']            = 'api/Sk_User/wallet_topup';
+$route['shopkart-api/payment/toyyibpay-return']['GET']      = 'api/Sk_Payment/toyyibpay_return';
+$route['shopkart-api/payment/toyyibpay-callback']['POST']   = 'api/Sk_Payment/toyyibpay_callback';
+$route['shopkart-api/payment/toyyibpay-callback']['GET']    = 'api/Sk_Payment/toyyibpay_callback';
 // Newsletter
 $route['shopkart-api/newsletter']['POST'] = 'api/Sk_User/newsletter';
 // Testimonials (public)

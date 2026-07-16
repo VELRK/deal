@@ -47,6 +47,9 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
         <a href="<?= site_url('shopkart/customer-wallets') ?>" class="nav-link sk-nav-link <?= $uri==='customer-wallets'?'active':'' ?>">
           <i class="bi bi-credit-card me-2"></i> Customer Wallets
         </a>
+        <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
+          <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
+        </a>
       </li>
       <li class="nav-item">
         <a href="<?= site_url('shopkart/affiliate-reports') ?>" class="nav-link sk-nav-link <?= $uri==='affiliate-reports'?'active':'' ?>">
@@ -56,6 +59,9 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       <li class="nav-item">
         <a href="<?= site_url('shopkart/customer-wallets') ?>" class="nav-link sk-nav-link <?= $uri==='customer-wallets'?'active':'' ?>">
           <i class="bi bi-credit-card me-2"></i> Customer Wallets
+        </a>
+        <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
+          <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
         </a>
       </li>
       <li class="nav-item">
@@ -87,6 +93,9 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       <li class="nav-item">
         <a href="<?= site_url('shopkart/customer-wallets') ?>" class="nav-link sk-nav-link <?= $uri==='customer-wallets'?'active':'' ?>">
           <i class="bi bi-credit-card me-2"></i> Customer Wallets
+        </a>
+        <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
+          <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
         </a>
       </li>
       <li class="nav-item">
@@ -128,6 +137,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
         <a href="<?= site_url('shopkart/brands') ?>"
            class="nav-link sk-nav-link <?= sk_active($uri,'brands') ?>">
           <i class="bi bi-shop me-2"></i> Brands
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a href="<?= site_url('shopkart/variant-units') ?>"
+           class="nav-link sk-nav-link <?= $uri==='variant-units'?'active':'' ?>">
+          <i class="bi bi-rulers me-2"></i> Variant Units
         </a>
       </li>
 

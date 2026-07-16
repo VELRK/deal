@@ -99,8 +99,8 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
         </div>
       </div>
 
-      <!-- Saree Attributes -->
-      <div class="card sk-table-card shadow-sm mb-3" style="border-left:4px solid #f59e0b;">
+      <!-- Saree Attributes (hidden — legacy fields kept for DB compatibility) -->
+      <div class="card sk-table-card shadow-sm mb-3 d-none" id="saree-attributes-card" style="border-left:4px solid #f59e0b;">
         <div class="card-header bg-white border-0 py-3 fw-semibold">
           <i class="bi bi-stars me-1 text-warning"></i> Saree Attributes
         </div>
@@ -474,6 +474,8 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
 
       <?php $seo = $p; $this->load->view('admin/partials/seo_fields', compact('seo')); ?>
 
+      <?php $product_variants = $product_variants ?? []; $this->load->view('admin/products/_variant_fields', compact('variant_units', 'product_variants')); ?>
+
       <!-- Pricing -->
       <div class="card sk-table-card shadow-sm mb-3">
         <div class="card-header bg-white border-0 py-3 fw-semibold">
@@ -602,8 +604,8 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
         </div>
       </div>
 
-      <!-- Saree info card -->
-      <div class="card border-0 bg-success bg-opacity-10">
+      <!-- Product variant summary (hidden legacy saree card) -->
+      <div class="card border-0 bg-success bg-opacity-10 d-none">
         <div class="card-body py-3">
           <p class="fw-semibold text-success mb-2 small"><i class="bi bi-check2-circle me-1"></i>Saree Details</p>
           <div class="small text-muted">
@@ -620,7 +622,7 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
 
   <div class="mt-3 d-flex gap-2 pb-4">
     <button type="submit" class="btn btn-warning fw-semibold px-5 py-2">
-      <i class="bi bi-check-lg me-1"></i> Update Saree
+      <i class="bi bi-check-lg me-1"></i> Update Product
     </button>
     <a href="<?= site_url('admin/products') ?>" class="btn btn-outline-secondary">Cancel</a>
   </div>
