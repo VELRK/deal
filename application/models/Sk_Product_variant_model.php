@@ -3,12 +3,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Sk_Product_variant_model extends CI_Model {
 
+    /** @var bool|null */
+    private static $schema_ready = null;
+
     public function __construct() {
         parent::__construct();
         $this->load->model('Sk_Variant_unit_model');
     }
 
+    /** True when variant tables exist (safe before migration on production). */
+    public function schema_ready() {
+        if (self::$schema_ready !== null) {
+            return self::$schema_ready;
+        }
+        $tables = $this->db->list_tables();
+        self::$schema_ready = in_array('product_variants', $tables, true)
+            && in_array('variant_units', $tables, true);
+        return self::$schema_ready;
+    }
+
     public function get_by_product($product_id, $active_only = true) {
+        if (!$this->schema_ready()) {
+            return [];
+        }
         $this->db->select('pv.*, vu.name as unit_name, vu.slug as unit_slug, vu.symbol as unit_symbol, vu.unit_type')
                  ->from('product_variants pv')
                  ->join('variant_units vu', 'vu.id = pv.unit_id', 'left')
@@ -27,6 +44,9 @@ class Sk_Product_variant_model extends CI_Model {
     }
 
     public function get_by_id($id) {
+        if (!$this->schema_ready()) {
+            return null;
+        }
         $row = $this->db->select('pv.*, vu.name as unit_name, vu.slug as unit_slug, vu.symbol as unit_symbol, vu.unit_type')
                         ->from('product_variants pv')
                         ->join('variant_units vu', 'vu.id = pv.unit_id', 'left')
@@ -45,6 +65,9 @@ class Sk_Product_variant_model extends CI_Model {
     }
 
     public function replace_for_product($product_id, array $variants) {
+        if (!$this->schema_ready()) {
+            return;
+        }
         $this->db->where('product_id', (int)$product_id)->delete('product_variants');
         if (empty($variants)) return;
 

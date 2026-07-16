@@ -3,9 +3,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Sk_Product_model extends CI_Model {
 
-    public function __construct() {
-        parent::__construct();
-        $this->load->model('Sk_Product_variant_model');
+    /** @var Sk_Product_variant_model|null */
+    private $_variant_model = null;
+
+    private function variant_model() {
+        if ($this->_variant_model === null) {
+            $this->load->model('Sk_Product_variant_model');
+            $this->_variant_model = $this->Sk_Product_variant_model;
+        }
+        return $this->_variant_model;
     }
 
     // ── Get paginated product list with filters ──────────────────────────────
@@ -188,7 +194,7 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function reduce_stock($product_id, $qty, $variant_id = null) {
-        if ($variant_id) {
+        if ($variant_id && $this->variant_model()->schema_ready()) {
             $this->db->set('stock', 'stock - ' . (int)$qty, FALSE)
                      ->where('id', (int)$variant_id)
                      ->where('product_id', (int)$product_id)
@@ -202,7 +208,7 @@ class Sk_Product_model extends CI_Model {
 
     public function attach_variants(&$product) {
         if (empty($product['id'])) return;
-        $variants = $this->Sk_Product_variant_model->get_by_product($product['id']);
+        $variants = $this->variant_model()->get_by_product($product['id']);
         $product['variants'] = $variants;
 
         if (!empty($variants)) {
