@@ -19,7 +19,21 @@ class Sk_Product_variant_model extends CI_Model {
         $tables = $this->db->list_tables();
         self::$schema_ready = in_array('product_variants', $tables, true)
             && in_array('variant_units', $tables, true);
+        if (self::$schema_ready) {
+            $this->ensure_image_column();
+        }
         return self::$schema_ready;
+    }
+
+    /** Add product_variants.image on older installs. */
+    public function ensure_image_column() {
+        if (!$this->db->table_exists('product_variants')) {
+            return;
+        }
+        if ($this->db->field_exists('image', 'product_variants')) {
+            return;
+        }
+        $this->db->query("ALTER TABLE `product_variants` ADD COLUMN `image` VARCHAR(255) DEFAULT NULL AFTER `sku`");
     }
 
     public function get_by_product($product_id, $active_only = true) {
@@ -120,7 +134,11 @@ class Sk_Product_variant_model extends CI_Model {
         $row['effective_price'] = ($sale !== null && $sale > 0 && $sale < $base) ? $sale : $base;
         $row['sale_active'] = ($sale !== null && $sale > 0 && $sale < $base) ? 1 : 0;
         if (!empty($row['image'])) {
-            $row['image_url'] = base_url($row['image']);
+            $img = trim($row['image']);
+            $row['image'] = $img;
+            $row['image_url'] = (strpos($img, 'http://') === 0 || strpos($img, 'https://') === 0)
+                ? $img
+                : base_url($img);
         }
         return $row;
     }

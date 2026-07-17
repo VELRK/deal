@@ -157,6 +157,7 @@ class Products extends Sk_Base {
             $this->_save_product_images($product_id);
         }
 
+        $this->_clear_product_api_cache();
         $this->session->set_flashdata('success', 'Product created successfully.');
         redirect('admin/products');
     }
@@ -283,7 +284,7 @@ class Products extends Sk_Base {
 
         $this->_clear_product_api_cache();
         $this->session->set_flashdata('success', 'Product updated successfully.');
-        redirect('admin/products');
+        redirect('admin/products/edit/' . $id);
     }
 
     public function delete($id) {
@@ -312,29 +313,36 @@ class Products extends Sk_Base {
     }
 
     private function _save_product_variants($product_id) {
-        $rows = $this->input->post('product_variants') ?? [];
+        $rows = array_values($this->input->post('product_variants') ?? []);
         $parsed = [];
         $main_price = (float)$this->input->post('price');
         $main_sale  = $this->input->post('sale_price') ?: null;
         $main_stock = (int)$this->input->post('stock');
         $main_sku   = $this->input->post('sku', TRUE);
         $product_thumb = null;
+        $upload_failed = false;
 
-        foreach ($rows as $i => $row) {
+        $existing_images = [];
+        foreach ($this->Sk_Product_variant_model->get_by_product($product_id, false) as $ev) {
+            if (empty($ev['image'])) continue;
+            $existing_images[$this->_variant_image_key($ev['unit_id'], $ev['unit_value'])] = $ev['image'];
+        }
+
+        foreach ($rows as $seq => $row) {
             $unit_id = (int)($row['unit_id'] ?? 0);
             if (!$unit_id) continue;
 
+            $unit_value = (float)($row['unit_value'] ?? 1);
             $image = trim($row['existing_image'] ?? '');
-            if (!empty($_FILES['variant_images']['name'][$i]) && $_FILES['variant_images']['error'][$i] === UPLOAD_ERR_OK) {
-                $_FILES['variant_image_single'] = [
-                    'name'     => $_FILES['variant_images']['name'][$i],
-                    'type'     => $_FILES['variant_images']['type'][$i],
-                    'tmp_name' => $_FILES['variant_images']['tmp_name'][$i],
-                    'error'    => $_FILES['variant_images']['error'][$i],
-                    'size'     => $_FILES['variant_images']['size'][$i],
-                ];
-                $uploaded = $this->upload_file('variant_image_single', 'products');
-                if ($uploaded) $image = $uploaded;
+            if ($image === '') {
+                $image = trim($existing_images[$this->_variant_image_key($unit_id, $unit_value)] ?? '');
+            }
+
+            $uploaded = $this->_upload_variant_image($seq);
+            if ($uploaded) {
+                $image = $uploaded;
+            } elseif ($this->_variant_upload_attempted($seq)) {
+                $upload_failed = true;
             }
 
             $price = ($row['price'] ?? '') !== '' ? (float)$row['price'] : $main_price;
@@ -343,19 +351,23 @@ class Products extends Sk_Base {
 
             $parsed[] = [
                 'unit_id'     => $unit_id,
-                'unit_value'  => (float)($row['unit_value'] ?? 1),
+                'unit_value'  => $unit_value,
                 'label'       => trim($row['label'] ?? ''),
                 'price'       => $price,
                 'sale_price'  => $sale,
                 'stock'       => $stock,
                 'sku'         => ($row['sku'] ?? '') !== '' ? $row['sku'] : $main_sku,
-                'image'       => $image ?: null,
+                'image'       => $image !== '' ? $image : null,
                 'is_default'  => !empty($row['is_default']),
             ];
 
-            if (!empty($row['is_default']) && $image) {
+            if (!empty($row['is_default']) && $image !== '') {
                 $product_thumb = $image;
             }
+        }
+
+        if ($upload_failed) {
+            $this->session->set_flashdata('error', 'One or more variant images failed to upload. Use JPG, PNG, GIF or WebP under 5MB.');
         }
 
         if (empty($parsed)) {
@@ -380,6 +392,43 @@ class Products extends Sk_Base {
         if ($product_thumb) {
             $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $product_thumb]);
         }
+    }
+
+    private function _variant_image_key($unit_id, $unit_value) {
+        return (int)$unit_id . ':' . rtrim(rtrim(number_format((float)$unit_value, 3, '.', ''), '0'), '.');
+    }
+
+    private function _upload_variant_image($seq) {
+        if (empty($_FILES['variant_images']) || !is_array($_FILES['variant_images']['name'] ?? null)) {
+            return null;
+        }
+        if (!isset($_FILES['variant_images']['name'][$seq])) {
+            return null;
+        }
+        if ((int)$_FILES['variant_images']['error'][$seq] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        if (trim((string)$_FILES['variant_images']['name'][$seq]) === '') {
+            return null;
+        }
+
+        $_FILES['variant_image_single'] = [
+            'name'     => $_FILES['variant_images']['name'][$seq],
+            'type'     => $_FILES['variant_images']['type'][$seq],
+            'tmp_name' => $_FILES['variant_images']['tmp_name'][$seq],
+            'error'    => $_FILES['variant_images']['error'][$seq],
+            'size'     => $_FILES['variant_images']['size'][$seq],
+        ];
+
+        return $this->upload_file('variant_image_single', 'products');
+    }
+
+    private function _variant_upload_attempted($seq) {
+        if (empty($_FILES['variant_images']) || !isset($_FILES['variant_images']['error'][$seq])) {
+            return false;
+        }
+        $err = (int)$_FILES['variant_images']['error'][$seq];
+        return $err !== UPLOAD_ERR_OK && $err !== UPLOAD_ERR_NO_FILE;
     }
 
     private function _clear_product_api_cache() {

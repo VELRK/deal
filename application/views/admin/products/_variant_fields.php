@@ -52,16 +52,11 @@ $rows = !empty($product_variants)
         <div class="row g-2 align-items-end">
           <div class="col-md-2">
             <label class="form-label small">Image</label>
-            <?php if (!empty($vr['image'])): ?>
-              <div class="mb-1 variant-img-preview-wrap">
-                <img src="<?= base_url($vr['image']) ?>" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;">
-                <input type="hidden" name="product_variants[<?= $vi ?>][existing_image]" value="<?= htmlspecialchars($vr['image']) ?>">
-              </div>
-            <?php else: ?>
-              <div class="mb-1 variant-img-preview-wrap d-none">
-                <img src="" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;">
-              </div>
-            <?php endif; ?>
+            <?php $imgPath = trim($vr['image'] ?? ''); ?>
+            <div class="mb-1 variant-img-preview-wrap<?= $imgPath === '' ? ' d-none' : '' ?>">
+              <img src="<?= $imgPath !== '' ? base_url($imgPath) : '' ?>" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;">
+              <input type="hidden" name="product_variants[<?= $vi ?>][existing_image]" class="variant-existing-image" value="<?= htmlspecialchars($imgPath) ?>">
+            </div>
             <input type="file" name="variant_images[<?= $vi ?>]" class="form-control form-control-sm variant-image-input" accept="image/*">
           </div>
           <div class="col-md-2">
@@ -141,6 +136,20 @@ $rows = !empty($product_variants)
     });
   }
 
+  function reindexVariantRows() {
+    document.querySelectorAll('.variant-row').forEach((row, i) => {
+      row.querySelectorAll('[name^="product_variants["]').forEach(el => {
+        el.name = el.name.replace(/product_variants\[\d+\]/, 'product_variants[' + i + ']');
+      });
+      const fileInput = row.querySelector('.variant-image-input');
+      if (fileInput) fileInput.name = 'variant_images[' + i + ']';
+      const radio = row.querySelector('.variant-default');
+      if (radio) radio.value = i;
+    });
+    const countEl = document.getElementById('variant_row_count');
+    if (countEl) countEl.value = document.querySelectorAll('.variant-row').length;
+  }
+
   document.getElementById('apply-default-unit')?.addEventListener('click', function() {
     const unit = document.getElementById('default_unit_id')?.value || '';
     const qty = document.getElementById('default_unit_value')?.value || '1';
@@ -160,7 +169,7 @@ $rows = !empty($product_variants)
     wrap.className = 'variant-row border rounded p-3 mb-2 bg-light';
     wrap.innerHTML = `
       <div class="row g-2 align-items-end">
-        <div class="col-md-2"><label class="form-label small">Image</label><div class="mb-1 variant-img-preview-wrap d-none"><img src="" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;"></div><input type="file" name="variant_images[${idx}]" class="form-control form-control-sm variant-image-input" accept="image/*"></div>
+        <div class="col-md-2"><label class="form-label small">Image</label><div class="mb-1 variant-img-preview-wrap d-none"><img src="" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;"><input type="hidden" name="product_variants[${idx}][existing_image]" class="variant-existing-image" value=""></div><input type="file" name="variant_images[${idx}]" class="form-control form-control-sm variant-image-input" accept="image/*"></div>
         <div class="col-md-2"><label class="form-label small">Unit *</label>${unitSelectHtml(idx, defaultUnit)}</div>
         <div class="col-md-1"><label class="form-label small">Qty</label><input type="number" name="product_variants[${idx}][unit_value]" class="form-control form-control-sm" step="0.001" min="0.001" value="${defaultQty}"></div>
         <div class="col-md-2"><label class="form-label small">Label</label><input type="text" name="product_variants[${idx}][label]" class="form-control form-control-sm" placeholder="Auto"></div>
@@ -182,6 +191,7 @@ $rows = !empty($product_variants)
     const rows = document.querySelectorAll('.variant-row');
     if (rows.length <= 1) return alert('At least one variant row is required.');
     btn.closest('.variant-row').remove();
+    reindexVariantRows();
     syncDefaultFlags();
   });
 
@@ -217,6 +227,7 @@ $rows = !empty($product_variants)
   saleInput?.addEventListener('input', fillEmptyFromMain);
 
   document.querySelector('form')?.addEventListener('submit', function() {
+    reindexVariantRows();
     document.querySelectorAll('.variant-row').forEach(row => {
       const vp = row.querySelector('.variant-price');
       const vs = row.querySelector('.variant-stock');

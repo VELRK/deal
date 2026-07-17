@@ -47,7 +47,7 @@ $body_class = trim(
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top sk-topbar">
   <div class="container-fluid">
     <a class="navbar-brand fw-bold" href="<?= site_url('shopkart/dashboard') ?>">
-      <i class="bi bi-bag-heart-fill text-warning me-1"></i> ShopKart
+      <i class="bi bi-bag-heart-fill text-warning me-1"></i> 2DEAL
     </a>
     <button class="btn btn-sm btn-outline-secondary ms-auto me-2" id="sidebarToggle">
       <i class="bi bi-list"></i>

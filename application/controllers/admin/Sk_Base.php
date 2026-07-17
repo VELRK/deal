@@ -108,7 +108,7 @@ class Sk_Base extends CI_Controller {
         $config = [
             'upload_path'   => $path,
             'allowed_types' => 'jpg|jpeg|png|gif|webp',
-            'max_size'      => 2048,
+            'max_size'      => 5120,
             'file_name'     => uniqid($dir . '_'),
         ];
         $this->load->library('upload', $config);
