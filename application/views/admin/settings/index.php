@@ -11,6 +11,7 @@
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-payment">Payment</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-email">Email</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-shipping">JT Express</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sms">SMS OTP (iSMS)</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo">SEO</button></li>
   </ul>
 
@@ -298,6 +299,80 @@
               <label class="form-label">Postcode</label>
               <input type="text" name="jt_express_sender_postcode" class="form-control"
                      value="<?= htmlspecialchars($settings['jt_express_sender_postcode'] ?? '') ?>">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- iSMS Malaysia OTP -->
+    <div class="tab-pane fade" id="tab-sms">
+      <div class="card sk-table-card shadow-sm">
+        <div class="card-body">
+          <div class="alert alert-info small">
+            <i class="bi bi-phone me-1"></i>
+            Login OTP via <a href="https://www.isms.com.my/two-factor-authentication-api.php" target="_blank" rel="noopener">iSMS Malaysia 2FA API</a>.
+            Register at <a href="https://www.isms.com.my/register.php" target="_blank" rel="noopener">isms.com.my</a>, buy SMS credits, then enter your portal username &amp; password below.
+            <br><span class="text-muted">When disabled or credentials are empty, test OTP mode is used (see Test OTP below). Or import <code>database/isms_otp.sql</code> in phpMyAdmin.</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="isms_enabled" value="1" id="ismsEnabled"
+                  <?= !empty($settings['isms_enabled']) && $settings['isms_enabled'] !== '0' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="ismsEnabled">Enable iSMS OTP (production)</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Country code</label>
+              <input type="text" name="isms_country_code" class="form-control"
+                     value="<?= htmlspecialchars($settings['isms_country_code'] ?? '60') ?>" placeholder="60">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">OTP expiry (minutes)</label>
+              <input type="number" name="isms_otp_interval" class="form-control" min="1" max="30"
+                     value="<?= htmlspecialchars($settings['isms_otp_interval'] ?? '5') ?>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">iSMS Username</label>
+              <input type="text" name="isms_username" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['isms_username'] ?? '') ?>" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">iSMS Password</label>
+              <input type="password" name="isms_password" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['isms_password'] ?? '') ?>" autocomplete="new-password">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sender ID <span class="text-muted">(optional)</span></label>
+              <input type="text" name="isms_sender_id" class="form-control font-monospace" maxlength="11"
+                     value="<?= htmlspecialchars($settings['isms_sender_id'] ?? '') ?>" placeholder="GOLDENEAGLE">
+              <div class="form-text">Alphanumeric 3–11 chars. Malaysia shortcode may not show custom sender ID.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">SMS message template</label>
+              <input type="text" name="isms_message" class="form-control"
+                     value="<?= htmlspecialchars($settings['isms_message'] ?? 'Your Golden Eagle verification code is %OTP%. Valid for 5 minutes. Do not share this code.') ?>">
+              <div class="form-text">Must include <code>%OTP%</code> — iSMS replaces it with the 6-digit code.</div>
+            </div>
+            <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Developer testing</h6></div>
+            <div class="col-12">
+              <div class="alert alert-secondary small mb-0 py-2">
+                <strong>Default dev login:</strong> mobile <code>0180000000</code> (or <code>601800000000</code>) + OTP <code>123456</code>.
+                Works without iSMS credits. This number never sends real SMS even when iSMS is enabled.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Test OTP code</label>
+              <input type="text" name="isms_test_otp" class="form-control font-monospace" maxlength="6"
+                     value="<?= htmlspecialchars($settings['isms_test_otp'] ?? '123456') ?>">
+              <div class="form-text">Used for test phone and when iSMS is disabled.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Test mobile number</label>
+              <input type="text" name="isms_test_phone" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['isms_test_phone'] ?? '601800000000') ?>" placeholder="601800000000">
+              <div class="form-text">Always uses test OTP above — no SMS sent for this number.</div>
             </div>
           </div>
         </div>

@@ -6,9 +6,10 @@ require_once APPPATH . 'controllers/admin/Sk_Base.php';
 class Settings extends Sk_Base {
 
     public function index() {
-        $this->load->helper(['sk_invoice', 'sk_jt_express']);
+        $this->load->helper(['sk_invoice', 'sk_jt_express', 'sk_isms']);
         sk_invoice_ensure_vendor_schema();
         sk_jt_express_ensure_schema();
+        sk_isms_ensure_schema();
         $data['title']    = 'Settings - ShopKart Admin';
         $data['settings'] = $this->Sk_Admin_model->get_settings();
         $this->render('settings/index', $data);
@@ -29,6 +30,8 @@ class Settings extends Sk_Base {
             'jt_express_default_weight', 'jt_express_sender_name', 'jt_express_sender_phone',
             'jt_express_sender_address', 'jt_express_sender_city', 'jt_express_sender_state',
             'jt_express_sender_postcode',
+            'isms_username', 'isms_password', 'isms_sender_id', 'isms_message',
+            'isms_country_code', 'isms_otp_interval', 'isms_test_otp', 'isms_test_phone',
         ];
 
         $data = [];
@@ -42,6 +45,7 @@ class Settings extends Sk_Base {
         $data['whatsapp_enabled'] = $this->input->post('whatsapp_enabled') ? '1' : '0';
         $data['jt_express_enabled'] = $this->input->post('jt_express_enabled') ? '1' : '0';
         $data['jt_express_sandbox'] = $this->input->post('jt_express_sandbox') ? '1' : '0';
+        $data['isms_enabled'] = $this->input->post('isms_enabled') ? '1' : '0';
 
         // logo upload
         $logo = $this->upload_file('site_logo', 'settings');
