@@ -42,7 +42,7 @@ SELECT 'isms_otp_interval', '5' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_otp_interval');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'isms_test_otp', '123456' FROM DUAL
+SELECT 'isms_test_otp', '1234' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_test_otp');
 
 INSERT INTO `settings` (`key`, `value`)

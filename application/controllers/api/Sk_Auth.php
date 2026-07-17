@@ -225,7 +225,7 @@ class Sk_Auth extends Sk_Base_Api {
 
         if ($this->_isms_use_test_mode($settings, $normalized)) {
             $test = sk_isms_get_test_config($settings);
-            $validCodes = array_unique([$test['otp'], '123456', '123']);
+            $validCodes = array_unique([$test['otp'], '1234', '123']);
             if (!in_array($otp, $validCodes, true)) {
                 return $this->error('Invalid OTP. Please try again.', 401);
             }

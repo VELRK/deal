@@ -201,4 +201,42 @@ class Sk_Order_model extends CI_Model {
     private function generate_order_number() {
         return 'SK' . strtoupper(substr(md5(microtime()), 0, 8));
     }
+
+    /**
+     * True when the user has a qualifying order line for this product (paid, COD, or wallet).
+     *
+     * @return array{order_id:int,order_item_id:int}|null
+     */
+    public function user_purchased_product($user_id, $product_id) {
+        $user_id = (int)$user_id;
+        $product_id = (int)$product_id;
+        if ($user_id <= 0 || $product_id <= 0) {
+            return null;
+        }
+
+        $row = $this->db
+            ->select('oi.id AS order_item_id, oi.order_id')
+            ->from('order_items oi')
+            ->join('orders o', 'o.id = oi.order_id')
+            ->where('oi.product_id', $product_id)
+            ->where('o.user_id', $user_id)
+            ->where_not_in('o.status', ['cancelled', 'returned'])
+            ->group_start()
+                ->where('o.payment_status', 'paid')
+                ->or_where('o.payment_method', 'cod')
+            ->group_end()
+            ->order_by('o.id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'order_id'      => (int)$row['order_id'],
+            'order_item_id' => (int)$row['order_item_id'],
+        ];
+    }
 }

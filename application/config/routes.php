@@ -536,6 +536,7 @@ $route['shopkart-api/newsletter']['POST'] = 'api/Sk_User/newsletter';
 // Testimonials (public)
 $route['shopkart-api/testimonials']['GET'] = 'api/Sk_Testimonial/index';
 // Reviews (public)
+$route['shopkart-api/product/(:num)/reviews/eligibility']['GET'] = 'api/Sk_Review/eligibility/$1';
 $route['shopkart-api/product/(:num)/reviews']['GET'] = 'api/Sk_Review/get_by_product/$1';
 $route['shopkart-api/reviews']['POST']                = 'api/Sk_Review/store';
 // Public site settings

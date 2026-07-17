@@ -39,7 +39,7 @@ function sk_isms_ensure_schema() {
         'isms_message'       => 'Your Golden Eagle verification code is %OTP%. Valid for 5 minutes. Do not share this code.',
         'isms_country_code'  => '60',
         'isms_otp_interval'  => '5',
-        'isms_test_otp'      => '123456',
+        'isms_test_otp'      => '1234',
         'isms_test_phone'    => '601800000000',
     ];
 
@@ -55,12 +55,18 @@ function sk_isms_ensure_schema() {
         }
         $CI->db->insert('settings', $row);
     }
+
+    // Migrate legacy 6-digit dev OTP to 4-digit (matches frontend OTP inputs).
+    if ($CI->db->table_exists('settings')) {
+        $CI->db->where('key', 'isms_test_otp')->where('value', '123456')
+            ->update('settings', ['value' => '1234']);
+    }
 }
 
 function sk_isms_test_defaults() {
     return [
         'phone' => '601800000000',
-        'otp'   => '123456',
+        'otp'   => '1234',
     ];
 }
 

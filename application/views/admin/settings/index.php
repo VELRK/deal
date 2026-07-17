@@ -358,14 +358,14 @@
             <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Developer testing</h6></div>
             <div class="col-12">
               <div class="alert alert-secondary small mb-0 py-2">
-                <strong>Default dev login:</strong> mobile <code>0180000000</code> (or <code>601800000000</code>) + OTP <code>123456</code>.
+                <strong>Default dev login:</strong> mobile <code>0180000000</code> (or <code>601800000000</code>) + OTP <code>1234</code>.
                 Works without iSMS credits. This number never sends real SMS even when iSMS is enabled.
               </div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Test OTP code</label>
-              <input type="text" name="isms_test_otp" class="form-control font-monospace" maxlength="6"
-                     value="<?= htmlspecialchars($settings['isms_test_otp'] ?? '123456') ?>">
+              <input type="text" name="isms_test_otp" class="form-control font-monospace" maxlength="4"
+                     value="<?= htmlspecialchars($settings['isms_test_otp'] ?? '1234') ?>">
               <div class="form-text">Used for test phone and when iSMS is disabled.</div>
             </div>
             <div class="col-md-6">

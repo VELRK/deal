@@ -22,6 +22,48 @@ class Sk_Review extends Sk_Base_Api {
         $this->success($rows);
     }
 
+    /** Check whether the current user may submit a review for this product. */
+    public function eligibility($product_id) {
+        $product_id = (int)$product_id;
+        if (!$product_id) {
+            return $this->error('Product ID required.');
+        }
+
+        $user = $this->sk_jwt->get_user_from_request();
+        if (!$user) {
+            return $this->success([
+                'can_review' => false,
+                'reason'     => 'login_required',
+                'message'    => 'Please log in to write a review.',
+            ]);
+        }
+
+        $user_id = (int)($user['user_id'] ?? $user['id']);
+
+        if ($this->_user_has_review($user_id, $product_id)) {
+            return $this->success([
+                'can_review' => false,
+                'reason'     => 'already_reviewed',
+                'message'    => 'You have already reviewed this product.',
+            ]);
+        }
+
+        $purchase = $this->Sk_Order_model->user_purchased_product($user_id, $product_id);
+        if (!$purchase) {
+            return $this->success([
+                'can_review' => false,
+                'reason'     => 'purchase_required',
+                'message'    => 'Only customers who purchased this product can write a review.',
+            ]);
+        }
+
+        return $this->success([
+            'can_review' => true,
+            'order_id'   => $purchase['order_id'],
+            'message'    => 'You can write a review for this product.',
+        ]);
+    }
+
     public function store() {
         $this->auth_required();
 
@@ -33,26 +75,34 @@ class Sk_Review extends Sk_Base_Api {
         if (!$product_id)   return $this->error('Product ID required.');
         if (empty($body))   return $this->error('Review text required.');
 
-        $user_id = $this->user['user_id'] ?? $this->user['id'];
-        $has_purchased = $this->db
-            ->select('oi.id')->from('order_items oi')
-            ->join('orders o', 'o.id = oi.order_id')
-            ->where('oi.product_id', $product_id)->where('o.user_id', $user_id)
-            ->where('o.status !=', 'cancelled')->count_all_results();
-        if (!$has_purchased) {
-            return $this->error('Only customers who purchased this product can submit a review.');
+        $user_id = (int)($this->user['user_id'] ?? $this->user['id']);
+
+        if ($this->_user_has_review($user_id, $product_id)) {
+            return $this->error('You have already reviewed this product.');
         }
 
-        $exists = $this->db->where('product_id', $product_id)
-                           ->where('user_id', $user_id)->count_all_results('reviews');
-        if ($exists) return $this->error('You have already reviewed this product.');
+        $purchase = $this->Sk_Order_model->user_purchased_product($user_id, $product_id);
+        if (!$purchase) {
+            return $this->error('Only customers who purchased this product can submit a review.', 403);
+        }
 
         $this->db->insert('reviews', [
-            'product_id' => $product_id, 'user_id' => $user_id,
-            'rating' => $rating, 'title' => $title ?: null,
-            'body' => $body, 'status' => 'pending',
+            'product_id' => $product_id,
+            'user_id'    => $user_id,
+            'order_id'   => $purchase['order_id'],
+            'rating'     => $rating,
+            'title'      => $title ?: null,
+            'body'       => $body,
+            'status'     => 'pending',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
         $this->success(['id' => $this->db->insert_id()], 'Review submitted. It will appear after approval.');
+    }
+
+    private function _user_has_review($user_id, $product_id) {
+        return (bool)$this->db
+            ->where('product_id', (int)$product_id)
+            ->where('user_id', (int)$user_id)
+            ->count_all_results('reviews');
     }
 }

@@ -14,7 +14,7 @@ class Isms {
     protected $message_template = '';
     protected $country_code = '60';
     protected $otp_interval = 5;
-    protected $test_otp = '123456';
+    protected $test_otp = '1234';
 
     const API_URL = 'https://www.isms.com.my/2FA/request.php';
 
@@ -40,7 +40,7 @@ class Isms {
             ?: 'Your verification code is %OTP%. Valid for 5 minutes. Do not share this code.';
         $this->country_code = trim($settings['isms_country_code'] ?? '60') ?: '60';
         $this->otp_interval = max(1, min(30, (int)($settings['isms_otp_interval'] ?? 5)));
-        $this->test_otp = trim($settings['isms_test_otp'] ?? '123456') ?: '123456';
+        $this->test_otp = trim($settings['isms_test_otp'] ?? '1234') ?: '1234';
     }
 
     /**
