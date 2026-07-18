@@ -368,7 +368,7 @@
             <div class="col-md-6">
               <label class="form-label">Sender ID <span class="text-muted">(optional)</span></label>
               <input type="text" name="isms_sender_id" class="form-control font-monospace" maxlength="11"
-                     value="<?= htmlspecialchars($settings['isms_sender_id'] ?? '') ?>" placeholder="GOLDENEAGLE">
+                     value="<?= htmlspecialchars($settings['isms_sender_id'] ?? 'GOLDEN2DEAL') ?>" placeholder="GOLDEN2DEAL">
               <div class="form-text">Alphanumeric 3–11 chars. Malaysia shortcode may not show custom sender ID.</div>
             </div>
             <div class="col-md-6">

@@ -27,7 +27,7 @@ SELECT 'isms_password', '' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_password');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'isms_sender_id', '' FROM DUAL
+SELECT 'isms_sender_id', 'GOLDEN2DEAL' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_sender_id');
 
 INSERT INTO `settings` (`key`, `value`)

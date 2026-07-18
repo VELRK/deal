@@ -39,7 +39,7 @@ function sk_isms_ensure_schema() {
         'isms_username'      => '',
         'isms_password'      => '',
         'isms_api_key'       => '',
-        'isms_sender_id'     => '',
+        'isms_sender_id'     => 'GOLDEN2DEAL',
         'isms_message'       => 'Your OTP is %OTP%. Valid for 5 minutes.',
         'isms_country_code'  => '60',
         'isms_otp_interval'  => '5',
@@ -63,6 +63,7 @@ function sk_isms_ensure_schema() {
     if ($CI->db->table_exists('settings')) {
         $CI->db->where('key', 'isms_test_otp')->where('value', '123456')
             ->update('settings', ['value' => '1234']);
+        $CI->db->where('key', 'isms_sender_id')->where('value', '')->update('settings', ['value' => 'GOLDEN2DEAL']);
     }
 }
 
@@ -118,10 +119,11 @@ function sk_isms_production_override() {
         return null;
     }
     return [
-        'isms_enabled'  => '1',
-        'isms_username' => '2DEAL',
-        'isms_password' => 'jsnWzFuDHZir',
-        'isms_api_key'  => '',
+        'isms_enabled'   => '1',
+        'isms_username'  => '2DEAL',
+        'isms_password'  => 'jsnWzFuDHZir',
+        'isms_api_key'   => '',
+        'isms_sender_id' => 'GOLDEN2DEAL',
     ];
 }
 
