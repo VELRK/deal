@@ -16,6 +16,7 @@ class Settings extends Sk_Base {
     }
 
     public function update() {
+        $this->load->helper('sk_isms');
         $fields = [
             'site_name', 'site_email', 'site_phone', 'site_address',
             'currency', 'currency_symbol', 'tax_rate', 'shipping_charge',
@@ -30,14 +31,35 @@ class Settings extends Sk_Base {
             'jt_express_default_weight', 'jt_express_sender_name', 'jt_express_sender_phone',
             'jt_express_sender_address', 'jt_express_sender_city', 'jt_express_sender_state',
             'jt_express_sender_postcode',
-            'isms_username', 'isms_password', 'isms_sender_id', 'isms_message',
+            'isms_username', 'isms_password', 'isms_api_key', 'isms_sender_id', 'isms_message',
             'isms_country_code', 'isms_otp_interval', 'isms_test_otp', 'isms_test_phone',
         ];
+        $raw_fields = [
+            'isms_password', 'isms_api_key', 'smtp_pass', 'razorpay_key_secret',
+            'jt_express_private_key', 'jt_express_customer_password',
+        ];
+        $preserve_if_empty = $raw_fields;
 
         $data = [];
         foreach ($fields as $f) {
-            $val = $this->input->post($f, TRUE);
-            if ($val !== null) $data[$f] = $val;
+            $val = in_array($f, $raw_fields, true)
+                ? $this->input->post($f, FALSE)
+                : $this->input->post($f, TRUE);
+            if ($val === null) {
+                continue;
+            }
+            if (in_array($f, $preserve_if_empty, true) && trim((string) $val) === '') {
+                continue;
+            }
+            if ($f === 'isms_username') {
+                $data[$f] = sk_isms_clean_credential($val);
+                continue;
+            }
+            if ($f === 'isms_password' || $f === 'isms_api_key') {
+                $data[$f] = sk_isms_clean_credential($val, false);
+                continue;
+            }
+            $data[$f] = is_string($val) ? trim($val) : $val;
         }
         // Checkbox: absent when unchecked, present with value "1" when checked
         $data['newsletter_popup_enabled'] = $this->input->post('newsletter_popup_enabled') ? '1' : '0';
@@ -57,5 +79,101 @@ class Settings extends Sk_Base {
         $this->Sk_Admin_model->save_settings($data);
         $this->session->set_flashdata('success', 'Settings saved successfully.');
         redirect('admin/settings');
+    }
+
+    public function test_isms() {
+        $this->load->helper('sk_isms');
+        sk_isms_ensure_schema();
+
+        $settings = $this->Sk_Admin_model->get_settings();
+        $posted_user = sk_isms_clean_credential($this->input->post('isms_username', FALSE));
+        $posted_pass = sk_isms_clean_credential($this->input->post('isms_password', FALSE), false);
+        $posted_key  = sk_isms_clean_credential($this->input->post('isms_api_key', FALSE), false);
+
+        $save = [];
+        if ($posted_user !== '') {
+            $save['isms_username'] = $posted_user;
+            $settings['isms_username'] = $posted_user;
+        }
+        if ($posted_pass !== '') {
+            $save['isms_password'] = $posted_pass;
+            $settings['isms_password'] = $posted_pass;
+        }
+        if ($posted_key !== '') {
+            $save['isms_api_key'] = $posted_key;
+            $settings['isms_api_key'] = $posted_key;
+        }
+        if (!empty($save)) {
+            $this->Sk_Admin_model->save_settings($save);
+        }
+
+        $this->load->library('isms', $settings);
+        $diag = $this->isms->credential_diagnostics();
+        $result = $this->isms->check_balance(false);
+
+        if ($result['success']) {
+            $this->session->set_flashdata('success', 'iSMS connection OK. ' . $result['message']);
+        } else {
+            $details = [];
+            if (!$diag['secret_saved']) {
+                $details[] = 'No password or API key saved — re-enter credentials and click Test again.';
+            }
+            if ($diag['looks_like_email']) {
+                $details[] = 'Username looks like an email. iSMS API needs your account username from the portal profile (e.g. 2Deal), not your email.';
+            }
+            if ($diag['secret_saved']) {
+                $details[] = 'Stored username: ' . sk_isms_mask_username($diag['username'])
+                    . ' (length ' . strlen($diag['username']) . '), password length: ' . $diag['password_len']
+                    . ', API key length: ' . $diag['api_key_len'] . '.';
+            }
+            $msg = 'iSMS test failed: ' . $result['message'];
+            if (!empty($details)) {
+                $msg .= ' ' . implode(' ', $details);
+            }
+            $this->session->set_flashdata('error', $msg);
+        }
+        redirect('admin/settings?tab=sms');
+    }
+
+    public function save_isms() {
+        $this->load->helper('sk_isms');
+        sk_isms_ensure_schema();
+
+        $username = sk_isms_clean_credential($this->input->post('isms_username', FALSE));
+        $password = sk_isms_clean_credential($this->input->post('isms_password', FALSE), false);
+        $api_key  = sk_isms_clean_credential($this->input->post('isms_api_key', FALSE), false);
+        if ($username === '') {
+            $this->session->set_flashdata('error', 'Enter iSMS username, then save credentials.');
+            redirect('admin/settings?tab=sms');
+        }
+        $existing = $this->Sk_Admin_model->get_settings();
+        $hasSecret = $password !== '' || $api_key !== ''
+            || trim($existing['isms_password'] ?? '') !== ''
+            || trim($existing['isms_api_key'] ?? '') !== '';
+        if (!$hasSecret) {
+            $this->session->set_flashdata('error', 'Enter either portal password or API key, then save credentials.');
+            redirect('admin/settings?tab=sms');
+        }
+
+        $data = [
+            'isms_username' => $username,
+            'isms_enabled'  => $this->input->post('isms_enabled') ? '1' : '0',
+        ];
+        if ($password !== '') {
+            $data['isms_password'] = $password;
+        }
+        if ($api_key !== '') {
+            $data['isms_api_key'] = $api_key;
+        }
+        foreach (['isms_sender_id', 'isms_message', 'isms_country_code', 'isms_otp_interval', 'isms_test_otp', 'isms_test_phone'] as $field) {
+            $val = $this->input->post($field, $field === 'isms_message' ? FALSE : TRUE);
+            if ($val !== null && $val !== '') {
+                $data[$field] = is_string($val) ? trim($val) : $val;
+            }
+        }
+
+        $this->Sk_Admin_model->save_settings($data);
+        $this->session->set_flashdata('success', 'iSMS credentials saved. Click "Test iSMS connection" to verify.');
+        redirect('admin/settings?tab=sms');
     }
 }

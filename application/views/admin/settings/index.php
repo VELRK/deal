@@ -311,9 +311,12 @@
         <div class="card-body">
           <div class="alert alert-info small">
             <i class="bi bi-phone me-1"></i>
-            Login OTP via <a href="https://www.isms.com.my/" target="_blank" rel="noopener">iSMS Malaysia JSON SMS API</a> (<code>isms_send_json.php</code>).
-            A new 6-digit OTP is generated on each request and sent in the SMS body. Register at <a href="https://www.isms.com.my/register.php" target="_blank" rel="noopener">isms.com.my</a>, buy SMS credits, then enter your portal username &amp; password below.
-            <br><span class="text-muted">When disabled or credentials are empty, test OTP mode is used (see Test OTP below). Or import <code>database/isms_otp.sql</code> in phpMyAdmin.</span>
+            Login OTP via <a href="https://www.isms.com.my/" target="_blank" rel="noopener">iSMS Malaysia</a>.
+            Use your portal <strong>Username</strong> (e.g. <code>2Deal</code> — not your email) plus either your
+            <strong>portal login password</strong> or the <strong>API Key</strong> from your iSMS account page (both are sent as <code>pwd</code> to iSMS).
+            If the portal lets you sign in with <em>email</em>, open your iSMS profile and copy the <strong>Username</strong> field for API use.
+            Buy SMS credits in the iSMS portal before sending OTPs.
+            <br><span class="text-muted">Test phone <code>0180000000</code> always uses OTP <code>1234</code> without sending SMS.</span>
           </div>
           <div class="row g-3">
             <div class="col-md-4">
@@ -336,12 +339,31 @@
             <div class="col-md-6">
               <label class="form-label">iSMS Username</label>
               <input type="text" name="isms_username" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['isms_username'] ?? '') ?>" autocomplete="off">
+                     value="<?= htmlspecialchars($settings['isms_username'] ?? '') ?>" autocomplete="off"
+                     placeholder="Portal username (not email)">
+              <?php if (!empty($settings['isms_username'])): ?>
+                <div class="form-text">Saved: <?= htmlspecialchars(sk_isms_mask_username($settings['isms_username'])) ?> (<?= strlen($settings['isms_username']) ?> chars)</div>
+              <?php endif; ?>
             </div>
             <div class="col-md-6">
-              <label class="form-label">iSMS Password</label>
+              <label class="form-label">iSMS Password <span class="text-muted">(portal login)</span></label>
               <input type="password" name="isms_password" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['isms_password'] ?? '') ?>" autocomplete="new-password">
+                     value="" placeholder="<?= !empty($settings['isms_password']) ? 'Saved — enter only to change' : 'Portal login password' ?>"
+                     autocomplete="new-password">
+              <?php if (!empty($settings['isms_password'])): ?>
+                <div class="form-text text-success">Portal password saved. Leave blank when saving other settings.</div>
+              <?php endif; ?>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">iSMS API Key</label>
+              <input type="password" name="isms_api_key" class="form-control font-monospace"
+                     value="" placeholder="<?= !empty($settings['isms_api_key']) ? 'Saved — enter only to change' : 'API Key from iSMS account page' ?>"
+                     autocomplete="new-password">
+              <?php if (!empty($settings['isms_api_key'])): ?>
+                <div class="form-text text-success">API key saved. Used as <code>pwd</code> if portal password is empty or fails.</div>
+              <?php else: ?>
+                <div class="form-text">From iSMS account → API Key. Either password or API key is required.</div>
+              <?php endif; ?>
             </div>
             <div class="col-md-6">
               <label class="form-label">Sender ID <span class="text-muted">(optional)</span></label>
@@ -373,6 +395,15 @@
               <input type="text" name="isms_test_phone" class="form-control font-monospace"
                      value="<?= htmlspecialchars($settings['isms_test_phone'] ?? '601800000000') ?>" placeholder="601800000000">
               <div class="form-text">Always uses test OTP above — no SMS sent for this number.</div>
+            </div>
+            <div class="col-12">
+              <button type="submit" formaction="<?= site_url('admin/settings/save_isms') ?>" formmethod="post" class="btn btn-warning btn-sm">
+                <i class="bi bi-shield-lock me-1"></i>Save iSMS credentials
+              </button>
+              <button type="submit" formaction="<?= site_url('admin/settings/test_isms') ?>" formmethod="post" class="btn btn-outline-primary btn-sm ms-2">
+                <i class="bi bi-plug me-1"></i>Test iSMS connection
+              </button>
+              <span class="text-muted small ms-2">Save credentials first, then test balance (~4,921 credits expected).</span>
             </div>
           </div>
         </div>
@@ -435,3 +466,15 @@
   </div>
 
 </form>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (!tab) return;
+  var btn = document.querySelector('[data-bs-target="#tab-' + tab + '"]');
+  if (btn && window.bootstrap) {
+    bootstrap.Tab.getOrCreateInstance(btn).show();
+  }
+})();
+</script>

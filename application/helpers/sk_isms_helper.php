@@ -38,6 +38,7 @@ function sk_isms_ensure_schema() {
         'isms_enabled'       => '0',
         'isms_username'      => '',
         'isms_password'      => '',
+        'isms_api_key'       => '',
         'isms_sender_id'     => '',
         'isms_message'       => 'Your OTP is %OTP%. Valid for 5 minutes.',
         'isms_country_code'  => '60',
@@ -108,10 +109,66 @@ function sk_isms_is_test_phone(array $settings, $normalized_phone) {
     return $testNorm !== '' && $testNorm === $normalized_phone;
 }
 
+/**
+ * TEMP: hardcoded iSMS sub-account on production until admin settings are verified.
+ * Remove sk_isms_production_override() once OTP works via Admin → Settings.
+ */
+function sk_isms_production_override() {
+    if (!defined('ENVIRONMENT') || ENVIRONMENT !== 'production') {
+        return null;
+    }
+    return [
+        'isms_enabled'  => '1',
+        'isms_username' => '2DEAL',
+        'isms_password' => 'jsnWzFuDHZir',
+        'isms_api_key'  => '',
+    ];
+}
+
+function sk_isms_effective_settings(array $settings) {
+    $override = sk_isms_production_override();
+    return $override ? array_merge($settings, $override) : $settings;
+}
+
 function sk_isms_is_configured(array $settings) {
+    $settings = sk_isms_effective_settings($settings);
+    $hasSecret = trim($settings['isms_password'] ?? '') !== ''
+        || trim($settings['isms_api_key'] ?? '') !== '';
     return !empty($settings['isms_enabled']) && $settings['isms_enabled'] !== '0'
         && trim($settings['isms_username'] ?? '') !== ''
-        && trim($settings['isms_password'] ?? '') !== '';
+        && $hasSecret;
+}
+
+/** @return string[] Unique non-empty API pwd values to try (portal password, then API key). */
+function sk_isms_auth_secrets(array $settings) {
+    $secrets = [];
+    foreach (['isms_password', 'isms_api_key'] as $field) {
+        $value = sk_isms_clean_credential($settings[$field] ?? '', false);
+        if ($value !== '' && !in_array($value, $secrets, true)) {
+            $secrets[] = $value;
+        }
+    }
+    return $secrets;
+}
+
+/** Normalize stored/API credentials (fix legacy HTML entity encoding). */
+function sk_isms_clean_credential($value, $trim = true) {
+    $value = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $value = str_replace("\0", '', $value);
+    return $trim ? trim($value) : $value;
+}
+
+/** Mask username for admin diagnostics (show first/last chars only). */
+function sk_isms_mask_username($username) {
+    $username = (string) $username;
+    $len = strlen($username);
+    if ($len <= 2) {
+        return str_repeat('*', $len);
+    }
+    if ($len <= 6) {
+        return substr($username, 0, 1) . str_repeat('*', max(1, $len - 2)) . substr($username, -1);
+    }
+    return substr($username, 0, 3) . str_repeat('*', $len - 5) . substr($username, -2);
 }
 
 function sk_isms_save_session($phone, $sms_id, $otp_hash, $interval_minutes = 5) {

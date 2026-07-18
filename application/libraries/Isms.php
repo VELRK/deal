@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * iSMS Malaysia JSON SMS API — https://www.isms.com.my/isms_send_json.php
+ * iSMS Malaysia SMS API — https://www.isms.com.my/sms_api.php
  * OTP is generated locally on each request and sent in the SMS body.
  */
 class Isms {
@@ -11,18 +11,23 @@ class Isms {
     protected $enabled = false;
     protected $username = '';
     protected $password = '';
+    protected $api_key = '';
     protected $sender_id = '';
     protected $message_template = '';
     protected $country_code = '60';
     protected $otp_interval = 5;
     protected $test_otp = '1234';
 
-    const SEND_URL    = 'https://www.isms.com.my/isms_send_json.php';
-    const BALANCE_URL = 'https://www.isms.com.my/isms_balance_json.php';
-    const OTP_LENGTH  = 4;
+    const SEND_URL        = 'https://www.isms.com.my/isms_send_all_id.php';
+    const BALANCE_URL     = 'https://www.isms.com.my/isms_balance.php';
+    const BALANCE_URL_JSON = 'https://www.isms.com.my/isms_balance_json.php';
+    const TWO_FA_URL      = 'https://www.isms.com.my/2FA/request.php';
+    const SEND_URL_JSON   = 'https://www.isms.com.my/isms_send_json.php';
+    const OTP_LENGTH    = 4;
 
     public function __construct($settings = null) {
         $this->CI =& get_instance();
+        $this->CI->load->helper('sk_isms');
         if ($settings === null) {
             $this->CI->load->model('Sk_Admin_model');
             $settings = $this->CI->Sk_Admin_model->get_settings();
@@ -31,13 +36,15 @@ class Isms {
     }
 
     public function is_enabled() {
-        return $this->enabled && $this->username !== '' && $this->password !== '';
+        return $this->enabled && $this->username !== '' && !empty($this->auth_secrets());
     }
 
     public function load_from_settings(array $settings) {
+        $settings = sk_isms_effective_settings($settings);
         $this->enabled = !empty($settings['isms_enabled']) && $settings['isms_enabled'] !== '0';
-        $this->username = trim($settings['isms_username'] ?? '');
-        $this->password = trim($settings['isms_password'] ?? '');
+        $this->username = sk_isms_clean_credential($settings['isms_username'] ?? '');
+        $this->password = sk_isms_clean_credential($settings['isms_password'] ?? '', false);
+        $this->api_key = sk_isms_clean_credential($settings['isms_api_key'] ?? '', false);
         $this->sender_id = trim($settings['isms_sender_id'] ?? '');
         $this->message_template = trim($settings['isms_message'] ?? '')
             ?: 'Your OTP is %OTP%. Valid for 5 minutes.';
@@ -122,91 +129,136 @@ class Isms {
      * @return array{success:bool,message:string,otp?:string,sms_id?:string,mobile?:string}
      */
     public function request_otp($phone) {
+        $secrets = $this->auth_secrets();
+        if ($this->username === '' || empty($secrets)) {
+            return ['success' => false, 'message' => 'iSMS username and password/API key are not configured.'];
+        }
+
         $parsed = $this->parse_phone($phone);
         if (!$parsed) {
             return ['success' => false, 'message' => 'Invalid Malaysia mobile number. Use format 01XXXXXXXX or 601XXXXXXXX.'];
         }
 
         $otp = $this->generate_otp();
-        $payload = [
+        $baseParams = [
             'un'         => $this->username,
-            'pwd'        => $this->password,
+            'dstno'      => $parsed['normalized'],
+            'msg'        => $this->build_otp_message($otp),
             'type'       => '1',
             'agreedterm' => 'YES',
-            'messages'   => [[
-                'dstno' => $parsed['normalized'],
-                'msg'   => $this->build_otp_message($otp),
-            ]],
         ];
         if ($this->sender_id !== '') {
-            $payload['sendid'] = $this->sender_id;
+            $baseParams['sendid'] = $this->sender_id;
         }
 
-        $response = $this->_post_json(self::SEND_URL, $payload);
-        if (!$response['ok']) {
-            return ['success' => false, 'message' => $response['error']];
+        $lastMessage = 'iSMS authentication failed.';
+        foreach ($secrets as $secret) {
+            $params = $baseParams;
+            $params['pwd'] = $secret;
+
+            $response = $this->_post_form(self::SEND_URL, $params);
+            if (!$response['ok']) {
+                $lastMessage = $response['error'];
+                continue;
+            }
+
+            $parsedResponse = $this->_parse_response_body($response['body'], 'bulk');
+            if ($parsedResponse['success']) {
+                return [
+                    'success' => true,
+                    'message' => 'OTP sent to +' . $parsed['normalized'] . '.',
+                    'otp'     => $otp,
+                    'sms_id'  => (string) ($parsedResponse['sms_id'] ?? ''),
+                    'mobile'  => $parsed['normalized'],
+                ];
+            }
+            $lastMessage = $parsedResponse['message'];
+            if ((int) ($parsedResponse['code'] ?? 0) !== -1001) {
+                return ['success' => false, 'message' => $lastMessage];
+            }
         }
 
-        $data = $response['data'];
-        $status = strtolower(trim($data['status'] ?? ''));
-        if ($status !== 'success' && $status !== 'partial') {
-            return [
-                'success' => false,
-                'message' => $this->_format_api_message($data),
-            ];
-        }
-
-        $result = $data['results'][0] ?? null;
-        if (!$result) {
-            return ['success' => false, 'message' => 'Unexpected response from iSMS.'];
-        }
-
-        $code = (int) ($result['code'] ?? 0);
-        if ($code !== 2000) {
-            return [
-                'success' => false,
-                'message' => $this->_format_api_message($result, $code),
-            ];
-        }
-
-        return [
-            'success' => true,
-            'message' => 'OTP sent to +' . $parsed['normalized'] . '.',
-            'otp'     => $otp,
-            'sms_id'  => (string) ($result['sms_id'] ?? ''),
-            'mobile'  => $parsed['normalized'],
-        ];
+        return ['success' => false, 'message' => $lastMessage];
     }
 
     /**
+     * @param bool $require_enabled When false, tests credentials even if iSMS toggle is off.
      * @return array{success:bool,message:string,balance?:string}
      */
-    public function check_balance() {
-        if (!$this->is_enabled()) {
+    public function check_balance($require_enabled = true) {
+        if ($require_enabled && !$this->is_enabled()) {
             return ['success' => false, 'message' => 'iSMS is not configured.'];
         }
-
-        $response = $this->_post_json(self::BALANCE_URL, [
-            'un'  => $this->username,
-            'pwd' => $this->password,
-        ]);
-        if (!$response['ok']) {
-            return ['success' => false, 'message' => $response['error']];
+        $secrets = $this->auth_secrets();
+        if ($this->username === '' || empty($secrets)) {
+            return ['success' => false, 'message' => 'iSMS username and password/API key are required.'];
         }
 
-        $data = $response['data'];
-        $status = strtolower(trim($data['status'] ?? ''));
-        if ($status !== 'success') {
-            return [
-                'success' => false,
-                'message' => $this->_format_api_message($data, (int) ($data['code'] ?? 0)),
+        $lastMessage = 'iSMS authentication failed.';
+        foreach ($secrets as $secret) {
+            $attempts = [
+                ['url' => self::BALANCE_URL, 'params' => [
+                    'un'  => $this->username,
+                    'pwd' => $secret,
+                ], 'mode' => 'bulk'],
+                ['url' => self::BALANCE_URL_JSON, 'params' => [
+                    'un'  => $this->username,
+                    'pwd' => $secret,
+                ], 'mode' => 'json'],
+                ['url' => self::TWO_FA_URL, 'params' => [
+                    'un'     => $this->username,
+                    'pass'   => $secret,
+                    'method' => 'balance',
+                ], 'mode' => '2fa'],
             ];
+
+            foreach ($attempts as $attempt) {
+                $response = $attempt['mode'] === 'json'
+                    ? $this->_post_json($attempt['url'], $attempt['params'])
+                    : $this->_post_form($attempt['url'], $attempt['params']);
+                if (!$response['ok']) {
+                    $lastMessage = $response['error'];
+                    continue;
+                }
+
+                $parsedResponse = $this->_parse_response_body($response['body'], $attempt['mode']);
+                if ($parsedResponse['success']) {
+                    $balance = (string) ($parsedResponse['balance'] ?? '');
+                    if ($balance === '' && !empty($parsedResponse['message'])) {
+                        return ['success' => true, 'message' => $parsedResponse['message'], 'balance' => ''];
+                    }
+                    return [
+                        'success' => true,
+                        'message' => 'Connected. Balance: RM ' . $balance,
+                        'balance' => $balance,
+                    ];
+                }
+                $lastMessage = $parsedResponse['message'];
+                if ((int) ($parsedResponse['code'] ?? 0) !== -1001) {
+                    break 2;
+                }
+            }
         }
 
+        return ['success' => false, 'message' => $lastMessage, 'code' => -1001];
+    }
+
+    /** @return string[] */
+    protected function auth_secrets() {
+        return sk_isms_auth_secrets([
+            'isms_password' => $this->password,
+            'isms_api_key'  => $this->api_key,
+        ]);
+    }
+
+    /** @return array{username:string,password_len:int,api_key_len:int,secret_saved:bool,looks_like_email:bool} */
+    public function credential_diagnostics() {
         return [
-            'success' => true,
-            'message' => 'Balance: RM ' . ($data['balance'] ?? '?'),
-            'balance' => (string) ($data['balance'] ?? ''),
+            'username'         => $this->username,
+            'password_len'     => strlen($this->password),
+            'api_key_len'      => strlen($this->api_key),
+            'secret_saved'     => !empty($this->auth_secrets()),
+            'looks_like_email' => strpos($this->username, '@') !== false,
         ];
     }
 
@@ -236,10 +288,10 @@ class Isms {
 
     protected function _map_error_code($code) {
         $map = [
-            -1001 => 'iSMS authentication failed. Check username and password.',
+            -1001 => 'iSMS authentication failed. Use portal username (e.g. 2Deal, not email) with your portal login password or API key as pwd. If login works on isms.com.my but API fails, contact iSMS to enable API access or whitelist your server IP.',
             -1002 => 'iSMS account suspended or expired.',
-            -1003 => 'Server IP not allowed in iSMS. Whitelist your server IP.',
-            -1004 => 'Insufficient iSMS credits.',
+            -1003 => 'Server IP not allowed by iSMS. Whitelist your website server IP in the iSMS portal or contact iSMS support.',
+            -1004 => 'Insufficient iSMS credits. Reload credits at isms.com.my.',
             -1006 => 'SMS message is empty or too long.',
             -1008 => 'Missing iSMS parameter.',
             -1009 => 'Invalid destination mobile number.',
@@ -249,17 +301,127 @@ class Isms {
     }
 
     /**
-     * @return array{ok:bool,data?:array,error?:string}
+     * Parse iSMS plain-text ("2000 = SUCCESS:123") or JSON responses.
+     *
+     * @return array{success:bool,message:string,code?:int,sms_id?:string,balance?:string}
      */
-    protected function _post_json($url, array $payload) {
+    protected function _parse_response_body($body, $mode = 'bulk') {
+        $body = trim((string) $body);
+        if ($body === '') {
+            return ['success' => false, 'message' => 'Empty response from iSMS.'];
+        }
+
+        $json = json_decode($body, true);
+        if (is_array($json)) {
+            if ($mode === 'json') {
+                $code = (int) ($json['code'] ?? 0);
+                if (($json['status'] ?? '') === 'success' || $code === 2000) {
+                    $balance = trim((string) ($json['balance'] ?? $json['message'] ?? ''));
+                    if ($balance !== '' && preg_match('/^-?\d+(\.\d+)?$/', $balance)) {
+                        return [
+                            'success' => true,
+                            'code'    => 2000,
+                            'message' => 'Balance: RM ' . $balance,
+                            'balance' => $balance,
+                        ];
+                    }
+                }
+                if ($code < 0) {
+                    return ['success' => false, 'code' => $code, 'message' => $this->_map_error_code($code)];
+                }
+            }
+            return $this->_parse_json_response($json, $mode);
+        }
+
+        if (preg_match('/^(-?\d+)\s*=\s*(.+)$/', $body, $m)) {
+            $code = (int) $m[1];
+            $rest = trim($m[2]);
+            if ($code === 2000) {
+                $sms_id = '';
+                if (stripos($rest, 'SUCCESS') !== false && strpos($rest, ':') !== false) {
+                    $sms_id = trim(substr($rest, strrpos($rest, ':') + 1));
+                }
+                return [
+                    'success' => true,
+                    'code'    => 2000,
+                    'message' => 'Message sent.',
+                    'sms_id'  => $sms_id,
+                ];
+            }
+            return [
+                'success' => false,
+                'code'    => $code,
+                'message' => $this->_map_error_code($code),
+            ];
+        }
+
+        if (preg_match('/^-?\d+$/', $body)) {
+            $code = (int) $body;
+            if ($code < 0) {
+                return ['success' => false, 'code' => $code, 'message' => $this->_map_error_code($code)];
+            }
+            return ['success' => true, 'code' => 2000, 'message' => 'Balance: RM ' . $body, 'balance' => $body];
+        }
+
+        if (preg_match('/^-?\d+(\.\d+)?$/', $body)) {
+            return ['success' => true, 'code' => 2000, 'message' => 'Balance: RM ' . $body, 'balance' => $body];
+        }
+
+        return ['success' => false, 'message' => $body];
+    }
+
+    protected function _parse_json_response(array $data, $mode = 'bulk') {
+        if ($mode === '2fa' && isset($data['method']) && $data['method'] === 'balance') {
+            $balance = trim((string) ($data['balance'] ?? ''));
+            $expiration = trim((string) ($data['expiration'] ?? ''));
+            if (preg_match('/^-1001\b/', $balance) || preg_match('/^-1001\b/', $expiration)) {
+                return ['success' => false, 'code' => -1001, 'message' => $this->_map_error_code(-1001)];
+            }
+            if ($balance !== '' && preg_match('/^-?\d+(\.\d+)?$/', $balance)) {
+                return [
+                    'success'    => true,
+                    'code'       => 2000,
+                    'message'    => 'Balance: RM ' . $balance,
+                    'balance'    => $balance,
+                    'expiration' => $expiration,
+                ];
+            }
+        }
+
+        $status = strtolower(trim($data['status'] ?? ''));
+        if ($status === 'success' || $status === 'partial') {
+            $result = $data['results'][0] ?? $data;
+            $code = (int) ($result['code'] ?? 2000);
+            if ($code === 2000) {
+                return [
+                    'success' => true,
+                    'code'    => 2000,
+                    'message' => 'Message sent.',
+                    'sms_id'  => (string) ($result['sms_id'] ?? ''),
+                    'balance' => isset($data['balance']) ? (string) $data['balance'] : '',
+                ];
+            }
+        }
+
+        $code = (int) ($data['code'] ?? ($data['results'][0]['code'] ?? 0));
+        return [
+            'success' => false,
+            'code'    => $code,
+            'message' => $this->_format_api_message($data, $code),
+        ];
+    }
+
+    /**
+     * @return array{ok:bool,body?:string,error?:string}
+     */
+    protected function _post_form($url, array $params) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_POST           => true,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_POSTFIELDS     => http_build_query($params),
         ]);
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
@@ -275,12 +437,36 @@ class Isms {
             return ['ok' => false, 'error' => 'iSMS returned an error (HTTP ' . $http . ').'];
         }
 
-        $data = json_decode((string) $body, true);
-        if (!is_array($data)) {
-            log_message('error', 'iSMS invalid JSON: ' . $body);
-            return ['ok' => false, 'error' => 'Unexpected response from iSMS.'];
+        return ['ok' => true, 'body' => (string) $body];
+    }
+
+    /**
+     * @return array{ok:bool,body?:string,error?:string}
+     */
+    protected function _post_json($url, array $params) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($params),
+        ]);
+        $body = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($errno) {
+            log_message('error', 'iSMS JSON cURL error: ' . $errno);
+            return ['ok' => false, 'error' => 'Unable to reach iSMS. Please try again later.'];
+        }
+        if ($http < 200 || $http >= 300) {
+            log_message('error', 'iSMS JSON HTTP ' . $http . ': ' . $body);
+            return ['ok' => false, 'error' => 'iSMS returned an error (HTTP ' . $http . ').'];
         }
 
-        return ['ok' => true, 'data' => $data];
+        return ['ok' => true, 'body' => (string) $body];
     }
 }
