@@ -36,6 +36,15 @@ RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
 RewriteRule ^shopkart/?$ admin/ [L]
 RewriteRule ^shopkart/(.+)$ admin/$1 [L]
 
+# Always fetch fresh SPA shell after deploys (hashed assets change each build)
+<Files "frontend/index.html">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </IfModule>
+</Files>
+
 # Serve static dirs directly (no CodeIgniter, no SPA fallback)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
 
