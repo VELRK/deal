@@ -19,6 +19,12 @@ class Sk_Payment extends Sk_Base_Api {
         if (!$order) return $this->error('Order not found.', 404);
         if ($order['payment_status'] === 'paid') return $this->error('Order already paid.');
 
+        $walletPaid = round((float)($order['wallet_amount'] ?? 0), 2);
+        $payAmount  = round(max(0, (float)$order['total'] - $walletPaid), 2);
+        if ($payAmount <= 0) {
+            return $this->error('Nothing left to pay online for this order.');
+        }
+
         $settings   = $this->get_settings();
         $key_id     = $settings['razorpay_key_id']     ?? config_item('razorpay_key_id');
         $key_secret = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
@@ -27,7 +33,7 @@ class Sk_Payment extends Sk_Base_Api {
             return $this->error('Payment gateway not configured.', 503);
         }
 
-        $amount_paise = (int)round($order['total'] * 100);
+        $amount_paise = (int)round($payAmount * 100);
         $currency = strtoupper($settings['currency_code'] ?? 'MYR');
         if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
             $currency = 'MYR';
@@ -70,7 +76,7 @@ class Sk_Payment extends Sk_Base_Api {
         $this->Sk_Order_model->save_payment([
             'order_id'          => $order_id,
             'razorpay_order_id' => $rzp['id'],
-            'amount'            => $order['total'],
+            'amount'            => $payAmount,
             'currency'          => $currency,
             'status'            => 'created',
         ]);
@@ -104,6 +110,9 @@ class Sk_Payment extends Sk_Base_Api {
         $this->success([
             'razorpay_order_id' => $rzp['id'],
             'amount'            => $amount_paise,
+            'pay_amount'        => $payAmount,
+            'wallet_amount'     => $walletPaid,
+            'order_total'       => (float)$order['total'],
             'currency'          => $currency,
             'key_id'            => $key_id,
             'order_number'      => $order['order_number'],

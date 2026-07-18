@@ -134,6 +134,48 @@ class Sk_Customer_wallet_model extends CI_Model {
         return $this->db->trans_status();
     }
 
+    /** Credit wallet back when a pending split-payment order is cancelled. */
+    public function refund_order_payment(int $userId, int $orderId, float $amount): bool {
+        if ($amount <= 0) {
+            return true;
+        }
+
+        $refundRef = 'ORD-' . $orderId . '-REFUND';
+        $already = $this->db->where('user_id', $userId)
+            ->where('reference', $refundRef)
+            ->count_all_results('customer_wallet_transactions');
+        if ($already > 0) {
+            return true;
+        }
+
+        $wallet = $this->get_wallet($userId);
+        if (!$wallet) {
+            return false;
+        }
+
+        $newBal = round((float)$wallet['balance'] + $amount, 2);
+
+        $this->db->trans_start();
+        $this->db->where('user_id', $userId)->update('customer_wallets', [
+            'balance'    => $newBal,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        $this->db->insert('customer_wallet_transactions', [
+            'wallet_id'     => $wallet['id'],
+            'user_id'       => $userId,
+            'type'          => 'credit',
+            'amount'        => $amount,
+            'balance_after' => $newBal,
+            'source'        => 'refund',
+            'reference'     => $refundRef,
+            'description'   => 'Wallet refund for cancelled order #' . $orderId,
+            'created_at'    => date('Y-m-d H:i:s'),
+        ]);
+        $this->db->trans_complete();
+
+        return $this->db->trans_status();
+    }
+
     /** 500 points = 100 RM → 5 points per RM */
     public function points_per_rm(): float {
         $row = $this->db->where('key', 'wallet_points_per_rm')->get('settings')->row_array();

@@ -82,6 +82,10 @@ class Affiliates extends Sk_Base {
             $this->session->set_flashdata('error', 'Name, email and phone are required.');
             redirect('admin/affiliates/add');
         }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->session->set_flashdata('error', 'Please enter a valid email address.');
+            redirect('admin/affiliates/add');
+        }
         if ($this->Sk_Affiliate_model->get_by_email($email)) {
             $this->session->set_flashdata('error', 'Email already registered.');
             redirect('admin/affiliates/add');
@@ -125,10 +129,31 @@ class Affiliates extends Sk_Base {
         if ($sent) {
             $msg .= ' Verification link emailed — they must set a password before login.';
         } else {
-            $setUrl = site_url('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($email));
-            $msg .= ' Email not sent (check SMTP). Share this link: ' . $setUrl;
+            $setUrl = $this->Sk_Affiliate_model->invite_set_password_url($aff, $token);
+            $msg .= ' Email not sent — check SMTP in Admin → Settings. Share this link: ' . $setUrl;
         }
         $this->session->set_flashdata('success', $msg);
+        redirect('admin/affiliates/view/' . $id);
+    }
+
+    public function resend_email($id) {
+        $id = (int)$id;
+        $aff = $this->Sk_Affiliate_model->get_by_id($id);
+        $this->assert_affiliate_access($aff);
+
+        $result = $this->Sk_Affiliate_model->resend_notification_email($id);
+        $this->activity_log->log_admin('affiliates', 'resend_email', $id);
+
+        if ($result['sent']) {
+            $this->session->set_flashdata('success', $result['message']);
+        } else {
+            $flash = $result['message'];
+            if (($result['type'] ?? '') === 'invite' && !empty($result['token']) && $aff) {
+                $flash .= ' Manual link: ' . $this->Sk_Affiliate_model->invite_set_password_url($aff, $result['token']);
+            }
+            $this->session->set_flashdata('error', $flash);
+        }
+
         redirect('admin/affiliates/view/' . $id);
     }
 
@@ -209,15 +234,24 @@ class Affiliates extends Sk_Base {
             'approved_by' => $this->admin['id'],
         ]);
         $aff = $this->Sk_Affiliate_model->get_by_id((int)$id);
-        $sent = $aff ? $this->Sk_Affiliate_model->send_approved_email($aff) : false;
         $this->activity_log->log_admin('affiliates', 'approve', (int)$id);
         $msg = 'Affiliate approved.';
-        if ($sent) {
-            $msg .= ' Approval email sent.';
-        } elseif (ENVIRONMENT !== 'production') {
-            $msg .= ' (SMTP not configured — no email sent.)';
-        } else {
-            $msg .= ' Could not send approval email — check SMTP settings.';
+        if ($aff && !empty($aff['must_set_password'])) {
+            $token = $this->Sk_Affiliate_model->create_invite_token((int)$id);
+            $aff = $this->Sk_Affiliate_model->get_by_id((int)$id);
+            $sent = $this->Sk_Affiliate_model->send_invite_email($aff, $token);
+            if ($sent) {
+                $msg .= ' Password setup link emailed.';
+            } else {
+                $msg .= ' Could not send invite email — use Resend Email on the profile or check SMTP settings.';
+            }
+        } elseif ($aff) {
+            $sent = $this->Sk_Affiliate_model->send_approved_email($aff);
+            if ($sent) {
+                $msg .= ' Approval email sent.';
+            } else {
+                $msg .= ' Could not send approval email — check SMTP settings.';
+            }
         }
         $this->session->set_flashdata('success', $msg);
         redirect('admin/affiliates/view/' . $id);

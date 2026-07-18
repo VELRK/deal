@@ -257,12 +257,16 @@ class Sk_Affiliate_model extends CI_Model {
         $this->load->model('Sk_Admin_model');
         $this->load->helper('sk_mailer');
         $settings = $this->Sk_Admin_model->get_settings();
-        $link = site_url('admin/affiliate/set-password?token=' . urlencode($token) . '&email=' . urlencode($affiliate['email']));
-        return sk_mail_affiliate_invite(
+        $link = $this->invite_set_password_url($affiliate, $token);
+        $sent = sk_mail_affiliate_invite(
             ['email' => $affiliate['email'], 'name' => $affiliate['name'], 'promo_code' => $affiliate['promo_code'] ?? ''],
             $link,
             $settings
         );
+        if (!$sent) {
+            log_message('error', 'Affiliate invite email failed for ' . ($affiliate['email'] ?? ''));
+        }
+        return $sent;
     }
 
     public function send_registration_emails(array $affiliate): bool {
@@ -286,6 +290,77 @@ class Sk_Affiliate_model extends CI_Model {
             log_message('error', 'Affiliate approval email failed for ' . ($affiliate['email'] ?? ''));
         }
         return $sent;
+    }
+
+    /**
+     * Resend the appropriate affiliate email (invite, registration, or approval).
+     *
+     * @return array{sent: bool, type: string, token?: string, message: string}
+     */
+    public function resend_notification_email(int $id): array {
+        $aff = $this->get_by_id($id);
+        if (!$aff) {
+            return ['sent' => false, 'type' => 'none', 'message' => 'Affiliate not found.'];
+        }
+
+        $this->ensure_invite_schema();
+        $email = $aff['email'] ?? '';
+
+        if (!empty($aff['must_set_password'])) {
+            $token = $this->create_invite_token($id);
+            $aff = $this->get_by_id($id);
+            $sent = $this->send_invite_email($aff, $token);
+            if (!$sent) {
+                log_message('error', 'Affiliate invite resend failed for ' . $email);
+            }
+            return [
+                'sent'    => $sent,
+                'type'    => 'invite',
+                'token'   => $token,
+                'message' => $sent
+                    ? 'Password setup link emailed to ' . $email . '.'
+                    : 'Could not send invite email — check SMTP settings in Admin → Settings.',
+            ];
+        }
+
+        if (($aff['status'] ?? '') === 'pending') {
+            $sent = $this->send_registration_emails($aff);
+            return [
+                'sent'    => $sent,
+                'type'    => 'registration',
+                'message' => $sent
+                    ? 'Registration confirmation emailed to ' . $email . '.'
+                    : 'Could not send registration email — check SMTP settings in Admin → Settings.',
+            ];
+        }
+
+        if (($aff['status'] ?? '') === 'approved') {
+            $sent = $this->send_approved_email($aff);
+            return [
+                'sent'    => $sent,
+                'type'    => 'approved',
+                'message' => $sent
+                    ? 'Approval email sent to ' . $email . '.'
+                    : 'Could not send approval email — check SMTP settings in Admin → Settings.',
+            ];
+        }
+
+        return [
+            'sent'    => false,
+            'type'    => 'none',
+            'message' => 'No notification email applies for status "' . ($aff['status'] ?? '') . '".',
+        ];
+    }
+
+    public function invite_set_password_url(array $affiliate, ?string $token = null): string {
+        $token = $token ?: ($affiliate['invite_token'] ?? '');
+        if (!$token) {
+            return '';
+        }
+        return site_url(
+            'admin/affiliate/set-password?token=' . urlencode($token)
+            . '&email=' . urlencode($affiliate['email'] ?? '')
+        );
     }
 
     public function status_counts(?int $vendorId = null): array {

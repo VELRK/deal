@@ -1,6 +1,22 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/** Human-readable payment method for invoices and emails. */
+function sk_invoice_payment_method_label(array $order): string {
+    $method = strtolower(trim($order['payment_method'] ?? 'cod'));
+    $wallet = round((float)($order['wallet_amount'] ?? 0), 2);
+    $total  = round((float)($order['total'] ?? 0), 2);
+
+    if ($wallet > 0 && $method === 'razorpay' && $wallet < $total) {
+        return 'WALLET + RAZORPAY';
+    }
+    if ($wallet > 0 && ($method === 'wallet' || $wallet >= $total)) {
+        return 'WALLET';
+    }
+
+    return strtoupper($method ?: 'COD');
+}
+
 /**
  * Build structured invoice data from an order row (+ items).
  */
@@ -95,7 +111,8 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'taxable_amount' => $taxable,
         'gst'            => $gst,
         'total'          => $total,
-        'payment_method' => strtoupper($order['payment_method'] ?? 'COD'),
+        'payment_method' => sk_invoice_payment_method_label($order),
+        'wallet_amount'  => (float)($order['wallet_amount'] ?? 0),
         'payment_status' => ucfirst($order['payment_status'] ?? 'pending'),
         'order_status'   => ucfirst($order['status'] ?? 'pending'),
         'notes'          => $order['notes'] ?? '',
@@ -247,6 +264,16 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
     ]));
     $buyerAddrHtml = implode('<br>', $buyerAddr);
 
+    $walletPayHtml = '';
+    $walletPaid = (float)($invoice['wallet_amount'] ?? 0);
+    if ($walletPaid > 0) {
+        $walletPayHtml = "<div><strong>Wallet:</strong> {$cur}" . number_format($walletPaid, 2) . '</div>';
+        $onlinePaid = max(0, (float)$invoice['total'] - $walletPaid);
+        if ($onlinePaid > 0.009) {
+            $walletPayHtml .= "<div><strong>Online:</strong> {$cur}" . number_format($onlinePaid, 2) . '</div>';
+        }
+    }
+
     $printBtns = $forEmail ? '' : "
     <div class='no-print' style='text-align:center;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;'>
       <button onclick='window.print()' style='background:#f59e0b;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:600;'>Print / Save PDF</button>
@@ -288,6 +315,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
         <div style='font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:8px;font-weight:700;'>Payment Details</div>
         <div style='line-height:1.8;font-size:13px;'>
           <div><strong>Method:</strong> " . htmlspecialchars($invoice['payment_method']) . "</div>
+          {$walletPayHtml}
           <div><strong>Status:</strong> " . htmlspecialchars($invoice['payment_status']) . "</div>
           <div><strong>Order Status:</strong> " . htmlspecialchars($invoice['order_status']) . "</div>
           <div><strong>Date:</strong> " . htmlspecialchars($invoice['order_date']) . "</div>

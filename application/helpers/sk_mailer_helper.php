@@ -36,12 +36,13 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body) {
     $from_email = $settings['site_email'] ?? $smtp_user;
     $from_name  = $settings['smtp_from_name'] ?? ($settings['site_name'] ?? 'ShopKart');
 
-    if (!$smtp_host || !$smtp_user || !$smtp_pass) {
+    if (!$smtp_host || !$smtp_user || !$smtp_pass || !filter_var($from_email, FILTER_VALIDATE_EMAIL)) {
         // SMTP not configured — log and bail
         log_message('info', "sk_mailer: SMTP not configured, skipping email to {$to_email}");
         return false;
     }
 
+    $CI->email->clear(true);
     $CI->email->initialize([
         'useragent'  => 'ShopKart Mailer',
         'protocol'   => 'smtp',

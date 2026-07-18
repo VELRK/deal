@@ -309,6 +309,7 @@ $route['shopkart/affiliates/view/(:num)'] = 'admin/Affiliates/view/$1';
 $route['shopkart/affiliates/edit/(:num)'] = 'admin/Affiliates/edit/$1';
 $route['shopkart/affiliates/update/(:num)'] = 'admin/Affiliates/update/$1';
 $route['shopkart/affiliates/approve/(:num)'] = 'admin/Affiliates/approve/$1';
+$route['shopkart/affiliates/resend_email/(:num)'] = 'admin/Affiliates/resend_email/$1';
 $route['shopkart/affiliates/reject/(:num)'] = 'admin/Affiliates/reject/$1';
 $route['shopkart/affiliates/verify_kyc/(:num)'] = 'admin/Affiliates/verify_kyc/$1';
 $route['shopkart/affiliates/check_promo'] = 'admin/Affiliates/check_promo';

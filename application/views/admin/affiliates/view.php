@@ -15,6 +15,9 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
     <a href="<?= site_url('admin/affiliates/approve/'.$a['id']) ?>" class="btn btn-success btn-sm">Approve</a>
     <a href="<?= site_url('admin/affiliates/reject/'.$a['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Reject affiliate?')">Reject</a>
     <?php endif; ?>
+    <?php if (!empty($a['must_set_password']) || in_array($a['status'], ['pending', 'approved'], true)): ?>
+    <a href="<?= site_url('admin/affiliates/resend_email/'.$a['id']) ?>" class="btn btn-outline-primary btn-sm" title="Resend invite, registration, or approval email">Resend Email</a>
+    <?php endif; ?>
     <?php if ($a['kyc_status']!=='verified'): ?>
     <a href="<?= site_url('admin/affiliates/verify_kyc/'.$a['id']) ?>" class="btn btn-outline-success btn-sm">Verify KYC</a>
     <?php endif; ?>
@@ -23,6 +26,26 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
     <a href="<?= site_url('admin/affiliates') ?>" class="btn btn-outline-dark btn-sm">Back</a>
   </div>
 </div>
+
+<?php if (!empty($a['must_set_password'])): ?>
+<?php
+  $inviteUrl = site_url('admin/affiliate/set-password?token=' . urlencode($a['invite_token'] ?? '') . '&email=' . urlencode($a['email']));
+  $inviteExpired = empty($a['invite_expires']) || strtotime($a['invite_expires']) < time();
+?>
+<div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <strong>Password not set.</strong> Affiliate must use the email link before they can log in.
+    <?php if ($inviteExpired): ?>
+    <span class="d-block small mt-1">Invite link expired — click <strong>Resend Email</strong> to generate a new one.</span>
+    <?php elseif (!empty($a['invite_expires'])): ?>
+    <span class="d-block small mt-1">Link valid until <?= date('d M Y, h:i A', strtotime($a['invite_expires'])) ?>.</span>
+    <?php endif; ?>
+  </div>
+  <?php if (!empty($a['invite_token']) && !$inviteExpired): ?>
+  <button type="button" class="btn btn-sm btn-outline-dark" data-copy-url="<?= htmlspecialchars($inviteUrl, ENT_QUOTES) ?>" onclick="navigator.clipboard.writeText(this.dataset.copyUrl); this.textContent='Copied!';">Copy set-password link</button>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <div class="row g-3 mb-4">
   <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Checkout Orders</div><div class="fs-4 fw-bold"><?= number_format($s['checkout_orders'] ?? $s['total_sales']) ?></div></div></div>

@@ -110,13 +110,20 @@ class Sk_Order extends Sk_Base_Api {
         }
 
         $payment_method = $data['payment_method'] ?? 'razorpay';
+        $use_wallet     = !empty($data['use_wallet']);
         $wallet_discount = 0;
+        $wallet_amount   = 0.0;
 
-        if ($payment_method === 'wallet') {
-            $this->load->model('Sk_Customer_wallet_model');
-            if (!$this->Sk_Customer_wallet_model->is_enabled()) {
-                return $this->error('Wallet payments are not enabled.');
-            }
+        $this->load->model('Sk_Customer_wallet_model');
+        $wallet_enabled = $this->Sk_Customer_wallet_model->is_enabled();
+        $uses_wallet    = ($payment_method === 'wallet')
+            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled);
+
+        if ($payment_method === 'wallet' && !$wallet_enabled) {
+            return $this->error('Wallet payments are not enabled.');
+        }
+
+        if ($uses_wallet && $wallet_enabled) {
             $walletPct = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
             if ($walletPct > 0) {
                 $wallet_discount = round(max(0, $subtotal - $discount) * $walletPct / 100, 2);
@@ -129,6 +136,23 @@ class Sk_Order extends Sk_Base_Api {
         $tax      = round($taxable_amount * ($settings['tax_rate'] ?? 18) / 100, 2);
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
+        if ($uses_wallet && $wallet_enabled && $total > 0) {
+            $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
+            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
+        }
+
+        if ($payment_method === 'wallet') {
+            if ($wallet_amount < $total) {
+                return $this->error('Insufficient wallet balance for this order.');
+            }
+        } elseif ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled && $wallet_amount >= $total && $total > 0) {
+            $payment_method = 'wallet';
+        }
+
+        $gateway_amount = round(max(0, $total - $wallet_amount), 2);
+        $is_paid_now    = ($payment_method === 'wallet');
+
+        $this->_ensure_order_wallet_schema();
         $order_data = [
             'user_id'          => $user_id,
             'subtotal'         => $subtotal,
@@ -139,9 +163,10 @@ class Sk_Order extends Sk_Base_Api {
             'affiliate_id'     => $affiliate_id,
             'affiliate_promo'  => $affiliate_promo,
             'total'            => $total,
+            'wallet_amount'    => $wallet_amount,
             'payment_method'   => $payment_method,
-            'payment_status'   => $payment_method === 'wallet' ? 'paid' : 'pending',
-            'status'           => $payment_method === 'wallet' ? 'confirmed' : 'pending',
+            'payment_status'   => $is_paid_now ? 'paid' : 'pending',
+            'status'           => $is_paid_now ? 'confirmed' : 'pending',
             'notes'            => $wallet_discount > 0
                 ? trim(($data['note'] ?? $data['notes'] ?? '') . ' [Wallet discount: ' . $wallet_discount . ']')
                 : ($data['note'] ?? $data['notes'] ?? null),
@@ -177,8 +202,15 @@ class Sk_Order extends Sk_Base_Api {
 
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
-        if ($payment_method === 'wallet') {
-            if (!$this->Sk_Customer_wallet_model->apply_wallet_payment($user_id, $total, $order_id, 'Order #' . $order_id)) {
+        if ($wallet_amount > 0) {
+            if (!$this->Sk_Customer_wallet_model->apply_wallet_payment(
+                $user_id,
+                $wallet_amount,
+                $order_id,
+                $gateway_amount > 0
+                    ? ('Partial wallet payment for order #' . $order_id)
+                    : ('Order #' . $order_id)
+            )) {
                 $this->db->where('id', $order_id)->delete('orders');
                 $this->db->where('order_id', $order_id)->delete('order_items');
                 return $this->error('Insufficient wallet balance for this order.');
@@ -246,6 +278,16 @@ class Sk_Order extends Sk_Base_Api {
 
         $this->_jt_cancel_if_needed($order);
 
+        $walletPaid = (float)($order['wallet_amount'] ?? 0);
+        if ($walletPaid > 0) {
+            $this->load->model('Sk_Customer_wallet_model');
+            $this->Sk_Customer_wallet_model->refund_order_payment(
+                (int)$this->user['user_id'],
+                (int)$id,
+                $walletPaid
+            );
+        }
+
         $this->Sk_Order_model->update_status((int)$id, 'cancelled');
         $this->Sk_Order_model->update_payment_status((int)$id, 'failed');
         $this->success([], 'Order cancelled.');
@@ -273,6 +315,17 @@ class Sk_Order extends Sk_Base_Api {
                 'jt_courier_status' => 'cancelled',
                 'jt_bill_code'      => null,
             ]);
+        }
+    }
+
+    private function _ensure_order_wallet_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('wallet_amount', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `wallet_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `total`');
         }
     }
 
