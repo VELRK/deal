@@ -37,7 +37,7 @@ class User_model extends CI_Model
         return $this->db->get_where($this->table, array('id' => $id))->row();
     }
 
-    public function get_by_phone($phone, $country_code = '+91')
+    public function get_by_phone($phone, $country_code = '+60')
     {
         return $this->db->get_where($this->table, array('phone' => $phone, 'country_code' => $country_code))->row();
     }
@@ -47,7 +47,7 @@ class User_model extends CI_Model
         return $this->db->where('id', $id)->update($this->table, $data);
     }
 
-    public function is_phone_exists($phone, $country_code = '+91')
+    public function is_phone_exists($phone, $country_code = '+60')
     {
         $this->db->where('phone', $phone)->where('country_code', $country_code);
         return $this->db->count_all_results($this->table) > 0;

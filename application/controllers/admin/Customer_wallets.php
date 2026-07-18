@@ -30,6 +30,7 @@ class Customer_wallets extends Sk_Base {
         $data['is_vendor_scope'] = (bool)$this->scoped_vendor_id();
         $data['discount_percent'] = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
         $data['wallet_enabled'] = $this->Sk_Customer_wallet_model->is_enabled();
+        $data['settings'] = $this->Sk_Admin_model->get_settings();
         $this->render('customer_wallets/index', $data);
     }
 
@@ -89,6 +90,8 @@ class Customer_wallets extends Sk_Base {
                 'toyyibpay_secret_key'             => $this->input->post('toyyibpay_secret_key') ?: '',
                 'toyyibpay_category_code'          => $this->input->post('toyyibpay_category_code') ?: '',
                 'toyyibpay_sandbox'                => $this->input->post('toyyibpay_sandbox') ? '1' : '0',
+                'payment_gateway'                  => in_array($this->input->post('payment_gateway'), ['razorpay', 'toyyibpay'], true)
+                    ? $this->input->post('payment_gateway') : 'razorpay',
             ]);
             $this->session->set_flashdata('success', 'Wallet settings saved.');
             redirect('admin/customer-wallets');

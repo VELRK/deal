@@ -39,6 +39,13 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
         if (!$name || !$email || !$phone || !$pass) return $this->error('All fields required.');
         if ($this->Sk_Affiliate_model->get_by_email($email)) return $this->error('Email already registered.');
 
+        $this->load->helper('sk_isms');
+        $normalized = sk_isms_normalize_phone($phone, $this->get_settings());
+        if ($normalized === '') {
+            return $this->error(sk_isms_phone_error());
+        }
+        $phone = $normalized;
+
         $promo = strtoupper(trim($data['promo_code'] ?? ''));
         if ($promo === '') $promo = $this->Sk_Affiliate_model->generate_promo_code($name, $phone);
         if (!$this->Sk_Affiliate_model->is_promo_code_available($promo)) {
@@ -80,6 +87,14 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
             }
         }
         if (empty($payload)) return $this->error('No profile fields to update.');
+        if (isset($payload['phone'])) {
+            $this->load->helper('sk_isms');
+            $normalized = sk_isms_normalize_phone($payload['phone'], $this->get_settings());
+            if ($normalized === '') {
+                return $this->error(sk_isms_phone_error());
+            }
+            $payload['phone'] = $normalized;
+        }
         $this->Sk_Affiliate_model->update_profile((int)$aff['id'], $payload);
         $aff = $this->Sk_Affiliate_model->get_by_id((int)$aff['id']);
         $this->success(['affiliate' => $this->_safe_affiliate($aff, true)], 'Profile updated.');

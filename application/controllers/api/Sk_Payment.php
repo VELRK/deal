@@ -139,6 +139,60 @@ class Sk_Payment extends Sk_Base_Api {
         $this->success(['order' => $order], 'Payment successful! Your order is confirmed.');
     }
 
+    /**
+     * Verify Razorpay payment for wallet top-up.
+     * POST /shopkart-api/payment/wallet-topup-verify
+     */
+    public function wallet_topup_verify() {
+        $this->auth_required();
+        $data = $this->body();
+
+        $rzpOrderId   = $data['razorpay_order_id'] ?? '';
+        $rzpPaymentId = $data['razorpay_payment_id'] ?? '';
+        $rzpSignature = $data['razorpay_signature'] ?? '';
+        $reference    = trim($data['reference'] ?? '');
+
+        if (!$rzpOrderId || !$rzpPaymentId || !$rzpSignature || !$reference) {
+            return $this->error('Missing payment verification data.');
+        }
+        if (strpos($reference, 'TOPUP-') !== 0) {
+            return $this->error('Invalid wallet top-up reference.');
+        }
+
+        $settings   = $this->get_settings();
+        $keySecret  = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
+        $expected   = hash_hmac('sha256', $rzpOrderId . '|' . $rzpPaymentId, $keySecret);
+        if (!hash_equals($expected, $rzpSignature)) {
+            log_message('error', 'Razorpay wallet topup signature mismatch: ' . $reference);
+            return $this->error('Payment verification failed.', 400);
+        }
+
+        $this->load->model('Sk_Customer_wallet_model');
+        $pending = $this->db->where('reference', $reference)
+            ->where('user_id', $this->user['user_id'])
+            ->where('source', 'topup_pending')
+            ->order_by('id', 'DESC')
+            ->get('customer_wallet_transactions')
+            ->row_array();
+        if (!$pending) {
+            $done = $this->db->where('reference', $reference)
+                ->where('source', 'topup')
+                ->count_all_results('customer_wallet_transactions');
+            if ($done > 0) {
+                $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']);
+                return $this->success($wallet, 'Wallet already topped up.');
+            }
+            return $this->error('Top-up session expired. Please try again.', 404);
+        }
+
+        if (!$this->Sk_Customer_wallet_model->complete_topup_by_reference($reference)) {
+            return $this->error('Could not credit wallet. Contact support with ref ' . $reference, 500);
+        }
+
+        $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']);
+        $this->success($wallet, 'Wallet topped up successfully!');
+    }
+
     /** ToyyibPay browser return after wallet top-up / order pay */
     public function toyyibpay_return() {
         $ref = $this->input->get('order_id') ?: $this->input->get('billExternalReferenceNo');
@@ -147,8 +201,8 @@ class Sk_Payment extends Sk_Base_Api {
         if ($ref && strpos($ref, 'TOPUP-') === 0 && $status === 1) {
             $this->Sk_Customer_wallet_model->complete_topup_by_reference($ref);
         }
-        $frontend = rtrim(config_item('frontend_url') ?: base_url('frontend/'), '/') . '/account-wallet';
-        redirect($frontend);
+        $q = ($status === 1) ? 'success' : 'failed';
+        redirect(rtrim(base_url(), '/') . '/account-wallet?topup=' . $q);
     }
 
     /** ToyyibPay server callback */

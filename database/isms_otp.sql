@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `otp_sessions` (
   `phone` VARCHAR(20) NOT NULL,
   `sms_id` VARCHAR(32) NOT NULL DEFAULT '',
   `uuid` VARCHAR(64) NOT NULL DEFAULT '',
+  `otp_hash` VARCHAR(255) NOT NULL DEFAULT '',
   `provider` VARCHAR(20) NOT NULL DEFAULT 'isms',
   `created_at` DATETIME NOT NULL,
   `expires_at` DATETIME NOT NULL,
@@ -30,7 +31,7 @@ SELECT 'isms_sender_id', '' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_sender_id');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'isms_message', 'Your Golden Eagle verification code is %OTP%. Valid for 5 minutes. Do not share this code.' FROM DUAL
+SELECT 'isms_message', 'Your OTP is %OTP%. Valid for 5 minutes.' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_message');
 
 INSERT INTO `settings` (`key`, `value`)

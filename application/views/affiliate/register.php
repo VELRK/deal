@@ -14,7 +14,7 @@
     <form action="<?= site_url('admin/affiliate/register/submit') ?>" method="POST">
       <div class="mb-3"><label class="form-label">Full Name</label><input type="text" name="name" id="regName" class="form-control" required></div>
       <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
-      <div class="mb-3"><label class="form-label">Phone</label><input type="text" name="phone" id="regPhone" class="form-control" required placeholder="10-digit mobile"></div>
+      <div class="mb-3"><label class="form-label">Phone</label><input type="text" name="phone" id="regPhone" class="form-control" required placeholder="e.g. 0123456789"></div>
       <div class="mb-3">
         <label class="form-label">Promo Code <small class="text-muted">(auto: Name4 + last 4 phone digits)</small></label>
         <input type="text" name="promo_code" id="regPromo" class="form-control text-uppercase" placeholder="Leave blank for auto">

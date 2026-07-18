@@ -528,6 +528,7 @@ $route['shopkart-api/user/addresses/(:num)']['DELETE']    = 'api/Sk_User/delete_
 $route['shopkart-api/user/wallet']['GET']                   = 'api/Sk_User/wallet';
 $route['shopkart-api/user/wallet/transactions']['GET']      = 'api/Sk_User/wallet_transactions';
 $route['shopkart-api/user/wallet/topup']['POST']            = 'api/Sk_User/wallet_topup';
+$route['shopkart-api/payment/wallet-topup-verify']['POST']  = 'api/Sk_Payment/wallet_topup_verify';
 $route['shopkart-api/payment/toyyibpay-return']['GET']      = 'api/Sk_Payment/toyyibpay_return';
 $route['shopkart-api/payment/toyyibpay-callback']['POST']   = 'api/Sk_Payment/toyyibpay_callback';
 $route['shopkart-api/payment/toyyibpay-callback']['GET']    = 'api/Sk_Payment/toyyibpay_callback';

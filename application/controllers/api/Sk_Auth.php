@@ -24,11 +24,22 @@ class Sk_Auth extends Sk_Base_Api {
             return $this->error('Email already registered.');
         }
 
+        $phone = trim($data['phone'] ?? '');
+        if ($phone !== '') {
+            $this->load->helper('sk_isms');
+            $settings = $this->get_settings();
+            $normalized = sk_isms_normalize_phone($phone, $settings);
+            if ($normalized === '') {
+                return $this->error(sk_isms_phone_error());
+            }
+            $phone = $normalized;
+        }
+
         $user_id = $this->Sk_User_model->create([
             'name'  => $name,
             'email' => $email,
             'password' => $password,
-            'phone' => $data['phone'] ?? null,
+            'phone' => $phone !== '' ? $phone : null,
         ]);
 
         // Save address if provided
@@ -38,12 +49,12 @@ class Sk_Auth extends Sk_Base_Api {
                 'user_id'    => $user_id,
                 'label'      => 'Home',
                 'full_name'  => $name,
-                'phone'      => $data['phone'] ?? '',
+                'phone'      => $phone !== '' ? $phone : ($data['phone'] ?? ''),
                 'line1'      => $address['line1'],
                 'city'       => $address['city'] ?? '',
                 'state'      => $address['state'] ?? '',
                 'pincode'    => $address['pincode'] ?? '',
-                'country'    => 'India',
+                'country'    => 'Malaysia',
                 'is_default' => 1,
             ]);
         }
@@ -193,13 +204,16 @@ class Sk_Auth extends Sk_Base_Api {
 
         $result = $this->isms->request_otp($phone);
         if (!$result['success']) {
+            if (ENVIRONMENT !== 'production' && $this->_isms_allow_dev_fallback($result['message'])) {
+                return $this->_isms_dev_test_response($normalized, $settings, $result['message']);
+            }
             return $this->error($result['message'], 502);
         }
 
         sk_isms_save_session(
             $normalized,
             $result['sms_id'] ?? '',
-            $result['uuid'] ?? '',
+            password_hash((string) ($result['otp'] ?? ''), PASSWORD_DEFAULT),
             $this->isms->get_otp_interval()
         );
 
@@ -219,24 +233,19 @@ class Sk_Auth extends Sk_Base_Api {
         $settings = $this->get_settings();
         $this->load->library('isms', $settings);
         $normalized = $this->isms->normalize_phone($phone);
-        if (!$normalized) {
+        if (!$normalized || !$this->isms->parse_phone($phone)) {
             return $this->error('Valid phone number required.');
         }
 
-        if ($this->_isms_use_test_mode($settings, $normalized)) {
+        if ($this->_isms_use_test_mode($settings, $normalized) || ENVIRONMENT !== 'production') {
             $test = sk_isms_get_test_config($settings);
             $validCodes = array_unique([$test['otp'], '1234', '123']);
             if (!in_array($otp, $validCodes, true)) {
                 return $this->error('Invalid OTP. Please try again.', 401);
             }
         } else {
-            $session = sk_isms_get_session($normalized);
-            if (!$session) {
-                return $this->error('OTP expired. Please request a new code.', 401);
-            }
-            $verified = $this->isms->verify_otp($phone, $otp, $session['sms_id'], $session['uuid']);
-            if (!$verified['success']) {
-                return $this->error($verified['message'], 401);
+            if (!sk_isms_verify_session_otp($normalized, $otp)) {
+                return $this->error('Invalid or expired OTP. Please try again.', 401);
             }
             sk_isms_clear_session($normalized);
         }
@@ -280,6 +289,31 @@ class Sk_Auth extends Sk_Base_Api {
         return empty($settings['isms_enabled']) || $settings['isms_enabled'] === '0'
             || trim($settings['isms_username'] ?? '') === ''
             || trim($settings['isms_password'] ?? '') === '';
+    }
+
+    /** Local dev: accept fixed OTP when iSMS is misconfigured or unreachable. */
+    private function _isms_allow_dev_fallback($message) {
+        $msg = strtolower((string) $message);
+        return strpos($msg, '-1001') !== false
+            || strpos($msg, 'authentication failed') !== false
+            || strpos($msg, 'not configured') !== false
+            || strpos($msg, 'unable to reach isms') !== false;
+    }
+
+    private function _isms_dev_test_response($normalized, array $settings, $ismsError = '') {
+        $test = sk_isms_get_test_config($settings);
+        $payload = [
+            'phone'        => $normalized,
+            'test_mode'    => true,
+            'dev_fallback' => true,
+            'test_otp'     => $test['otp'],
+            'dev_hint'     => 'Local dev: iSMS failed — use OTP ' . $test['otp'],
+        ];
+        $msg = 'OTP ready for +' . $normalized . ' (local dev mode). Use OTP ' . $test['otp'] . '.';
+        if ($ismsError !== '') {
+            log_message('error', 'iSMS dev fallback: ' . $ismsError);
+        }
+        return $this->success($payload, $msg);
     }
 
     private function _find_user_by_phone($normalized) {

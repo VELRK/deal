@@ -34,6 +34,14 @@
         <input type="text" name="currency_code" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['currency_code'] ?? 'MYR') ?>">
       </div>
       <div class="col-md-2">
+        <label class="form-label small">Wallet top-up gateway</label>
+        <select name="payment_gateway" class="form-select form-select-sm">
+          <?php $pg = $settings['payment_gateway'] ?? 'razorpay'; ?>
+          <option value="razorpay" <?= $pg === 'razorpay' ? 'selected' : '' ?>>Razorpay (FPX/Card)</option>
+          <option value="toyyibpay" <?= $pg === 'toyyibpay' ? 'selected' : '' ?>>ToyyibPay</option>
+        </select>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small">ToyyibPay Secret</label>
         <input type="text" name="toyyibpay_secret_key" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['toyyibpay_secret_key'] ?? '') ?>" placeholder="Malaysia FPX">
       </div>

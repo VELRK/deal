@@ -103,7 +103,7 @@
                       value="<?= htmlspecialchars($settings['whatsapp_number'] ?? '') ?>"
                       placeholder="e.g. 919876543210">
                   </div>
-                  <div class="form-text small text-muted">Include country code without + (e.g. 91 for India).</div>
+                  <div class="form-text small text-muted">Malaysia country code without + (default 60).</div>
                 </div>
               </div>
             </div>
@@ -311,8 +311,8 @@
         <div class="card-body">
           <div class="alert alert-info small">
             <i class="bi bi-phone me-1"></i>
-            Login OTP via <a href="https://www.isms.com.my/two-factor-authentication-api.php" target="_blank" rel="noopener">iSMS Malaysia 2FA API</a>.
-            Register at <a href="https://www.isms.com.my/register.php" target="_blank" rel="noopener">isms.com.my</a>, buy SMS credits, then enter your portal username &amp; password below.
+            Login OTP via <a href="https://www.isms.com.my/" target="_blank" rel="noopener">iSMS Malaysia JSON SMS API</a> (<code>isms_send_json.php</code>).
+            A new 6-digit OTP is generated on each request and sent in the SMS body. Register at <a href="https://www.isms.com.my/register.php" target="_blank" rel="noopener">isms.com.my</a>, buy SMS credits, then enter your portal username &amp; password below.
             <br><span class="text-muted">When disabled or credentials are empty, test OTP mode is used (see Test OTP below). Or import <code>database/isms_otp.sql</code> in phpMyAdmin.</span>
           </div>
           <div class="row g-3">
@@ -352,8 +352,8 @@
             <div class="col-md-6">
               <label class="form-label">SMS message template</label>
               <input type="text" name="isms_message" class="form-control"
-                     value="<?= htmlspecialchars($settings['isms_message'] ?? 'Your Golden Eagle verification code is %OTP%. Valid for 5 minutes. Do not share this code.') ?>">
-              <div class="form-text">Must include <code>%OTP%</code> — iSMS replaces it with the 6-digit code.</div>
+                     value="<?= htmlspecialchars($settings['isms_message'] ?? 'Your OTP is %OTP%. Valid for 5 minutes.') ?>">
+              <div class="form-text">Must include <code>%OTP%</code> — replaced with a new random 4-digit code each request (e.g. <em>Your OTP is 4839. Valid for 5 minutes.</em>).</div>
             </div>
             <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Developer testing</h6></div>
             <div class="col-12">

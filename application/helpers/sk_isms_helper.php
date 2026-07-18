@@ -22,6 +22,7 @@ function sk_isms_ensure_schema() {
             `phone` VARCHAR(20) NOT NULL,
             `sms_id` VARCHAR(32) NOT NULL DEFAULT '',
             `uuid` VARCHAR(64) NOT NULL DEFAULT '',
+            `otp_hash` VARCHAR(255) NOT NULL DEFAULT '',
             `provider` VARCHAR(20) NOT NULL DEFAULT 'isms',
             `created_at` DATETIME NOT NULL,
             `expires_at` DATETIME NOT NULL,
@@ -29,6 +30,8 @@ function sk_isms_ensure_schema() {
             KEY `idx_otp_phone` (`phone`),
             KEY `idx_otp_expires` (`expires_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } elseif (!$CI->db->field_exists('otp_hash', 'otp_sessions')) {
+        $CI->db->query("ALTER TABLE `otp_sessions` ADD COLUMN `otp_hash` VARCHAR(255) NOT NULL DEFAULT '' AFTER `uuid`");
     }
 
     $defaults = [
@@ -36,7 +39,7 @@ function sk_isms_ensure_schema() {
         'isms_username'      => '',
         'isms_password'      => '',
         'isms_sender_id'     => '',
-        'isms_message'       => 'Your Golden Eagle verification code is %OTP%. Valid for 5 minutes. Do not share this code.',
+        'isms_message'       => 'Your OTP is %OTP%. Valid for 5 minutes.',
         'isms_country_code'  => '60',
         'isms_otp_interval'  => '5',
         'isms_test_otp'      => '1234',
@@ -45,7 +48,7 @@ function sk_isms_ensure_schema() {
 
     $hasGroup = $CI->db->field_exists('group', 'settings');
     foreach ($defaults as $key => $value) {
-        $exists = (int)$CI->db->where('key', $key)->count_all_results('settings');
+        $exists = (int) $CI->db->where('key', $key)->count_all_results('settings');
         if ($exists) {
             continue;
         }
@@ -56,7 +59,6 @@ function sk_isms_ensure_schema() {
         $CI->db->insert('settings', $row);
     }
 
-    // Migrate legacy 6-digit dev OTP to 4-digit (matches frontend OTP inputs).
     if ($CI->db->table_exists('settings')) {
         $CI->db->where('key', 'isms_test_otp')->where('value', '123456')
             ->update('settings', ['value' => '1234']);
@@ -106,19 +108,20 @@ function sk_isms_is_test_phone(array $settings, $normalized_phone) {
     return $testNorm !== '' && $testNorm === $normalized_phone;
 }
 
-function sk_isms_save_session($phone, $sms_id, $uuid, $interval_minutes = 5) {
+function sk_isms_save_session($phone, $sms_id, $otp_hash, $interval_minutes = 5) {
     $CI =& get_instance();
     sk_isms_ensure_schema();
 
     $now = date('Y-m-d H:i:s');
-    $expires = date('Y-m-d H:i:s', time() + ((int)$interval_minutes * 60));
+    $expires = date('Y-m-d H:i:s', time() + ((int) $interval_minutes * 60));
 
     $CI->db->where('phone', $phone)->delete('otp_sessions');
 
     $CI->db->insert('otp_sessions', [
         'phone'      => $phone,
-        'sms_id'     => (string)$sms_id,
-        'uuid'       => (string)$uuid,
+        'sms_id'     => (string) $sms_id,
+        'uuid'       => '',
+        'otp_hash'   => (string) $otp_hash,
         'provider'   => 'isms',
         'created_at' => $now,
         'expires_at' => $expires,
@@ -126,7 +129,7 @@ function sk_isms_save_session($phone, $sms_id, $uuid, $interval_minutes = 5) {
 }
 
 /**
- * @return array{sms_id:string,uuid:string}|null
+ * @return array{sms_id:string,otp_hash:string}|null
  */
 function sk_isms_get_session($phone) {
     $CI =& get_instance();
@@ -144,9 +147,18 @@ function sk_isms_get_session($phone) {
     }
 
     return [
-        'sms_id' => (string)$row['sms_id'],
-        'uuid'   => (string)$row['uuid'],
+        'sms_id'   => (string) ($row['sms_id'] ?? ''),
+        'otp_hash' => (string) ($row['otp_hash'] ?? ''),
     ];
+}
+
+function sk_isms_verify_session_otp($phone, $code) {
+    $session = sk_isms_get_session($phone);
+    if (!$session || $session['otp_hash'] === '') {
+        return false;
+    }
+    $code = preg_replace('/\D/', '', (string) $code);
+    return $code !== '' && password_verify($code, $session['otp_hash']);
 }
 
 function sk_isms_clear_session($phone) {
@@ -155,4 +167,28 @@ function sk_isms_clear_session($phone) {
         return;
     }
     $CI->db->where('phone', $phone)->delete('otp_sessions');
+}
+
+function sk_isms_phone_error() {
+    return 'Valid Malaysia mobile number required (e.g. 0123456789 or 60123456789).';
+}
+
+/**
+ * @return array{country_code:string,mobile:string,normalized:string}|null
+ */
+function sk_isms_parse_phone($phone, array $settings = null) {
+    $CI =& get_instance();
+    if ($settings === null) {
+        if (!isset($CI->Sk_Admin_model)) {
+            $CI->load->model('Sk_Admin_model');
+        }
+        $settings = $CI->Sk_Admin_model->get_settings();
+    }
+    $CI->load->library('isms', $settings);
+    return $CI->isms->parse_phone($phone);
+}
+
+function sk_isms_normalize_phone($phone, array $settings = null) {
+    $parsed = sk_isms_parse_phone($phone, $settings);
+    return $parsed ? $parsed['normalized'] : '';
 }

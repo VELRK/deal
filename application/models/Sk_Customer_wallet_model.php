@@ -143,9 +143,111 @@ class Sk_Customer_wallet_model extends CI_Model {
 
     public function create_topup_intent(int $userId, float $amountRm): ?string {
         if ($amountRm <= 0) return null;
-        $ref = 'TOPUP-' . $userId . '-' . time() . '-' . bin2hex(random_bytes(3));
-        // Store intent in a lightweight way via pending txn description if needed
-        return $ref;
+        return 'TOPUP-' . $userId . '-' . time() . '-' . bin2hex(random_bytes(3));
+    }
+
+    public function save_topup_pending(int $userId, float $amountRm, string $ref, string $description): void {
+        $wallet = $this->get_wallet($userId);
+        $this->db->insert('customer_wallet_transactions', [
+            'wallet_id'     => $wallet['id'],
+            'user_id'       => $userId,
+            'type'          => 'credit',
+            'amount'        => $amountRm,
+            'balance_after' => (float)$wallet['balance'],
+            'source'        => 'topup_pending',
+            'reference'     => $ref,
+            'description'   => $description,
+            'created_at'    => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Resolve wallet top-up gateway from admin settings.
+     * @return 'razorpay'|'toyyibpay'|'sandbox'|'none'
+     */
+    public function resolve_topup_gateway(array $settings): string {
+        $preferred = strtolower(trim($settings['payment_gateway'] ?? ''));
+        $hasRzp = trim($settings['razorpay_key_id'] ?? '') !== ''
+            && trim($settings['razorpay_key_secret'] ?? '') !== '';
+        $hasToyyib = trim($settings['toyyibpay_secret_key'] ?? '') !== ''
+            && trim($settings['toyyibpay_category_code'] ?? '') !== '';
+
+        if ($preferred === 'razorpay' && $hasRzp) return 'razorpay';
+        if ($preferred === 'toyyibpay' && $hasToyyib) return 'toyyibpay';
+        if ($hasRzp) return 'razorpay';
+        if ($hasToyyib) return 'toyyibpay';
+        if (ENVIRONMENT !== 'production') return 'sandbox';
+        return 'none';
+    }
+
+    /**
+     * Create Razorpay order for wallet top-up (Malaysia checkout modal).
+     */
+    public function start_razorpay_topup(int $userId, float $amountRm, string $ref, array $settings): array {
+        $keyId = trim($settings['razorpay_key_id'] ?? '');
+        $keySecret = trim($settings['razorpay_key_secret'] ?? '');
+        if (!$keyId || !$keySecret) {
+            return ['error' => 'Razorpay is not configured.'];
+        }
+
+        $CI =& get_instance();
+        $CI->load->model('Sk_User_model');
+        $user = $CI->Sk_User_model->get_by_id($userId);
+        $currency = strtoupper($settings['currency_code'] ?? 'MYR');
+        if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
+            $currency = 'MYR';
+        }
+
+        $amountPaise = (int)round($amountRm * 100);
+        $payload = json_encode([
+            'amount'          => $amountPaise,
+            'currency'        => $currency,
+            'receipt'         => $ref,
+            'payment_capture' => 1,
+            'notes'           => ['type' => 'wallet_topup', 'reference' => $ref],
+        ]);
+
+        $ch = curl_init('https://api.razorpay.com/v1/orders');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_USERPWD        => $keyId . ':' . $keySecret,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $rzp = json_decode((string)$response, true);
+
+        if ($httpCode !== 200 || empty($rzp['id'])) {
+            log_message('error', 'Razorpay wallet topup failed: ' . $response);
+            return ['error' => 'Failed to start payment. Please try again.'];
+        }
+
+        $this->save_topup_pending(
+            $userId,
+            $amountRm,
+            $ref,
+            'Pending Razorpay ' . $rzp['id']
+        );
+
+        return [
+            'gateway'           => 'razorpay',
+            'razorpay_order_id' => $rzp['id'],
+            'amount'            => $amountPaise,
+            'currency'          => $currency,
+            'key_id'            => $keyId,
+            'reference'         => $ref,
+            'prefill'           => [
+                'name'    => $user['name'] ?? 'Customer',
+                'email'   => $user['email'] ?? '',
+                'contact' => preg_replace('/\D/', '', (string)($user['phone'] ?? '')),
+            ],
+        ];
     }
 
     public function credit_topup(int $userId, float $amountRm, string $reference, string $source = 'topup'): bool {
@@ -189,12 +291,14 @@ class Sk_Customer_wallet_model extends CI_Model {
         $user = $CI->Sk_User_model->get_by_id($userId);
 
         if (!$secret || !$category) {
-            // Dev / not configured: credit RM directly
-            if ($this->credit_topup($userId, $amountRm, $ref, 'topup_sandbox')) {
-                $w = $this->get_wallet($userId);
-                return ['credited' => true, 'balance' => (float)$w['balance']];
+            if (ENVIRONMENT !== 'production') {
+                if ($this->credit_topup($userId, $amountRm, $ref, 'topup_sandbox')) {
+                    $w = $this->get_wallet($userId);
+                    return ['gateway' => 'sandbox', 'credited' => true, 'balance' => (float)$w['balance']];
+                }
+                return ['error' => 'Top-up failed.'];
             }
-            return ['error' => 'Top-up failed.'];
+            return ['error' => 'ToyyibPay is not configured. Ask admin to add payment gateway keys.'];
         }
 
         $apiBase = $sandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com';
@@ -235,19 +339,10 @@ class Sk_Customer_wallet_model extends CI_Model {
         }
 
         // Persist pending reference for callback
-        $this->db->insert('customer_wallet_transactions', [
-            'wallet_id'     => $this->get_wallet($userId)['id'],
-            'user_id'       => $userId,
-            'type'          => 'credit',
-            'amount'        => $amountRm,
-            'balance_after' => (float)$this->get_wallet($userId)['balance'],
-            'source'        => 'topup_pending',
-            'reference'     => $ref,
-            'description'   => 'Pending ToyyibPay ' . $billCode,
-            'created_at'    => date('Y-m-d H:i:s'),
-        ]);
+        $this->save_topup_pending($userId, $amountRm, $ref, 'Pending ToyyibPay ' . $billCode);
 
         return [
+            'gateway'   => 'toyyibpay',
             'url'       => $apiBase . '/' . $billCode,
             'bill_code' => $billCode,
             'credited'  => false,

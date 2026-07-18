@@ -2,7 +2,8 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * iSMS Malaysia 2FA OTP API — https://www.isms.com.my/two-factor-authentication-api.php
+ * iSMS Malaysia JSON SMS API — https://www.isms.com.my/isms_send_json.php
+ * OTP is generated locally on each request and sent in the SMS body.
  */
 class Isms {
 
@@ -16,7 +17,9 @@ class Isms {
     protected $otp_interval = 5;
     protected $test_otp = '1234';
 
-    const API_URL = 'https://www.isms.com.my/2FA/request.php';
+    const SEND_URL    = 'https://www.isms.com.my/isms_send_json.php';
+    const BALANCE_URL = 'https://www.isms.com.my/isms_balance_json.php';
+    const OTP_LENGTH  = 4;
 
     public function __construct($settings = null) {
         $this->CI =& get_instance();
@@ -37,7 +40,7 @@ class Isms {
         $this->password = trim($settings['isms_password'] ?? '');
         $this->sender_id = trim($settings['isms_sender_id'] ?? '');
         $this->message_template = trim($settings['isms_message'] ?? '')
-            ?: 'Your verification code is %OTP%. Valid for 5 minutes. Do not share this code.';
+            ?: 'Your OTP is %OTP%. Valid for 5 minutes.';
         $this->country_code = trim($settings['isms_country_code'] ?? '60') ?: '60';
         $this->otp_interval = max(1, min(30, (int)($settings['isms_otp_interval'] ?? 5)));
         $this->test_otp = trim($settings['isms_test_otp'] ?? '1234') ?: '1234';
@@ -65,8 +68,6 @@ class Isms {
     }
 
     /**
-     * Split normalized phone into iSMS country_code + mobile (no leading zero).
-     *
      * @return array{country_code:string,mobile:string,normalized:string}|null
      */
     public function parse_phone($phone) {
@@ -80,7 +81,11 @@ class Isms {
         }
         $mobile = substr($normalized, strlen($cc));
         $mobile = ltrim($mobile, '0');
-        if ($mobile === '' || strlen($mobile) < 8 || strlen($mobile) > 12) {
+        if ($mobile === '' || strlen($mobile) < 9 || strlen($mobile) > 10) {
+            return null;
+        }
+        // Malaysian mobile numbers use 01X locally (first digit after country code is 1).
+        if ($mobile[0] !== '1') {
             return null;
         }
         return [
@@ -98,10 +103,23 @@ class Isms {
         return $this->test_otp;
     }
 
+    /** Generate a fresh numeric OTP for each request. */
+    public function generate_otp() {
+        return str_pad((string) random_int(0, 9999), self::OTP_LENGTH, '0', STR_PAD_LEFT);
+    }
+
+    public function build_otp_message($otp) {
+        $template = $this->message_template;
+        if (strpos($template, '%OTP%') === false) {
+            $template = 'Your OTP is %OTP%. Valid for ' . $this->otp_interval . ' minutes.';
+        }
+        return str_replace('%OTP%', (string) $otp, $template);
+    }
+
     /**
-     * Request OTP via iSMS 2FA API.
+     * Generate OTP, send via iSMS JSON API, return OTP for server-side storage.
      *
-     * @return array{success:bool,message:string,sms_id?:string,uuid?:string,mobile?:string}
+     * @return array{success:bool,message:string,otp?:string,sms_id?:string,mobile?:string}
      */
     public function request_otp($phone) {
         $parsed = $this->parse_phone($phone);
@@ -109,84 +127,54 @@ class Isms {
             return ['success' => false, 'message' => 'Invalid Malaysia mobile number. Use format 01XXXXXXXX or 601XXXXXXXX.'];
         }
 
-        $params = [
-            'un'           => $this->username,
-            'pass'         => $this->password,
-            'mobile'       => $parsed['mobile'],
-            'country_code' => $parsed['country_code'],
-            'type'         => '1',
-            'message'      => $this->message_template,
+        $otp = $this->generate_otp();
+        $payload = [
+            'un'         => $this->username,
+            'pwd'        => $this->password,
+            'type'       => '1',
+            'agreedterm' => 'YES',
+            'messages'   => [[
+                'dstno' => $parsed['normalized'],
+                'msg'   => $this->build_otp_message($otp),
+            ]],
         ];
         if ($this->sender_id !== '') {
-            $params['sendid'] = $this->sender_id;
+            $payload['sendid'] = $this->sender_id;
         }
 
-        $response = $this->_get($params);
+        $response = $this->_post_json(self::SEND_URL, $payload);
         if (!$response['ok']) {
             return ['success' => false, 'message' => $response['error']];
         }
 
         $data = $response['data'];
         $status = strtolower(trim($data['status'] ?? ''));
-        if ($status !== 'success') {
+        if ($status !== 'success' && $status !== 'partial') {
             return [
                 'success' => false,
-                'message' => $data['message'] ?? 'Failed to send OTP via iSMS.',
+                'message' => $this->_format_api_message($data),
+            ];
+        }
+
+        $result = $data['results'][0] ?? null;
+        if (!$result) {
+            return ['success' => false, 'message' => 'Unexpected response from iSMS.'];
+        }
+
+        $code = (int) ($result['code'] ?? 0);
+        if ($code !== 2000) {
+            return [
+                'success' => false,
+                'message' => $this->_format_api_message($result, $code),
             ];
         }
 
         return [
             'success' => true,
             'message' => 'OTP sent to +' . $parsed['normalized'] . '.',
-            'sms_id'  => (string)($data['sms_id'] ?? ''),
-            'uuid'    => (string)($data['uuid'] ?? ''),
+            'otp'     => $otp,
+            'sms_id'  => (string) ($result['sms_id'] ?? ''),
             'mobile'  => $parsed['normalized'],
-        ];
-    }
-
-    /**
-     * Verify OTP via iSMS 2FA API.
-     *
-     * @return array{success:bool,message:string}
-     */
-    public function verify_otp($phone, $code, $sms_id, $uuid) {
-        $parsed = $this->parse_phone($phone);
-        if (!$parsed) {
-            return ['success' => false, 'message' => 'Invalid phone number.'];
-        }
-        if (!$sms_id || !$uuid) {
-            return ['success' => false, 'message' => 'OTP session expired. Please request a new code.'];
-        }
-
-        $params = [
-            'un'           => $this->username,
-            'pass'         => $this->password,
-            'mobile'       => $parsed['mobile'],
-            'country_code' => $parsed['country_code'],
-            'method'       => 'verify',
-            'code'         => preg_replace('/\D/', '', (string)$code),
-            'sms_id'       => $sms_id,
-            'uuid'         => $uuid,
-            'interval'     => (string)$this->otp_interval,
-        ];
-        if ($this->sender_id !== '') {
-            $params['sendid'] = $this->sender_id;
-        }
-
-        $response = $this->_get($params);
-        if (!$response['ok']) {
-            return ['success' => false, 'message' => $response['error']];
-        }
-
-        $data = $response['data'];
-        $status = strtolower(trim($data['status'] ?? ''));
-        if ($status === 'verified') {
-            return ['success' => true, 'message' => 'OTP verified.'];
-        }
-
-        return [
-            'success' => false,
-            'message' => $data['message'] ?? 'Invalid or expired OTP. Please try again.',
         ];
     }
 
@@ -197,38 +185,85 @@ class Isms {
         if (!$this->is_enabled()) {
             return ['success' => false, 'message' => 'iSMS is not configured.'];
         }
-        $response = $this->_get([
-            'un'     => $this->username,
-            'pass'   => $this->password,
-            'method' => 'balance',
+
+        $response = $this->_post_json(self::BALANCE_URL, [
+            'un'  => $this->username,
+            'pwd' => $this->password,
         ]);
         if (!$response['ok']) {
             return ['success' => false, 'message' => $response['error']];
         }
+
         $data = $response['data'];
+        $status = strtolower(trim($data['status'] ?? ''));
+        if ($status !== 'success') {
+            return [
+                'success' => false,
+                'message' => $this->_format_api_message($data, (int) ($data['code'] ?? 0)),
+            ];
+        }
+
         return [
             'success' => true,
             'message' => 'Balance: RM ' . ($data['balance'] ?? '?'),
-            'balance' => (string)($data['balance'] ?? ''),
+            'balance' => (string) ($data['balance'] ?? ''),
         ];
+    }
+
+    protected function _format_api_message(array $data, $code = 0) {
+        $code = (int) ($code ?: ($data['code'] ?? 0));
+        if (!empty($data['message'])) {
+            return $this->_normalize_api_message((string) $data['message'], $code);
+        }
+        if (!empty($data['status']) && is_string($data['status'])) {
+            return $this->_normalize_api_message((string) $data['status'], $code);
+        }
+        return $this->_map_error_code($code);
+    }
+
+    protected function _normalize_api_message($message, $code = 0) {
+        if (preg_match('/-?\d+/', (string) $message, $m)) {
+            $parsed = (int) $m[0];
+            if ($parsed < 0) {
+                return $this->_map_error_code($parsed);
+            }
+        }
+        if ($code < 0) {
+            return $this->_map_error_code($code);
+        }
+        return (string) $message;
+    }
+
+    protected function _map_error_code($code) {
+        $map = [
+            -1001 => 'iSMS authentication failed. Check username and password.',
+            -1002 => 'iSMS account suspended or expired.',
+            -1003 => 'Server IP not allowed in iSMS. Whitelist your server IP.',
+            -1004 => 'Insufficient iSMS credits.',
+            -1006 => 'SMS message is empty or too long.',
+            -1008 => 'Missing iSMS parameter.',
+            -1009 => 'Invalid destination mobile number.',
+            -1013 => 'iSMS terms not accepted (agreedterm must be YES).',
+        ];
+        return $map[$code] ?? 'Failed to send OTP via iSMS (code ' . $code . ').';
     }
 
     /**
      * @return array{ok:bool,data?:array,error?:string}
      */
-    protected function _get(array $params) {
-        $url = self::API_URL . '?' . http_build_query($params);
-
+    protected function _post_json($url, array $payload) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPGET        => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($payload),
         ]);
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
-        $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($errno) {
@@ -240,7 +275,7 @@ class Isms {
             return ['ok' => false, 'error' => 'iSMS returned an error (HTTP ' . $http . ').'];
         }
 
-        $data = json_decode((string)$body, true);
+        $data = json_decode((string) $body, true);
         if (!is_array($data)) {
             log_message('error', 'iSMS invalid JSON: ' . $body);
             return ['ok' => false, 'error' => 'Unexpected response from iSMS.'];

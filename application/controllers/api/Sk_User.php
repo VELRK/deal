@@ -18,6 +18,14 @@ class Sk_User extends Sk_Base_Api {
         $allowed = ['name', 'phone'];
         $update  = [];
         foreach ($allowed as $f) { if (isset($data[$f])) $update[$f] = $data[$f]; }
+        if (isset($update['phone']) && trim((string) $update['phone']) !== '') {
+            $this->load->helper('sk_isms');
+            $normalized = sk_isms_normalize_phone($update['phone'], $this->get_settings());
+            if ($normalized === '') {
+                return $this->error(sk_isms_phone_error());
+            }
+            $update['phone'] = $normalized;
+        }
         if (!empty($data['password'])) {
             if (strlen($data['password']) < 6) return $this->error('Password must be at least 6 characters.');
             $update['password'] = $data['password'];
@@ -55,6 +63,12 @@ class Sk_User extends Sk_Base_Api {
         foreach ($required as $f) {
             if (empty($data[$f])) return $this->error("Field '$f' is required.");
         }
+        $this->load->helper('sk_isms');
+        $normalized = sk_isms_normalize_phone($data['phone'], $this->get_settings());
+        if ($normalized === '') {
+            return $this->error(sk_isms_phone_error());
+        }
+        $data['phone'] = $normalized;
         $this->Sk_User_model->ensure_address_schema();
         $data['user_id'] = $this->user['user_id'];
         $data['label']   = $data['label'] ?? 'Home';
@@ -173,23 +187,64 @@ class Sk_User extends Sk_Base_Api {
         $data = $this->body();
         $amountRm = (float)($data['amount'] ?? 0);
         if ($amountRm <= 0) return $this->error('Enter a valid amount in RM.');
+        if ($amountRm < 1) return $this->error('Minimum top-up is RM 1.');
 
-        // Create pending top-up then redirect to Malaysian payment (ToyyibPay)
+        $settings = $this->get_settings();
         $ref = $this->Sk_Customer_wallet_model->create_topup_intent($this->user['user_id'], $amountRm);
         if (!$ref) return $this->error('Could not start top-up.');
 
-        $pay = $this->Sk_Customer_wallet_model->start_toyyibpay_topup($this->user['user_id'], $amountRm, $ref);
-        if (!empty($pay['error'])) return $this->error($pay['error']);
+        $gateway = $this->Sk_Customer_wallet_model->resolve_topup_gateway($settings);
+        $points = $this->Sk_Customer_wallet_model->rm_to_points($amountRm);
 
-        $this->success([
-            'reference'   => $ref,
-            'amount_rm'   => $amountRm,
-            'points'      => $this->Sk_Customer_wallet_model->rm_to_points($amountRm),
-            'payment_url' => $pay['url'] ?? null,
-            'bill_code'   => $pay['bill_code'] ?? null,
-            // Dev fallback when gateway not configured: credit immediately
-            'credited'    => !empty($pay['credited']),
-            'balance'     => $pay['balance'] ?? null,
-        ], !empty($pay['credited']) ? 'Wallet topped up (sandbox).' : 'Redirect to payment.');
+        if ($gateway === 'razorpay') {
+            $pay = $this->Sk_Customer_wallet_model->start_razorpay_topup(
+                $this->user['user_id'],
+                $amountRm,
+                $ref,
+                $settings
+            );
+            if (!empty($pay['error'])) return $this->error($pay['error']);
+
+            return $this->success([
+                'gateway'           => 'razorpay',
+                'reference'         => $ref,
+                'amount_rm'         => $amountRm,
+                'points'            => $points,
+                'razorpay_order_id' => $pay['razorpay_order_id'],
+                'amount'            => $pay['amount'],
+                'currency'          => $pay['currency'],
+                'key_id'            => $pay['key_id'],
+                'prefill'           => $pay['prefill'],
+            ], 'Complete payment to add funds to your wallet.');
+        }
+
+        if ($gateway === 'toyyibpay') {
+            $pay = $this->Sk_Customer_wallet_model->start_toyyibpay_topup($this->user['user_id'], $amountRm, $ref);
+            if (!empty($pay['error'])) return $this->error($pay['error']);
+
+            return $this->success([
+                'gateway'     => 'toyyibpay',
+                'reference'   => $ref,
+                'amount_rm'   => $amountRm,
+                'points'      => $points,
+                'payment_url' => $pay['url'] ?? null,
+                'bill_code'   => $pay['bill_code'] ?? null,
+            ], 'Redirecting to payment gateway…');
+        }
+
+        if ($gateway === 'sandbox') {
+            $pay = $this->Sk_Customer_wallet_model->start_toyyibpay_topup($this->user['user_id'], $amountRm, $ref);
+            if (!empty($pay['error'])) return $this->error($pay['error']);
+            return $this->success([
+                'gateway'   => 'sandbox',
+                'reference' => $ref,
+                'amount_rm' => $amountRm,
+                'points'    => $points,
+                'credited'  => true,
+                'balance'   => $pay['balance'] ?? null,
+            ], 'Wallet topped up (dev sandbox — no payment gateway configured).');
+        }
+
+        return $this->error('Payment gateway is not configured. Please contact support.', 503);
     }
 }
