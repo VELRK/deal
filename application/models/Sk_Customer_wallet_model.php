@@ -35,8 +35,11 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function get_transactions(int $userId, int $limit = 20, int $offset = 0): array {
-        $total = $this->db->where('user_id', $userId)->count_all_results('customer_wallet_transactions');
-        $rows  = $this->db->where('user_id', $userId)->order_by('created_at', 'DESC')
+        $this->db->where('user_id', $userId)->where('source !=', 'topup_pending');
+        $total = $this->db->count_all_results('customer_wallet_transactions');
+        $rows  = $this->db->where('user_id', $userId)
+            ->where('source !=', 'topup_pending')
+            ->order_by('created_at', 'DESC')
             ->limit($limit, $offset)->get('customer_wallet_transactions')->result_array();
         return ['rows' => $rows, 'total' => $total];
     }
