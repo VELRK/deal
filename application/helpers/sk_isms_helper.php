@@ -108,6 +108,12 @@ function sk_isms_is_test_phone(array $settings, $normalized_phone) {
     return $testNorm !== '' && $testNorm === $normalized_phone;
 }
 
+function sk_isms_is_configured(array $settings) {
+    return !empty($settings['isms_enabled']) && $settings['isms_enabled'] !== '0'
+        && trim($settings['isms_username'] ?? '') !== ''
+        && trim($settings['isms_password'] ?? '') !== '';
+}
+
 function sk_isms_save_session($phone, $sms_id, $otp_hash, $interval_minutes = 5) {
     $CI =& get_instance();
     sk_isms_ensure_schema();

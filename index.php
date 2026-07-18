@@ -63,7 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
  *
  * NOTE: If you change these, also change the error_reporting() code below
  */
-	define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
+	$ci_env = isset($_SERVER['CI_ENV']) ? trim((string) $_SERVER['CI_ENV']) : '';
+	if ($ci_env === '') {
+		$host = strtolower($_SERVER['HTTP_HOST'] ?? '');
+		$ci_env = (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false)
+			? 'development'
+			: 'production';
+	}
+	define('ENVIRONMENT', $ci_env);
 
 /*
  *---------------------------------------------------------------

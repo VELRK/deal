@@ -190,7 +190,7 @@ class Sk_Auth extends Sk_Base_Api {
             return $this->error('Valid Malaysia mobile number required (e.g. 0123456789 or 60123456789).');
         }
 
-        if ($this->_isms_use_test_mode($settings, $normalized)) {
+        if (sk_isms_is_test_phone($settings, $normalized)) {
             $test = sk_isms_get_test_config($settings);
             $payload = ['phone' => $normalized, 'test_mode' => true];
             $msg = 'OTP sent to +' . $normalized . '.';
@@ -200,6 +200,13 @@ class Sk_Auth extends Sk_Base_Api {
                 $msg .= ' Dev OTP: ' . $test['otp'];
             }
             return $this->success($payload, $msg);
+        }
+
+        if (!sk_isms_is_configured($settings)) {
+            if (ENVIRONMENT !== 'production') {
+                return $this->_isms_dev_test_response($normalized, $settings, 'iSMS not configured.');
+            }
+            return $this->error('SMS login is not available. Please contact support.', 503);
         }
 
         $result = $this->isms->request_otp($phone);
@@ -237,7 +244,7 @@ class Sk_Auth extends Sk_Base_Api {
             return $this->error('Valid phone number required.');
         }
 
-        if ($this->_isms_use_test_mode($settings, $normalized) || ENVIRONMENT !== 'production') {
+        if (sk_isms_is_test_phone($settings, $normalized)) {
             $test = sk_isms_get_test_config($settings);
             $validCodes = array_unique([$test['otp'], '1234', '123']);
             if (!in_array($otp, $validCodes, true)) {
@@ -281,17 +288,7 @@ class Sk_Auth extends Sk_Base_Api {
         return $user;
     }
 
-    /** Test OTP when iSMS disabled, dev test phone, or configured test phone. */
-    private function _isms_use_test_mode(array $settings, $normalized_phone) {
-        if (sk_isms_is_test_phone($settings, $normalized_phone)) {
-            return true;
-        }
-        return empty($settings['isms_enabled']) || $settings['isms_enabled'] === '0'
-            || trim($settings['isms_username'] ?? '') === ''
-            || trim($settings['isms_password'] ?? '') === '';
-    }
-
-    /** Local dev: accept fixed OTP when iSMS is misconfigured or unreachable. */
+    /** Local dev only: accept fixed OTP when iSMS is misconfigured or unreachable. */
     private function _isms_allow_dev_fallback($message) {
         $msg = strtolower((string) $message);
         return strpos($msg, '-1001') !== false
@@ -302,6 +299,12 @@ class Sk_Auth extends Sk_Base_Api {
 
     private function _isms_dev_test_response($normalized, array $settings, $ismsError = '') {
         $test = sk_isms_get_test_config($settings);
+        sk_isms_save_session(
+            $normalized,
+            'dev',
+            password_hash((string) $test['otp'], PASSWORD_DEFAULT),
+            max(1, (int) ($settings['isms_otp_interval'] ?? 5))
+        );
         $payload = [
             'phone'        => $normalized,
             'test_mode'    => true,
