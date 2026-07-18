@@ -5,6 +5,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * Send an email using SMTP settings stored in the settings table.
  * Returns true on success, false on failure.
  */
+function sk_mailer_settings(): array {
+    $CI =& get_instance();
+    if (!isset($CI->Sk_Admin_model)) {
+        $CI->load->model('Sk_Admin_model');
+    }
+    return $CI->Sk_Admin_model->get_settings();
+}
+
+function sk_mailer_notify_email(array $settings = []): string {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    return trim($settings['site_email'] ?? $settings['smtp_user'] ?? '');
+}
+
 function sk_send_mail($to_email, $to_name, $subject, $html_body) {
     if (empty($to_email) || strpos($to_email, '@shopkart.app') !== false) {
         return false; // Skip placeholder emails
@@ -12,7 +27,7 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body) {
 
     $CI =& get_instance();
     $CI->load->library('email');
-    $settings = $CI->Sk_Admin_model->get_settings();
+    $settings = sk_mailer_settings();
 
     $smtp_host = $settings['smtp_host'] ?? '';
     $smtp_user = $settings['smtp_user'] ?? '';
@@ -320,4 +335,166 @@ function sk_mail_affiliate_invite($affiliate, $link, $settings = []) {
 </html>";
 
     return sk_send_mail($to_email, $to_name, $subject, $body);
+}
+
+/** Affiliate self-registration: confirmation to applicant (pending approval). */
+function sk_mail_affiliate_registration(array $affiliate, array $settings = []) {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $to_email  = $affiliate['email'] ?? '';
+    $to_name   = $affiliate['name'] ?? 'Affiliate';
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
+    $loginUrl  = htmlspecialchars(site_url('admin/affiliate/login'));
+    $safeName  = htmlspecialchars($to_name);
+    $subject   = 'Affiliate registration received – ' . $site_name;
+
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;'>
+<div style='max-width:520px;margin:30px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.07);'>
+  <div style='background:#065f46;padding:28px 32px;text-align:center;'>
+    <h1 style='color:#fff;margin:0;font-size:22px;'>{$site_name}</h1>
+    <p style='color:#a7f3d0;margin:6px 0 0;font-size:13px;'>Affiliate Registration</p>
+  </div>
+  <div style='padding:36px 32px;'>
+    <p style='color:#334155;font-size:16px;'>Hi <strong>{$safeName}</strong>,</p>
+    <p style='color:#334155;'>Thank you for registering as an affiliate. Your application is <strong>pending admin approval</strong>.</p>
+    <p style='color:#334155;'>Your requested promo code: <strong style='letter-spacing:1px;'>{$promo}</strong></p>
+    <p style='color:#64748b;font-size:14px;'>We will email you again once your account is approved. After approval you can sign in here:<br><a href='{$loginUrl}'>{$loginUrl}</a></p>
+  </div>
+  <div style='background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;'>
+    <p style='margin:0;color:#94a3b8;font-size:13px;'>{$site_name} &copy; " . date('Y') . "</p>
+  </div>
+</div>
+</body>
+</html>";
+
+    return sk_send_mail($to_email, $to_name, $subject, $body);
+}
+
+/** Notify store admin about a new affiliate registration. */
+function sk_mail_affiliate_registration_admin(array $affiliate, array $settings = []) {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $adminEmail = sk_mailer_notify_email($settings);
+    if ($adminEmail === '') {
+        return false;
+    }
+
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $name  = htmlspecialchars($affiliate['name'] ?? '');
+    $email = htmlspecialchars($affiliate['email'] ?? '');
+    $phone = htmlspecialchars($affiliate['phone'] ?? '');
+    $promo = htmlspecialchars($affiliate['promo_code'] ?? '');
+    $adminUrl = htmlspecialchars(site_url('admin/affiliates'));
+    $subject = 'New affiliate registration – ' . ($affiliate['name'] ?? 'Applicant');
+
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'></head>
+<body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
+  <div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
+    <h2 style='margin:0 0 16px;color:#0f172a;'>New affiliate registration</h2>
+    <p><strong>Name:</strong> {$name}<br>
+    <strong>Email:</strong> {$email}<br>
+    <strong>Phone:</strong> {$phone}<br>
+    <strong>Promo code:</strong> {$promo}</p>
+    <p style='margin-top:24px;'><a href='{$adminUrl}' style='background:#059669;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;'>Review in admin</a></p>
+    <p style='color:#94a3b8;font-size:13px;margin-top:24px;'>{$site_name}</p>
+  </div>
+</body>
+</html>";
+
+    return sk_send_mail($adminEmail, $site_name . ' Admin', $subject, $body);
+}
+
+/** Affiliate approved: notify applicant with promo code and login link. */
+function sk_mail_affiliate_approved(array $affiliate, array $settings = []) {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $to_email  = $affiliate['email'] ?? '';
+    $to_name   = $affiliate['name'] ?? 'Affiliate';
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
+    $loginUrl  = htmlspecialchars(site_url('admin/affiliate/login'));
+    $safeName  = htmlspecialchars($to_name);
+    $subject   = 'Affiliate account approved – ' . $site_name;
+
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;'>
+<div style='max-width:520px;margin:30px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.07);'>
+  <div style='background:#065f46;padding:28px 32px;text-align:center;'>
+    <h1 style='color:#fff;margin:0;font-size:22px;'>{$site_name}</h1>
+    <p style='color:#a7f3d0;margin:6px 0 0;font-size:13px;'>Affiliate Approved</p>
+  </div>
+  <div style='padding:36px 32px;'>
+    <p style='color:#334155;font-size:16px;'>Hi <strong>{$safeName}</strong>,</p>
+    <p style='color:#334155;'>Great news — your affiliate account has been <strong>approved</strong>.</p>
+    <p style='color:#334155;'>Your promo code: <strong style='letter-spacing:1px;font-size:18px;'>{$promo}</strong></p>
+    <p style='color:#64748b;font-size:14px;'>Share this code at checkout or use your referral link. Sign in to your affiliate dashboard:</p>
+    <div style='text-align:center;margin:28px 0;'>
+      <a href='{$loginUrl}' style='display:inline-block;background:#059669;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;'>Affiliate Login</a>
+    </div>
+  </div>
+  <div style='background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;'>
+    <p style='margin:0;color:#94a3b8;font-size:13px;'>{$site_name} &copy; " . date('Y') . "</p>
+  </div>
+</div>
+</body>
+</html>";
+
+    return sk_send_mail($to_email, $to_name, $subject, $body);
+}
+
+/** Contact / affiliate enquiry: ack to user + notify admin. */
+function sk_mail_contact_enquiry(string $name, string $email, string $message, array $settings = []): array {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $safeName  = htmlspecialchars($name);
+    $safeMsg   = nl2br(htmlspecialchars($message));
+    $isAffiliate = stripos($message, 'Affiliate programme enquiry') !== false
+        || stripos($message, 'Affiliate program enquiry') !== false;
+
+    $userSubject = ($isAffiliate ? 'Affiliate enquiry received' : 'We received your message') . ' – ' . $site_name;
+    $userBody = "
+<!DOCTYPE html>
+<html><body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
+<div style='max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
+  <p>Hi <strong>{$safeName}</strong>,</p>
+  <p>Thank you for contacting {$site_name}. We have received your " . ($isAffiliate ? 'affiliate enquiry' : 'message') . " and will get back to you shortly.</p>
+  <p style='color:#64748b;font-size:14px;'><strong>Your message:</strong><br>{$safeMsg}</p>
+</div>
+</body></html>";
+
+    $sentUser = sk_send_mail($email, $name, $userSubject, $userBody);
+
+    $adminEmail = sk_mailer_notify_email($settings);
+    $sentAdmin = false;
+    if ($adminEmail !== '') {
+        $adminSubject = ($isAffiliate ? 'New affiliate enquiry' : 'New contact enquiry') . ' – ' . $name;
+        $adminBody = "
+<!DOCTYPE html>
+<html><body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
+<div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
+  <h2 style='margin:0 0 16px;'>{$adminSubject}</h2>
+  <p><strong>Name:</strong> {$safeName}<br><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
+  <p style='background:#f8fafc;padding:16px;border-radius:8px;'>{$safeMsg}</p>
+</div>
+</body></html>";
+        $sentAdmin = sk_send_mail($adminEmail, $site_name . ' Admin', $adminSubject, $adminBody);
+    }
+
+    return ['user' => $sentUser, 'admin' => $sentAdmin];
 }

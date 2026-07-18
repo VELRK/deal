@@ -6,15 +6,19 @@ import{r as e}from"./rolldown-runtime-QTnfLwEv.js";import{t}from"./react-CZI7_Jk
           }
           .form-group-custom { margin-bottom: 22px; }
           .form-group-custom label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
-          .input-amount-wrapper { position: relative; display: flex; align-items: center; }
+          .input-amount-wrapper {
+            display: flex; align-items: center; width: 100%; box-sizing: border-box;
+            border: 1px solid #d1d5db; border-radius: 10px; background: #fff; overflow: hidden;
+          }
+          .input-amount-wrapper:focus-within { border-color: #3ec1bc; box-shadow: 0 0 0 4px rgba(62,193,188,.1); }
           .input-amount-prefix {
-            position: absolute; left: 16px; font-size: 18px; font-weight: 600; color: #64748b; pointer-events: none;
+            flex-shrink: 0; padding: 0 10px 0 16px; font-size: 18px; font-weight: 600; color: #64748b; line-height: 1;
           }
           .input-amount {
-            width: 100%; height: 52px; padding: 10px 16px 10px 52px; font-size: 20px; font-weight: 700;
-            border: 1px solid #d1d5db; border-radius: 10px; outline: none;
+            flex: 1; min-width: 0; width: auto; height: 52px; padding: 10px 16px 10px 0;
+            font-size: 20px; font-weight: 700; border: none; border-radius: 0; outline: none; background: transparent;
           }
-          .input-amount:focus { border-color: #3ec1bc; box-shadow: 0 0 0 4px rgba(62,193,188,.1); }
+          .input-amount:focus { box-shadow: none; }
           .points-preview { font-size: 13px; color: #0f766e; margin-top: 8px; }
           .gateway-note {
             background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 10px; padding: 12px 14px;

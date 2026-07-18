@@ -65,11 +65,20 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
         ]);
 
         $aff = $this->Sk_Affiliate_model->get_by_id($id);
-        $this->success([
+        $sent = $aff ? $this->Sk_Affiliate_model->send_registration_emails($aff) : false;
+
+        $payload = [
             'affiliate'   => $this->_safe_affiliate($aff),
             'promo_code'  => $promo,
             'message'     => 'Registration submitted. Await admin approval.',
-        ], 'Registered', 201);
+        ];
+        if (!$sent && ENVIRONMENT !== 'production') {
+            $payload['email_note'] = 'SMTP not configured — confirmation email was not sent.';
+        } elseif (!$sent) {
+            $payload['email_note'] = 'Confirmation email could not be sent. Contact support if needed.';
+        }
+
+        $this->success($payload, 'Registered', 201);
     }
 
     public function profile() {

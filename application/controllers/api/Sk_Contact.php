@@ -26,6 +26,12 @@ class Sk_Contact extends Sk_Base_Api {
             ]);
         }
 
+        $this->load->helper('sk_mailer');
+        $mail = sk_mail_contact_enquiry($name, $email, $message);
+        if (!$mail['user'] && ENVIRONMENT === 'production') {
+            log_message('error', 'Contact enquiry email failed for ' . $email);
+        }
+
         $this->success([], 'Thank you! We will get back to you shortly.');
     }
 }

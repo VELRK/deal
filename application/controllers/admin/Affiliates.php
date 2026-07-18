@@ -208,8 +208,18 @@ class Affiliates extends Sk_Base {
             'approved_at' => date('Y-m-d H:i:s'),
             'approved_by' => $this->admin['id'],
         ]);
+        $aff = $this->Sk_Affiliate_model->get_by_id((int)$id);
+        $sent = $aff ? $this->Sk_Affiliate_model->send_approved_email($aff) : false;
         $this->activity_log->log_admin('affiliates', 'approve', (int)$id);
-        $this->session->set_flashdata('success', 'Affiliate approved.');
+        $msg = 'Affiliate approved.';
+        if ($sent) {
+            $msg .= ' Approval email sent.';
+        } elseif (ENVIRONMENT !== 'production') {
+            $msg .= ' (SMTP not configured — no email sent.)';
+        } else {
+            $msg .= ' Could not send approval email — check SMTP settings.';
+        }
+        $this->session->set_flashdata('success', $msg);
         redirect('admin/affiliates/view/' . $id);
     }
 

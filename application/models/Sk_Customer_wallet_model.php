@@ -35,13 +35,34 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function get_transactions(int $userId, int $limit = 20, int $offset = 0): array {
-        $this->db->where('user_id', $userId)->where('source !=', 'topup_pending');
+        $this->db->where('user_id', $userId);
+        $this->apply_completed_transactions_scope();
         $total = $this->db->count_all_results('customer_wallet_transactions');
-        $rows  = $this->db->where('user_id', $userId)
-            ->where('source !=', 'topup_pending')
-            ->order_by('created_at', 'DESC')
-            ->limit($limit, $offset)->get('customer_wallet_transactions')->result_array();
+        $this->db->where('user_id', $userId);
+        $this->apply_completed_transactions_scope();
+        $rows = $this->db->order_by('created_at', 'DESC')
+            ->limit($limit, $offset)
+            ->get('customer_wallet_transactions')
+            ->result_array();
         return ['rows' => $rows, 'total' => $total];
+    }
+
+    /** Hide in-progress top-ups from customer history. */
+    private function apply_completed_transactions_scope(): void {
+        $this->db->where('source !=', 'topup_pending');
+        $this->db->not_like('description', 'Pending Razorpay', 'after');
+        $this->db->not_like('description', 'Pending ToyyibPay', 'after');
+    }
+
+    /** Match pending top-up rows even if legacy ENUM stored an empty source. */
+    private function apply_pending_topup_scope(): void {
+        $this->db->group_start()
+            ->where('source', 'topup_pending')
+            ->or_group_start()
+                ->like('description', 'Pending Razorpay', 'after')
+                ->or_like('description', 'Pending ToyyibPay', 'after')
+            ->group_end()
+        ->group_end();
     }
 
     public function add_funds(int $userId, float $amount, string $description, ?int $adminId = null): bool {
@@ -362,20 +383,22 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function complete_topup_by_reference(string $ref, ?int $userId = null): bool {
-        $this->db->where('reference', $ref)->where('source', 'topup_pending');
+        if ($this->is_topup_completed($ref, (int)($userId ?? 0))) {
+            return true;
+        }
+
+        $this->db->where('reference', $ref);
         if ($userId !== null) {
             $this->db->where('user_id', $userId);
         }
+        $this->apply_pending_topup_scope();
         $pending = $this->db->order_by('id', 'DESC')->get('customer_wallet_transactions')->row_array();
         if (!$pending) {
-            $this->db->where('reference', $ref)->where('source', 'topup');
-            if ($userId !== null) {
-                $this->db->where('user_id', $userId);
-            }
-            return $this->db->count_all_results('customer_wallet_transactions') > 0;
+            return false;
         }
 
-        if (!$this->credit_topup((int)$pending['user_id'], (float)$pending['amount'], $ref, 'topup')) {
+        $refToCredit = $pending['reference'] ?? $ref;
+        if (!$this->credit_topup((int)$pending['user_id'], (float)$pending['amount'], $refToCredit, 'topup')) {
             return false;
         }
 
@@ -384,10 +407,10 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function find_topup_pending(string $ref, int $userId, string $rzpOrderId = ''): ?array {
-        $pending = $this->db->where('reference', $ref)
-            ->where('user_id', $userId)
-            ->where('source', 'topup_pending')
-            ->order_by('id', 'DESC')
+        $this->db->where('reference', $ref)
+            ->where('user_id', $userId);
+        $this->apply_pending_topup_scope();
+        $pending = $this->db->order_by('id', 'DESC')
             ->get('customer_wallet_transactions')
             ->row_array();
         if ($pending) {
@@ -396,7 +419,6 @@ class Sk_Customer_wallet_model extends CI_Model {
 
         if ($rzpOrderId !== '') {
             $pending = $this->db->where('user_id', $userId)
-                ->where('source', 'topup_pending')
                 ->like('description', 'Pending Razorpay ' . $rzpOrderId, 'after')
                 ->order_by('id', 'DESC')
                 ->get('customer_wallet_transactions')
@@ -410,10 +432,15 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function is_topup_completed(string $ref, int $userId): bool {
-        return $this->db->where('reference', $ref)
-            ->where('user_id', $userId)
+        $this->db->where('reference', $ref);
+        if ($userId > 0) {
+            $this->db->where('user_id', $userId);
+        }
+        $this->db->group_start()
             ->where_in('source', ['topup', 'topup_sandbox'])
-            ->count_all_results('customer_wallet_transactions') > 0;
+            ->or_like('description', 'Wallet recharge RM', 'after')
+        ->group_end();
+        return $this->db->count_all_results('customer_wallet_transactions') > 0;
     }
 
     public function get_recharge_report(array $filters = [], int $limit = 50, int $offset = 0): array {

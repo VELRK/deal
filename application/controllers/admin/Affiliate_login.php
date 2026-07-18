@@ -66,7 +66,18 @@ class Affiliate_login extends CI_Controller {
             'kyc_status'      => 'pending',
         ]);
 
-        $this->session->set_flashdata('success', 'Registration submitted! Your promo code: ' . $promo . '. Await admin approval.');
+        $aff = $this->Sk_Affiliate_model->get_by_id($id);
+        $sent = $aff ? $this->Sk_Affiliate_model->send_registration_emails($aff) : false;
+
+        $msg = 'Registration submitted! Your promo code: ' . $promo . '. Await admin approval.';
+        if ($sent) {
+            $msg .= ' A confirmation email has been sent to ' . $email . '.';
+        } elseif (ENVIRONMENT !== 'production') {
+            $msg .= ' (SMTP not configured — no email sent.)';
+        } else {
+            $msg .= ' We could not send confirmation email — please contact support if you do not hear from us.';
+        }
+        $this->session->set_flashdata('success', $msg);
         redirect('admin/affiliate/login');
     }
 

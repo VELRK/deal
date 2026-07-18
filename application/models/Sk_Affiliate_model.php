@@ -265,6 +265,29 @@ class Sk_Affiliate_model extends CI_Model {
         );
     }
 
+    public function send_registration_emails(array $affiliate): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $sentUser = sk_mail_affiliate_registration($affiliate, $settings);
+        sk_mail_affiliate_registration_admin($affiliate, $settings);
+        if (!$sentUser) {
+            log_message('error', 'Affiliate registration email failed for ' . ($affiliate['email'] ?? ''));
+        }
+        return $sentUser;
+    }
+
+    public function send_approved_email(array $affiliate): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $sent = sk_mail_affiliate_approved($affiliate, $settings);
+        if (!$sent) {
+            log_message('error', 'Affiliate approval email failed for ' . ($affiliate['email'] ?? ''));
+        }
+        return $sent;
+    }
+
     public function status_counts(?int $vendorId = null): array {
         $this->db->select('status, COUNT(*) as cnt')
             ->where('deleted_at IS NULL', null, false);
