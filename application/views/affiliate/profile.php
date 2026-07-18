@@ -103,7 +103,6 @@
           </div>
           <button type="submit" class="btn btn-success w-100">Update Password</button>
         </form>
-        <p class="small mt-3 mb-0"><a href="<?= site_url('admin/affiliate/forgot-password') ?>">Forgot password?</a></p>
       </div>
     </div>
 
