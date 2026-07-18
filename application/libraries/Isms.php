@@ -236,24 +236,20 @@ class Isms {
 
         $lastMessage = 'iSMS authentication failed.';
         foreach ($secrets as $secret) {
+            // JSON API first (recommended in iSMS docs), then classic fallbacks.
             $attempts = [
+                ['url' => self::BALANCE_URL_JSON, 'params' => [
+                    'un'  => $this->username,
+                    'pwd' => $secret,
+                ], 'mode' => 'json_balance'],
                 ['url' => self::BALANCE_URL, 'params' => [
                     'un'  => $this->username,
                     'pwd' => $secret,
                 ], 'mode' => 'bulk'],
-                ['url' => self::BALANCE_URL_JSON, 'params' => [
-                    'un'  => $this->username,
-                    'pwd' => $secret,
-                ], 'mode' => 'json'],
-                ['url' => self::TWO_FA_URL, 'params' => [
-                    'un'     => $this->username,
-                    'pass'   => $secret,
-                    'method' => 'balance',
-                ], 'mode' => '2fa'],
             ];
 
             foreach ($attempts as $attempt) {
-                $response = $attempt['mode'] === 'json'
+                $response = $attempt['mode'] === 'json_balance'
                     ? $this->_post_json($attempt['url'], $attempt['params'])
                     : $this->_post_form($attempt['url'], $attempt['params']);
                 if (!$response['ok']) {
@@ -336,6 +332,9 @@ class Isms {
             -1008 => 'Missing iSMS parameter.',
             -1009 => 'Invalid destination mobile number.',
             -1013 => 'iSMS terms not accepted (agreedterm must be YES).',
+            -1010 => 'Too many destination numbers (JSON API max 50 per request).',
+            -1014 => 'Invalid JSON body sent to iSMS.',
+            -1015 => 'iSMS JSON endpoint requires POST with Content-Type application/json.',
         ];
         return $map[$code] ?? 'Failed to send OTP via iSMS (code ' . $code . ').';
     }
@@ -353,22 +352,8 @@ class Isms {
 
         $json = json_decode($body, true);
         if (is_array($json)) {
-            if ($mode === 'json') {
-                $code = (int) ($json['code'] ?? 0);
-                if (($json['status'] ?? '') === 'success' || $code === 2000) {
-                    $balance = trim((string) ($json['balance'] ?? $json['message'] ?? ''));
-                    if ($balance !== '' && preg_match('/^-?\d+(\.\d+)?$/', $balance)) {
-                        return [
-                            'success' => true,
-                            'code'    => 2000,
-                            'message' => 'Balance: RM ' . $balance,
-                            'balance' => $balance,
-                        ];
-                    }
-                }
-                if ($code < 0) {
-                    return ['success' => false, 'code' => $code, 'message' => $this->_map_error_code($code)];
-                }
+            if ($mode === 'json_balance') {
+                return $this->_parse_json_balance_response($json);
             }
             if ($mode === 'send') {
                 return $this->_parse_json_send_response($json);
@@ -414,6 +399,42 @@ class Isms {
     }
 
     /**
+     * Parse isms_balance_json.php — docs: status success, code 0, balance field.
+     *
+     * @return array{success:bool,message:string,code?:int,balance?:string}
+     */
+    protected function _parse_json_balance_response(array $data) {
+        $code = (int) ($data['code'] ?? 0);
+        $status = strtolower(trim((string) ($data['status'] ?? '')));
+
+        if ($status === 'success') {
+            $balance = trim((string) ($data['balance'] ?? ''));
+            if ($balance !== '' && preg_match('/^-?\d+(\.\d+)?$/', $balance)) {
+                return [
+                    'success' => true,
+                    'code'    => 0,
+                    'message' => 'Balance: RM ' . $balance,
+                    'balance' => $balance,
+                ];
+            }
+        }
+
+        if ($code < 0) {
+            return [
+                'success' => false,
+                'code'    => $code,
+                'message' => $this->_map_error_code($code),
+            ];
+        }
+
+        return [
+            'success' => false,
+            'code'    => $code,
+            'message' => $this->_format_api_message($data, $code),
+        ];
+    }
+
+    /**
      * Parse isms_send_json.php response with per-recipient results.
      *
      * @return array{success:bool,message:string,code?:int,sms_id?:string}
@@ -432,10 +453,10 @@ class Isms {
         if (!empty($results) && is_array($results)) {
             $result = $results[0];
             $code = (int) ($result['code'] ?? $topCode);
-            $status = strtolower(trim((string) ($result['status'] ?? '')));
-            if ($code === 2000 || $status === 'success') {
+            $status = trim((string) ($result['status'] ?? ''));
+            if ($code === 2000 || stripos($status, 'success') !== false) {
                 $sms_id = (string) ($result['sms_id'] ?? $result['trx_id'] ?? '');
-                if ($sms_id === '' && !empty($result['message']) && preg_match('/SUCCESS:(\S+)/i', (string) $result['message'], $m)) {
+                if ($sms_id === '' && preg_match('/SUCCESS:([^|\s]+)/i', $status, $m)) {
                     $sms_id = $m[1];
                 }
                 return [
