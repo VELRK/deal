@@ -235,6 +235,16 @@ class Sk_Customer_wallet_model extends CI_Model {
             'Pending Razorpay ' . $rzp['id']
         );
 
+        $CI->load->helper('sk_isms');
+        $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
+        $prefill = [
+            'name'  => $user['name'] ?? 'Customer',
+            'email' => $user['email'] ?? '',
+        ];
+        if ($contact !== '') {
+            $prefill['contact'] = $contact;
+        }
+
         return [
             'gateway'           => 'razorpay',
             'razorpay_order_id' => $rzp['id'],
@@ -242,11 +252,7 @@ class Sk_Customer_wallet_model extends CI_Model {
             'currency'          => $currency,
             'key_id'            => $keyId,
             'reference'         => $ref,
-            'prefill'           => [
-                'name'    => $user['name'] ?? 'Customer',
-                'email'   => $user['email'] ?? '',
-                'contact' => preg_replace('/\D/', '', (string)($user['phone'] ?? '')),
-            ],
+            'prefill'           => $prefill,
         ];
     }
 

@@ -304,3 +304,17 @@ function sk_isms_normalize_phone($phone, array $settings = null) {
     $parsed = sk_isms_parse_phone($phone, $settings);
     return $parsed ? $parsed['normalized'] : '';
 }
+
+/**
+ * Digits-only contact for Razorpay prefill (E.164 without '+').
+ * Returns empty string when the number is missing or invalid.
+ */
+function sk_razorpay_contact($phone, array $settings = null) {
+    $normalized = sk_isms_normalize_phone($phone, $settings);
+    if ($normalized === '') {
+        return '';
+    }
+    $digits = preg_replace('/\D/', '', $normalized);
+    // Razorpay: at least 8 digits including country code; MY mobiles are 60 + 9–10 digits.
+    return strlen($digits) >= 10 ? $digits : '';
+}

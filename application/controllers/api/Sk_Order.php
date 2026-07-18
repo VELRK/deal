@@ -15,12 +15,19 @@ class Sk_Order extends Sk_Base_Api {
             return $this->error('Shipping address is required.');
         }
 
+        $settings = $this->get_settings();
+        $this->load->helper('sk_isms');
+        $shippingPhone = sk_isms_normalize_phone($addr['phone'] ?? '', $settings);
+        if ($shippingPhone === '') {
+            return $this->error(sk_isms_phone_error());
+        }
+        $addr['phone'] = $shippingPhone;
+
         // Build cart
         $user_id = $this->user['user_id'];
         $items   = $this->db->where('user_id', $user_id)->get('cart')->result_array();
         if (empty($items)) return $this->error('Cart is empty.');
 
-        $settings = $this->get_settings();
         $subtotal = 0;
         $order_items = [];
 
@@ -139,7 +146,7 @@ class Sk_Order extends Sk_Base_Api {
                 ? trim(($data['note'] ?? $data['notes'] ?? '') . ' [Wallet discount: ' . $wallet_discount . ']')
                 : ($data['note'] ?? $data['notes'] ?? null),
             'shipping_name'    => $addr['full_name'],
-            'shipping_phone'   => $addr['phone'] ?? '',
+            'shipping_phone'   => $shippingPhone,
             'shipping_line1'   => $addr['line1'],
             'shipping_line2'   => $addr['line2'] ?? '',
             'shipping_city'    => $addr['city'],
@@ -151,10 +158,16 @@ class Sk_Order extends Sk_Base_Api {
         // Billing address (optional) — checkbox "same as shipping" sends billing_same=true
         $billingSame = !empty($data['billing_same']) || empty($data['billing_address']);
         $bill = $billingSame ? $addr : ($data['billing_address'] ?? $addr);
+        $billingPhone = $billingSame
+            ? $shippingPhone
+            : sk_isms_normalize_phone($bill['phone'] ?? '', $settings);
+        if (!$billingSame && $billingPhone === '') {
+            return $this->error('A valid mobile number is required for billing.');
+        }
         $this->_ensure_order_billing_schema();
         $order_data['billing_name']     = $bill['full_name'] ?? $addr['full_name'];
         $order_data['billing_company']  = trim($bill['company_name'] ?? '') ?: null;
-        $order_data['billing_phone']    = $bill['phone'] ?? ($addr['phone'] ?? '');
+        $order_data['billing_phone']    = $billingPhone ?: $shippingPhone;
         $order_data['billing_line1']    = $bill['line1'] ?? $addr['line1'];
         $order_data['billing_line2']    = $bill['line2'] ?? ($addr['line2'] ?? '');
         $order_data['billing_city']     = $bill['city'] ?? $addr['city'];

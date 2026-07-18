@@ -75,17 +75,31 @@ class Sk_Payment extends Sk_Base_Api {
             'status'            => 'created',
         ]);
 
+        $this->load->helper('sk_isms');
+        $user = $this->Sk_User_model->get_by_id($this->user['user_id']);
+        $contact = sk_razorpay_contact($order['shipping_phone'] ?? '', $settings);
+        if ($contact === '') {
+            $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
+        }
+        if ($contact === '') {
+            $contact = sk_razorpay_contact($order['billing_phone'] ?? '', $settings);
+        }
+
+        $prefill = [
+            'name'  => $order['shipping_name'],
+            'email' => $user['email'] ?? '',
+        ];
+        if ($contact !== '') {
+            $prefill['contact'] = $contact;
+        }
+
         $this->success([
             'razorpay_order_id' => $rzp['id'],
             'amount'            => $amount_paise,
             'currency'          => $currency,
             'key_id'            => $key_id,
             'order_number'      => $order['order_number'],
-            'prefill' => [
-                'name'  => $order['shipping_name'],
-                'email' => $this->Sk_User_model->get_by_id($this->user['user_id'])['email'] ?? '',
-                'contact' => $order['shipping_phone'],
-            ],
+            'prefill'           => $prefill,
         ], 'Payment order created.');
     }
 
