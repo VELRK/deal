@@ -44,7 +44,7 @@ function sk_isms_ensure_schema() {
         'isms_country_code'  => '60',
         'isms_otp_interval'  => '5',
         'isms_test_otp'      => '1234',
-        'isms_test_phone'    => '601800000000',
+        'isms_test_phone'    => '60180000000',
     ];
 
     $hasGroup = $CI->db->field_exists('group', 'settings');
@@ -65,12 +65,13 @@ function sk_isms_ensure_schema() {
             ->update('settings', ['value' => '1234']);
         $CI->db->where('key', 'isms_sender_id')->where('value', '')->update('settings', ['value' => 'GOLDEN2DEAL']);
         $CI->db->where('key', 'isms_username')->where('value', '2DEAL')->update('settings', ['value' => '2DEAL1']);
+        $CI->db->where('key', 'isms_test_phone')->where('value', '601800000000')->update('settings', ['value' => '60180000000']);
     }
 }
 
 function sk_isms_test_defaults() {
     return [
-        'phone' => '601800000000',
+        'phone' => '60180000000',
         'otp'   => '1234',
     ];
 }
@@ -104,11 +105,20 @@ function sk_isms_get_test_config(array $settings = null) {
 }
 
 function sk_isms_is_test_phone(array $settings, $normalized_phone) {
+    if ($normalized_phone === '') {
+        return false;
+    }
     $CI =& get_instance();
     $CI->load->library('isms', $settings);
     $test = sk_isms_get_test_config($settings);
-    $testNorm = $CI->isms->normalize_phone($test['phone']);
-    return $testNorm !== '' && $testNorm === $normalized_phone;
+    $aliases = [
+        $CI->isms->normalize_phone($test['phone']),
+        $CI->isms->normalize_phone('0180000000'),
+        $CI->isms->normalize_phone('60180000000'),
+        $CI->isms->normalize_phone('601800000000'),
+    ];
+    $aliases = array_values(array_unique(array_filter($aliases)));
+    return in_array($normalized_phone, $aliases, true);
 }
 
 /**

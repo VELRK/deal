@@ -47,5 +47,5 @@ SELECT 'isms_test_otp', '1234' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_test_otp');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'isms_test_phone', '601800000000' FROM DUAL
+SELECT 'isms_test_phone', '60180000000' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'isms_test_phone');
