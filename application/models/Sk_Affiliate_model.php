@@ -141,6 +141,40 @@ class Sk_Affiliate_model extends CI_Model {
         return $this->update($id, $filtered);
     }
 
+    /** Create a secure reset link token (forgot password). Expires in 1 hour. */
+    public function create_reset_token(string $email): ?string {
+        $aff = $this->get_by_email($email);
+        if (!$aff) return null;
+        $token = bin2hex(random_bytes(32));
+        $this->db->where('id', $aff['id'])->update($this->table, [
+            'reset_token'   => $token,
+            'reset_expires' => date('Y-m-d H:i:s', strtotime('+1 hour')),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+        return $token;
+    }
+
+    public function get_by_reset_token(string $email, string $token): ?array {
+        if (!$email || !$token || strlen($token) < 32) return null;
+        return $this->db->where('email', $email)
+            ->where('reset_token', $token)
+            ->where('reset_expires >', date('Y-m-d H:i:s'))
+            ->where('deleted_at IS NULL', null, false)
+            ->get($this->table)->row_array() ?: null;
+    }
+
+    public function reset_password_url(array $affiliate, ?string $token = null): string {
+        $token = $token ?: ($affiliate['reset_token'] ?? '');
+        if (!$token) {
+            return '';
+        }
+        return site_url(
+            'admin/affiliate/reset-password?token=' . urlencode($token)
+            . '&email=' . urlencode($affiliate['email'] ?? '')
+        );
+    }
+
+    /** 6-digit code for logged-in password change (profile). */
     public function set_reset_code(string $email): ?string {
         $aff = $this->get_by_email($email);
         if (!$aff) return null;
@@ -189,7 +223,17 @@ class Sk_Affiliate_model extends CI_Model {
         return true;
     }
 
-    public function send_password_reset_email(array $affiliate, string $code): bool {
+    public function send_password_reset_email(array $affiliate, string $token): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $link = $this->reset_password_url($affiliate, $token);
+        if (!$link) return false;
+        return sk_mail_affiliate_password_reset($affiliate, $link, $settings);
+    }
+
+    /** Email 6-digit code when changing password from profile (logged in). */
+    public function send_password_change_code_email(array $affiliate, string $code): bool {
         $this->load->model('Sk_Admin_model');
         $this->load->helper('sk_mailer');
         $settings = $this->Sk_Admin_model->get_settings();

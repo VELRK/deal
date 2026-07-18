@@ -120,13 +120,15 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
             return $this->error('Account is ' . $aff['status'] . '.', 403);
         }
 
-        $code = $this->Sk_Affiliate_model->set_reset_code($email);
-        $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $code);
+        $token = $this->Sk_Affiliate_model->create_reset_token($email);
+        if (!$token) return $this->error('Unable to start password reset.', 500);
+        $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $token);
+        $resetUrl = $this->Sk_Affiliate_model->reset_password_url($aff, $token);
         if (!$sent && ENVIRONMENT !== 'production') {
-            return $this->success(['dev_code' => $code], 'Use verification code: ' . $code);
+            return $this->success(['reset_url' => $resetUrl], 'Check email for reset link. Dev URL: ' . $resetUrl);
         }
         if (!$sent) return $this->error('Unable to send email.', 500);
-        $this->success([], 'Verification code sent to your email.');
+        $this->success([], 'Password reset link sent to your email.');
     }
 
     public function verify_reset_code() {
@@ -161,7 +163,7 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
     public function request_password_code() {
         $aff = $this->_auth_affiliate();
         $code = $this->Sk_Affiliate_model->set_reset_code($aff['email']);
-        $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $code);
+        $sent = $this->Sk_Affiliate_model->send_password_change_code_email($aff, $code);
         if (!$sent && ENVIRONMENT !== 'production') {
             return $this->success(['dev_code' => $code], 'Verification code: ' . $code);
         }

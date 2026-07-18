@@ -80,7 +80,7 @@ class Affiliate_portal extends Sk_Affiliate_Base {
             if ($action === 'send_code') {
                 $aff = $this->Sk_Affiliate_model->get_by_id($aid);
                 $code = $this->Sk_Affiliate_model->set_reset_code($aff['email']);
-                $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $code);
+                $sent = $this->Sk_Affiliate_model->send_password_change_code_email($aff, $code);
                 if (!$sent && ENVIRONMENT !== 'production') {
                     $this->session->set_flashdata('success', 'Verification code (dev): ' . $code);
                 } elseif (!$sent) {

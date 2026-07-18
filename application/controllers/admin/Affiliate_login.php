@@ -186,65 +186,65 @@ class Affiliate_login extends CI_Controller {
             redirect('admin/affiliate/forgot-password');
         }
 
-        $code = $this->Sk_Affiliate_model->set_reset_code($email);
-        $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $code);
+        $token = $this->Sk_Affiliate_model->create_reset_token($email);
+        if (!$token) {
+            $this->session->set_flashdata('error', 'Unable to start password reset. Try again.');
+            redirect('admin/affiliate/forgot-password');
+        }
+        $sent = $this->Sk_Affiliate_model->send_password_reset_email($aff, $token);
+        $resetUrl = $this->Sk_Affiliate_model->reset_password_url($aff, $token);
 
-        $this->session->set_userdata('aff_reset_email', $email);
         if (!$sent && ENVIRONMENT !== 'production') {
-            $this->session->set_flashdata('success', 'SMTP not configured. Verification code: ' . $code);
+            $this->session->set_flashdata('success', 'SMTP not configured. Reset link: ' . $resetUrl);
         } elseif (!$sent) {
             $this->session->set_flashdata('error', 'Unable to send email. Try again later.');
-            redirect('admin/affiliate/forgot-password');
         } else {
-            $this->session->set_flashdata('success', 'Verification code sent to your email.');
+            $this->session->set_flashdata('success', 'Password reset link sent. Check your email and click the link to set a new password.');
         }
-        redirect('admin/affiliate/reset-password');
+        redirect('admin/affiliate/forgot-password');
     }
 
     public function reset_password() {
-        $email = $this->session->userdata('aff_reset_email');
-        if (!$email) {
+        if ($this->session->userdata('sk_affiliate_login')) {
+            redirect('admin/affiliate/dashboard');
+        }
+        $email = trim($this->input->get('email', TRUE) ?: '');
+        $token = trim($this->input->get('token', TRUE) ?: '');
+        $aff = $this->Sk_Affiliate_model->get_by_reset_token($email, $token);
+        if (!$aff) {
+            $this->session->set_flashdata('error', 'Invalid or expired reset link. Request a new one below.');
             redirect('admin/affiliate/forgot-password');
         }
         $data['title'] = 'Reset Affiliate Password';
         $data['email'] = $email;
+        $data['token'] = $token;
         $this->load->view('affiliate/reset_password', $data);
     }
 
     public function reset_submit() {
         $email = trim($this->input->post('email', TRUE));
-        $code  = trim($this->input->post('code', TRUE));
+        $token = trim($this->input->post('token', TRUE));
         $pass  = $this->input->post('password', TRUE);
         $confirm = $this->input->post('password_confirm', TRUE);
+        $backUrl = 'admin/affiliate/reset-password?token=' . urlencode($token) . '&email=' . urlencode($email);
 
-        if (!$email || !$code || !$pass) {
+        if (!$email || !$token || !$pass) {
             $this->session->set_flashdata('error', 'All fields are required.');
-            redirect('admin/affiliate/reset-password');
-        }
-        if (!preg_match('/^\d{6}$/', $code)) {
-            $this->session->set_flashdata('error', 'Enter the 6-digit code from your email.');
-            redirect('admin/affiliate/reset-password');
+            redirect($backUrl);
         }
         if (strlen($pass) < 6) {
             $this->session->set_flashdata('error', 'Password must be at least 6 characters.');
-            redirect('admin/affiliate/reset-password');
+            redirect($backUrl);
         }
         if ($pass !== $confirm) {
             $this->session->set_flashdata('error', 'Passwords do not match.');
-            redirect('admin/affiliate/reset-password');
-        }
-
-        $token = $this->Sk_Affiliate_model->verify_reset_code($email, $code);
-        if (!$token) {
-            $this->session->set_flashdata('error', 'Invalid or expired verification code.');
-            redirect('admin/affiliate/reset-password');
+            redirect($backUrl);
         }
         if (!$this->Sk_Affiliate_model->reset_password_with_token($email, $token, $pass)) {
-            $this->session->set_flashdata('error', 'Reset failed. Please start again.');
+            $this->session->set_flashdata('error', 'Invalid or expired reset link. Request a new one.');
             redirect('admin/affiliate/forgot-password');
         }
 
-        $this->session->unset_userdata('aff_reset_email');
         $this->session->set_flashdata('success', 'Password updated. You can sign in now.');
         redirect('admin/affiliate/login');
     }
