@@ -240,6 +240,9 @@ class Sk_Order extends Sk_Base_Api {
         if ($order['status'] !== 'pending') {
             return $this->error('Only pending orders can be cancelled.');
         }
+        if (($order['payment_status'] ?? '') === 'paid') {
+            return $this->error('Paid orders cannot be cancelled.');
+        }
 
         $this->_jt_cancel_if_needed($order);
 

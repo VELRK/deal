@@ -129,6 +129,13 @@ class Sk_Payment extends Sk_Base_Api {
             return $this->error('Missing payment verification data.');
         }
 
+        if ($order_id > 0) {
+            $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
+            if ($existing && ($existing['payment_status'] ?? '') === 'paid') {
+                return $this->success(['order' => $existing], 'Payment successful! Your order is confirmed.');
+            }
+        }
+
         $settings   = $this->get_settings();
         $key_secret = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
 
@@ -190,28 +197,31 @@ class Sk_Payment extends Sk_Base_Api {
         }
 
         $this->load->model('Sk_Customer_wallet_model');
-        $pending = $this->db->where('reference', $reference)
-            ->where('user_id', $this->user['user_id'])
-            ->where('source', 'topup_pending')
-            ->order_by('id', 'DESC')
-            ->get('customer_wallet_transactions')
-            ->row_array();
+        $userId = (int)$this->user['user_id'];
+
+        if ($this->Sk_Customer_wallet_model->is_topup_completed($reference, $userId)) {
+            $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
+            return $this->success($wallet, 'Wallet already topped up.');
+        }
+
+        $pending = $this->Sk_Customer_wallet_model->find_topup_pending($reference, $userId, $rzpOrderId);
         if (!$pending) {
-            $done = $this->db->where('reference', $reference)
-                ->where('source', 'topup')
-                ->count_all_results('customer_wallet_transactions');
-            if ($done > 0) {
-                $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']);
-                return $this->success($wallet, 'Wallet already topped up.');
+            if (!preg_match('/^TOPUP-' . $userId . '-/', $reference)) {
+                return $this->error('Invalid top-up reference for your account.', 403);
             }
             return $this->error('Top-up session expired. Please try again.', 404);
         }
 
-        if (!$this->Sk_Customer_wallet_model->complete_topup_by_reference($reference)) {
+        $refToCredit = $pending['reference'] ?? $reference;
+        if (!$this->Sk_Customer_wallet_model->complete_topup_by_reference($refToCredit, $userId)) {
+            if ($this->Sk_Customer_wallet_model->is_topup_completed($refToCredit, $userId)) {
+                $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
+                return $this->success($wallet, 'Wallet topped up successfully!');
+            }
             return $this->error('Could not credit wallet. Contact support with ref ' . $reference, 500);
         }
 
-        $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']);
+        $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
         $this->success($wallet, 'Wallet topped up successfully!');
     }
 
