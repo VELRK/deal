@@ -298,7 +298,6 @@ $route['shopkart/affiliate/dashboard'] = 'admin/Affiliate_portal/dashboard';
 $route['shopkart/affiliate/commissions'] = 'admin/Affiliate_portal/commissions';
 $route['shopkart/affiliate/payouts'] = 'admin/Affiliate_portal/payouts';
 $route['shopkart/affiliate/kyc'] = 'admin/Affiliate_portal/kyc';
-$route['shopkart/affiliate/products'] = 'admin/Affiliate_portal/products';
 $route['shopkart/affiliate/profile'] = 'admin/Affiliate_portal/profile';
 
 // Admin — Affiliates & wallets
@@ -334,10 +333,6 @@ $route['admin/wallet-recharge'] = 'admin/Wallet_recharge/index';
 
 $route['shopkart/affiliate-reports'] = 'admin/Affiliate_reports/index';
 $route['shopkart/affiliate-reports/export'] = 'admin/Affiliate_reports/export';
-
-$route['shopkart/affiliate-requests'] = 'admin/Affiliate_requests/index';
-$route['shopkart/affiliate-requests/approve/(:num)'] = 'admin/Affiliate_requests/approve/$1';
-$route['shopkart/affiliate-requests/reject/(:num)'] = 'admin/Affiliate_requests/reject/$1';
 
 $route['shopkart/dashboard'] = 'admin/Dashboard/index';
 // Vendors (multi-vendor)

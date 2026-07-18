@@ -64,11 +64,6 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
           <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
         </a>
       </li>
-      <li class="nav-item">
-        <a href="<?= site_url('shopkart/affiliate-requests') ?>" class="nav-link sk-nav-link <?= $uri==='affiliate-requests'?'active':'' ?>">
-          <i class="bi bi-box-seam me-2"></i> Affiliate Requests
-        </a>
-      </li>
       <?php endif; ?>
 
       <?php if (!empty($impersonating) || !empty($vendor_context) && $vendor_context->vendor_id()): ?>
@@ -106,11 +101,6 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       <li class="nav-item">
         <a href="<?= site_url('shopkart/wallet/vendor/'.($vendor_context->vendor_id() ?? '')) ?>" class="nav-link sk-nav-link <?= sk_active($uri,'wallet') ?>">
           <i class="bi bi-wallet2 me-2"></i> My Wallet
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="<?= site_url('shopkart/affiliate-requests') ?>" class="nav-link sk-nav-link <?= $uri==='affiliate-requests'?'active':'' ?>">
-          <i class="bi bi-megaphone me-2"></i> Affiliate Requests
         </a>
       </li>
       <?php endif; ?>

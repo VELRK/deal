@@ -54,24 +54,6 @@ class Affiliate_portal extends Sk_Affiliate_Base {
         $this->render('kyc', $data);
     }
 
-    public function products() {
-        $aid = (int)$this->affiliate['id'];
-        if ($this->input->method() === 'post') {
-            $this->Sk_Affiliate_model->add_product_request($aid, [
-                'product_id'   => $this->input->post('product_id') ?: null,
-                'product_name' => $this->input->post('product_name', TRUE),
-                'notes'        => $this->input->post('notes'),
-            ]);
-            $this->session->set_flashdata('success', 'Product request submitted.');
-            redirect('admin/affiliate/products');
-        }
-        $this->load->model('Sk_Product_model');
-        $data['title'] = 'Product Requests';
-        $data['requests'] = $this->Sk_Affiliate_model->get_product_requests($aid);
-        $data['products'] = $this->db->select('id, name, slug')->where('status', 'active')->order_by('name')->limit(100)->get('products')->result_array();
-        $this->render('products', $data);
-    }
-
     public function profile() {
         $aid = (int)$this->affiliate['id'];
         $action = $this->input->post('action', TRUE);
