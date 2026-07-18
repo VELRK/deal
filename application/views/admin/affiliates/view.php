@@ -55,6 +55,11 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
   <?= htmlspecialchars(implode(' ', $mail_status['issues'] ?? [])) ?>
   <a href="<?= site_url('admin/settings?tab=email') ?>" class="alert-link">Open Email settings</a>
 </div>
+<?php elseif (!empty($mail_status['warnings'])): ?>
+<div class="alert alert-warning mb-3">
+  <?= htmlspecialchars(implode(' ', $mail_status['warnings'])) ?>
+  <a href="<?= site_url('admin/settings') ?>" class="alert-link">Update Site Email</a>
+</div>
 <?php endif; ?>
 
 <div class="row g-3 mb-4">

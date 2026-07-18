@@ -28,7 +28,8 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Site Email</label>
-              <input type="email" name="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>">
+              <input type="email" name="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="info@superfinelabels.in">
+              <div class="form-text">Must be a real mailbox on your domain (same as SMTP username). Do not use shopkart.com.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Phone</label>

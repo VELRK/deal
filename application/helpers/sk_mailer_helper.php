@@ -17,7 +17,42 @@ function sk_mailer_notify_email(array $settings = []): string {
     if (empty($settings)) {
         $settings = sk_mailer_settings();
     }
-    return trim($settings['site_email'] ?? $settings['smtp_user'] ?? '');
+    return sk_mailer_resolve_from_email($settings);
+}
+
+function sk_mailer_email_domain(string $email): string {
+    $email = strtolower(trim($email));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return '';
+    }
+    $parts = explode('@', $email);
+    return $parts[1] ?? '';
+}
+
+/** Pick a From address that SMTP will accept (must match mailbox domain). */
+function sk_mailer_resolve_from_email(array $settings): string {
+    $smtpUser = trim($settings['smtp_user'] ?? '');
+    $siteEmail = trim($settings['site_email'] ?? '');
+
+    $blockedDomains = ['shopkart.com', 'shopkart.app', 'example.com', 'example.org', 'test.com'];
+
+    $smtpDomain = sk_mailer_email_domain($smtpUser);
+    $siteDomain = sk_mailer_email_domain($siteEmail);
+
+    if ($smtpUser !== '' && filter_var($smtpUser, FILTER_VALIDATE_EMAIL) && !in_array($smtpDomain, $blockedDomains, true)) {
+        if ($siteEmail !== '' && filter_var($siteEmail, FILTER_VALIDATE_EMAIL)
+            && !in_array($siteDomain, $blockedDomains, true)
+            && $siteDomain === $smtpDomain) {
+            return $siteEmail;
+        }
+        return $smtpUser;
+    }
+
+    if ($siteEmail !== '' && filter_var($siteEmail, FILTER_VALIDATE_EMAIL) && !in_array($siteDomain, $blockedDomains, true)) {
+        return $siteEmail;
+    }
+
+    return '';
 }
 
 /** @return string ssl|tls|empty */
@@ -37,10 +72,12 @@ function sk_mailer_config_status(array $settings = []): array {
     }
 
     $issues = [];
+    $warnings = [];
     $host = trim($settings['smtp_host'] ?? '');
     $user = trim($settings['smtp_user'] ?? '');
     $pass = trim($settings['smtp_pass'] ?? '');
-    $from = trim($settings['site_email'] ?? $user);
+    $siteEmail = trim($settings['site_email'] ?? '');
+    $from = sk_mailer_resolve_from_email($settings);
 
     if ($host === '') {
         $issues[] = 'SMTP host is empty.';
@@ -52,16 +89,28 @@ function sk_mailer_config_status(array $settings = []): array {
         $issues[] = 'SMTP password is empty.';
     }
     if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
-        $issues[] = 'Site Email (General tab) must be a valid From address.';
+        $issues[] = 'Set Site Email or SMTP username to a valid mailbox on your domain (not shopkart.com).';
+    }
+
+    if ($siteEmail !== '' && $user !== ''
+        && filter_var($siteEmail, FILTER_VALIDATE_EMAIL) && filter_var($user, FILTER_VALIDATE_EMAIL)) {
+        $siteDomain = sk_mailer_email_domain($siteEmail);
+        $userDomain = sk_mailer_email_domain($user);
+        if (in_array($siteDomain, ['shopkart.com', 'shopkart.app', 'example.com'], true)) {
+            $warnings[] = 'Site Email uses placeholder domain ' . $siteDomain . '. Update General → Site Email to your real mailbox (e.g. info@yourdomain.com). Emails will send from ' . $from . ' until fixed.';
+        } elseif ($siteDomain !== $userDomain) {
+            $warnings[] = 'Site Email domain (' . $siteDomain . ') differs from SMTP username (' . $userDomain . '). Emails send from ' . $from . '.';
+        }
     }
 
     return [
-        'ok'     => empty($issues),
-        'issues' => $issues,
-        'from'   => $from,
-        'host'   => $host,
-        'port'   => (int)($settings['smtp_port'] ?? 587),
-        'crypto' => sk_mailer_smtp_crypto($settings),
+        'ok'       => empty($issues),
+        'issues'   => $issues,
+        'warnings' => $warnings,
+        'from'     => $from,
+        'host'     => $host,
+        'port'     => (int)($settings['smtp_port'] ?? 587),
+        'crypto'   => sk_mailer_smtp_crypto($settings),
     ];
 }
 
@@ -124,6 +173,9 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body) {
     $result = $CI->email->send(false);
     if (!$result) {
         $debug = trim(strip_tags($CI->email->print_debugger(['headers'])));
+        if (preg_match('/550[^\\n]*Sender address rejected[^\\n]*/i', $debug, $m)) {
+            $debug = $m[0] . ' Use the same domain as your SMTP mailbox in Admin → Settings → General (Site Email).';
+        }
         sk_mailer_set_last_error($debug !== '' ? $debug : 'SMTP send failed.');
         log_message('error', 'sk_mailer send error: ' . $CI->email->print_debugger(['headers', 'subject', 'body']));
     } else {
