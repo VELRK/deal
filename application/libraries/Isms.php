@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * iSMS Malaysia SMS API — https://www.isms.com.my/sms_api.php
+ * iSMS Malaysia JSON SMS API — https://www.isms.com.my/isms_send_json.php
  * OTP is generated locally on each request and sent in the SMS body.
  */
 class Isms {
@@ -140,29 +140,18 @@ class Isms {
         }
 
         $otp = $this->generate_otp();
-        $baseParams = [
-            'un'         => $this->username,
-            'dstno'      => $parsed['normalized'],
-            'msg'        => $this->build_otp_message($otp),
-            'type'       => '1',
-            'agreedterm' => 'YES',
-        ];
-        if ($this->sender_id !== '') {
-            $baseParams['sendid'] = $this->sender_id;
-        }
-
+        $message = $this->build_otp_message($otp);
         $lastMessage = 'iSMS authentication failed.';
-        foreach ($secrets as $secret) {
-            $params = $baseParams;
-            $params['pwd'] = $secret;
 
-            $response = $this->_post_form(self::SEND_URL, $params);
+        foreach ($secrets as $secret) {
+            $jsonPayload = $this->_build_json_send_payload($secret, $parsed['normalized'], $message);
+            $response = $this->_post_json(self::SEND_URL_JSON, $jsonPayload);
             if (!$response['ok']) {
                 $lastMessage = $response['error'];
                 continue;
             }
 
-            $parsedResponse = $this->_parse_response_body($response['body'], 'bulk');
+            $parsedResponse = $this->_parse_response_body($response['body'], 'send');
             if ($parsedResponse['success']) {
                 return [
                     'success' => true,
@@ -172,13 +161,64 @@ class Isms {
                     'mobile'  => $parsed['normalized'],
                 ];
             }
+
             $lastMessage = $parsedResponse['message'];
             if ((int) ($parsedResponse['code'] ?? 0) !== -1001) {
+                // Fallback to classic form API for non-auth errors (e.g. gateway quirks).
+                $formParams = [
+                    'un'         => $this->username,
+                    'pwd'        => $secret,
+                    'dstno'      => $parsed['normalized'],
+                    'msg'        => $message,
+                    'type'       => '1',
+                    'agreedterm' => 'YES',
+                ];
+                if ($this->sender_id !== '') {
+                    $formParams['sendid'] = $this->sender_id;
+                }
+                $formResponse = $this->_post_form(self::SEND_URL, $formParams);
+                if ($formResponse['ok']) {
+                    $formParsed = $this->_parse_response_body($formResponse['body'], 'bulk');
+                    if ($formParsed['success']) {
+                        return [
+                            'success' => true,
+                            'message' => 'OTP sent to +' . $parsed['normalized'] . '.',
+                            'otp'     => $otp,
+                            'sms_id'  => (string) ($formParsed['sms_id'] ?? ''),
+                            'mobile'  => $parsed['normalized'],
+                        ];
+                    }
+                    $lastMessage = $formParsed['message'];
+                }
                 return ['success' => false, 'message' => $lastMessage];
             }
         }
 
         return ['success' => false, 'message' => $lastMessage];
+    }
+
+    /**
+     * Build iSMS JSON send payload (single-recipient OTP).
+     *
+     * @return array<string,mixed>
+     */
+    protected function _build_json_send_payload($secret, $dstno, $message) {
+        $payload = [
+            'un'         => $this->username,
+            'pwd'        => $secret,
+            'type'       => '1',
+            'agreedterm' => 'YES',
+            'messages'   => [
+                [
+                    'dstno' => $dstno,
+                    'msg'   => $message,
+                ],
+            ],
+        ];
+        if ($this->sender_id !== '') {
+            $payload['sendid'] = $this->sender_id;
+        }
+        return $payload;
     }
 
     /**
@@ -330,6 +370,9 @@ class Isms {
                     return ['success' => false, 'code' => $code, 'message' => $this->_map_error_code($code)];
                 }
             }
+            if ($mode === 'send') {
+                return $this->_parse_json_send_response($json);
+            }
             return $this->_parse_json_response($json, $mode);
         }
 
@@ -368,6 +411,64 @@ class Isms {
         }
 
         return ['success' => false, 'message' => $body];
+    }
+
+    /**
+     * Parse isms_send_json.php response with per-recipient results.
+     *
+     * @return array{success:bool,message:string,code?:int,sms_id?:string}
+     */
+    protected function _parse_json_send_response(array $data) {
+        $topCode = (int) ($data['code'] ?? 0);
+        if ($topCode < 0) {
+            return [
+                'success' => false,
+                'code'    => $topCode,
+                'message' => $this->_map_error_code($topCode),
+            ];
+        }
+
+        $results = $data['results'] ?? [];
+        if (!empty($results) && is_array($results)) {
+            $result = $results[0];
+            $code = (int) ($result['code'] ?? $topCode);
+            $status = strtolower(trim((string) ($result['status'] ?? '')));
+            if ($code === 2000 || $status === 'success') {
+                $sms_id = (string) ($result['sms_id'] ?? $result['trx_id'] ?? '');
+                if ($sms_id === '' && !empty($result['message']) && preg_match('/SUCCESS:(\S+)/i', (string) $result['message'], $m)) {
+                    $sms_id = $m[1];
+                }
+                return [
+                    'success' => true,
+                    'code'    => 2000,
+                    'message' => trim((string) ($data['message'] ?? 'Message sent.')),
+                    'sms_id'  => $sms_id,
+                ];
+            }
+            if ($code < 0) {
+                return [
+                    'success' => false,
+                    'code'    => $code,
+                    'message' => $this->_map_error_code($code),
+                ];
+            }
+        }
+
+        $status = strtolower(trim($data['status'] ?? ''));
+        if ($status === 'success' || $status === 'partial' || $topCode === 2000) {
+            return [
+                'success' => true,
+                'code'    => 2000,
+                'message' => trim((string) ($data['message'] ?? 'Message sent.')),
+                'sms_id'  => (string) ($data['sms_id'] ?? ''),
+            ];
+        }
+
+        return [
+            'success' => false,
+            'code'    => $topCode,
+            'message' => $this->_format_api_message($data, $topCode),
+        ];
     }
 
     protected function _parse_json_response(array $data, $mode = 'bulk') {

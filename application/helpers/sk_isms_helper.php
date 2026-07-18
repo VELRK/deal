@@ -171,6 +171,44 @@ function sk_isms_mask_username($username) {
     return substr($username, 0, 3) . str_repeat('*', $len - 5) . substr($username, -2);
 }
 
+/** Outbound IP seen by the internet (for iSMS IP whitelist requests). */
+function sk_isms_server_outbound_ip() {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    $cached = '';
+    if (!function_exists('curl_init')) {
+        return $cached;
+    }
+    $ch = curl_init('https://api.ipify.org?format=text');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 5,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $ip = trim((string) curl_exec($ch));
+    curl_close($ch);
+    if (filter_var($ip, FILTER_VALIDATE_IP)) {
+        $cached = $ip;
+    }
+    return $cached;
+}
+
+function sk_isms_auth_failure_hint(array $result = []) {
+    $hints = [];
+    $code = (int) ($result['code'] ?? 0);
+    $outIp = sk_isms_server_outbound_ip();
+    if ($outIp !== '') {
+        $hints[] = 'Server outbound IP: ' . $outIp . ' — ask iSMS support to whitelist this IP for API/SMS.';
+    }
+    if ($code === -1001 || stripos((string) ($result['message'] ?? ''), 'authentication failed') !== false) {
+        $hints[] = 'Use sub-account API login: un=2DEAL, pwd=(sub-account password). Main portal email login does not work for API.';
+        $hints[] = 'Confirm the sub-account is saved in iSMS portal (Profile → Sub Accounts) and has SMS credits.';
+    }
+    return implode(' ', $hints);
+}
+
 function sk_isms_save_session($phone, $sms_id, $otp_hash, $interval_minutes = 5) {
     $CI =& get_instance();
     sk_isms_ensure_schema();

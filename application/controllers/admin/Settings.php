@@ -126,6 +126,10 @@ class Settings extends Sk_Base {
                     . ' (length ' . strlen($diag['username']) . '), password length: ' . $diag['password_len']
                     . ', API key length: ' . $diag['api_key_len'] . '.';
             }
+            $hint = sk_isms_auth_failure_hint($result);
+            if ($hint !== '') {
+                $details[] = $hint;
+            }
             $msg = 'iSMS test failed: ' . $result['message'];
             if (!empty($details)) {
                 $msg .= ' ' . implode(' ', $details);

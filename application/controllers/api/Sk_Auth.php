@@ -214,7 +214,14 @@ class Sk_Auth extends Sk_Base_Api {
             if (ENVIRONMENT !== 'production' && $this->_isms_allow_dev_fallback($result['message'])) {
                 return $this->_isms_dev_test_response($normalized, $settings, $result['message']);
             }
-            return $this->error($result['message'], 502);
+            $msg = $result['message'];
+            if (ENVIRONMENT === 'production') {
+                $hint = sk_isms_auth_failure_hint($result);
+                if ($hint !== '') {
+                    $msg .= ' ' . $hint;
+                }
+            }
+            return $this->error($msg, 502);
         }
 
         sk_isms_save_session(
