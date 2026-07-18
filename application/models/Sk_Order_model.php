@@ -239,4 +239,146 @@ class Sk_Order_model extends CI_Model {
             'order_item_id' => (int)$row['order_item_id'],
         ];
     }
+
+    /** Statuses customers may cancel (before shipment). */
+    public function customer_cancellable_statuses(): array {
+        return ['pending', 'confirmed', 'processing'];
+    }
+
+    public function can_customer_cancel(array $order): ?string {
+        if (($order['status'] ?? '') === 'cancelled') {
+            return null;
+        }
+        if (!in_array($order['status'] ?? '', $this->customer_cancellable_statuses(), true)) {
+            return 'This order can no longer be cancelled.';
+        }
+        return null;
+    }
+
+    public function restore_stock_for_order(int $orderId): void {
+        $this->load->model('Sk_Product_model');
+        foreach ($this->get_items($orderId) as $item) {
+            $qty = (int)($item['quantity'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $this->Sk_Product_model->restore_stock(
+                (int)$item['product_id'],
+                $qty,
+                !empty($item['variant_id']) ? (int)$item['variant_id'] : null
+            );
+        }
+    }
+
+    /**
+     * Cancel order with wallet / Razorpay refunds and stock restore.
+     *
+     * @return array{ok: bool, message: string}
+     */
+    public function cancel_order(int $orderId, ?int $userId = null, array $settings = [], bool $adminForce = false): array {
+        $order = $this->get_by_id($orderId, $userId);
+        if (!$order) {
+            return ['ok' => false, 'message' => 'Order not found.'];
+        }
+        if (($order['status'] ?? '') === 'cancelled') {
+            return ['ok' => true, 'message' => 'Order already cancelled.'];
+        }
+
+        if (!$adminForce) {
+            $block = $this->can_customer_cancel($order);
+            if ($block) {
+                return ['ok' => false, 'message' => $block];
+            }
+        } elseif (in_array($order['status'] ?? '', ['delivered', 'returned'], true)) {
+            return ['ok' => false, 'message' => 'Delivered or returned orders cannot be cancelled.'];
+        }
+
+        $walletRefund = (float)($order['wallet_amount'] ?? 0);
+        if ($walletRefund <= 0 && ($order['payment_method'] ?? '') === 'wallet' && ($order['payment_status'] ?? '') === 'paid') {
+            $walletRefund = (float)$order['total'];
+        }
+
+        $onlineRefund = 0.0;
+        $payment = $order['payment'] ?? $this->get_payment($orderId);
+        $wasPaid = ($order['payment_status'] ?? '') === 'paid';
+        if ($wasPaid && ($order['payment_method'] ?? '') === 'razorpay') {
+            $onlineRefund = round(max(0, (float)$order['total'] - $walletRefund), 2);
+        }
+
+        if ($onlineRefund > 0) {
+            $paymentId = $payment['razorpay_payment_id'] ?? '';
+            if (!$paymentId) {
+                return ['ok' => false, 'message' => 'Payment record missing. Contact support to cancel this order.'];
+            }
+            $refund = $this->_razorpay_refund($paymentId, $onlineRefund, $settings);
+            if (!$refund['ok']) {
+                return ['ok' => false, 'message' => $refund['message']];
+            }
+        }
+
+        if ($walletRefund > 0) {
+            $this->load->model('Sk_Customer_wallet_model');
+            if (!$this->Sk_Customer_wallet_model->refund_order_payment((int)$order['user_id'], $orderId, $walletRefund)) {
+                return ['ok' => false, 'message' => 'Could not refund wallet balance. Please contact support.'];
+            }
+        }
+
+        $this->restore_stock_for_order($orderId);
+
+        $newPaymentStatus = $wasPaid ? 'refunded' : 'failed';
+        $this->update_status($orderId, 'cancelled');
+        $this->update_payment_status($orderId, $newPaymentStatus);
+
+        $msg = 'Order cancelled.';
+        if ($wasPaid) {
+            $msg = 'Order cancelled and refund initiated.';
+        } elseif ($walletRefund > 0) {
+            $msg = 'Order cancelled. Wallet balance has been restored.';
+        }
+
+        return ['ok' => true, 'message' => $msg];
+    }
+
+    /** @return array{ok: bool, message: string} */
+    protected function _razorpay_refund(string $paymentId, float $amountRm, array $settings): array {
+        if ($amountRm <= 0) {
+            return ['ok' => true, 'message' => ''];
+        }
+        $keyId     = $settings['razorpay_key_id'] ?? config_item('razorpay_key_id');
+        $keySecret = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
+        if (!$keyId || !$keySecret) {
+            return ['ok' => false, 'message' => 'Payment gateway not configured for refund.'];
+        }
+
+        $currency = strtoupper($settings['currency_code'] ?? 'MYR');
+        $payload = json_encode([
+            'amount'   => (int)round($amountRm * 100),
+            'currency' => $currency,
+            'notes'    => ['reason' => 'Order cancelled by customer'],
+        ]);
+
+        $ch = curl_init('https://api.razorpay.com/v1/payments/' . rawurlencode($paymentId) . '/refund');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_USERPWD        => $keyId . ':' . $keySecret,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $body = json_decode($response ?: '', true);
+        if ($httpCode >= 200 && $httpCode < 300 && !empty($body['id'])) {
+            return ['ok' => true, 'message' => ''];
+        }
+
+        $err = is_array($body) ? ($body['error']['description'] ?? $body['error']['reason'] ?? '') : '';
+        log_message('error', 'Razorpay refund failed for payment ' . $paymentId . ': ' . $response);
+        return ['ok' => false, 'message' => $err ?: 'Online payment refund failed. Please contact support.'];
+    }
 }

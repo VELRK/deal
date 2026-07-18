@@ -268,29 +268,24 @@ class Sk_Order extends Sk_Base_Api {
     public function cancel($id) {
         $this->auth_required();
         $order = $this->Sk_Order_model->get_by_id((int)$id, $this->user['user_id']);
-        if (!$order) return $this->error('Order not found.', 404);
-        if ($order['status'] !== 'pending') {
-            return $this->error('Only pending orders can be cancelled.');
-        }
-        if (($order['payment_status'] ?? '') === 'paid') {
-            return $this->error('Paid orders cannot be cancelled.');
+        if (!$order) {
+            return $this->error('Order not found.', 404);
         }
 
         $this->_jt_cancel_if_needed($order);
+        $this->_ensure_order_wallet_schema();
 
-        $walletPaid = (float)($order['wallet_amount'] ?? 0);
-        if ($walletPaid > 0) {
-            $this->load->model('Sk_Customer_wallet_model');
-            $this->Sk_Customer_wallet_model->refund_order_payment(
-                (int)$this->user['user_id'],
-                (int)$id,
-                $walletPaid
-            );
+        $result = $this->Sk_Order_model->cancel_order(
+            (int)$id,
+            (int)$this->user['user_id'],
+            $this->get_settings(),
+            false
+        );
+        if (!$result['ok']) {
+            return $this->error($result['message'], 400);
         }
 
-        $this->Sk_Order_model->update_status((int)$id, 'cancelled');
-        $this->Sk_Order_model->update_payment_status((int)$id, 'failed');
-        $this->success([], 'Order cancelled.');
+        $this->success([], $result['message']);
     }
 
     private function _jt_cancel_if_needed(array $order) {

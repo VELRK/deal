@@ -206,6 +206,19 @@ class Sk_Product_model extends CI_Model {
                  ->update('products');
     }
 
+    public function restore_stock($product_id, $qty, $variant_id = null) {
+        if ($variant_id && $this->variant_model()->schema_ready()) {
+            $this->db->set('stock', 'stock + ' . (int)$qty, FALSE)
+                     ->where('id', (int)$variant_id)
+                     ->where('product_id', (int)$product_id)
+                     ->update('product_variants');
+        }
+        $this->db->set('stock', 'stock + ' . (int)$qty, FALSE)
+                 ->set('total_sold', 'GREATEST(total_sold - ' . (int)$qty . ', 0)', FALSE)
+                 ->where('id', $product_id)
+                 ->update('products');
+    }
+
     public function attach_variants(&$product) {
         if (empty($product['id'])) return;
         $variants = $this->variant_model()->get_by_product($product['id']);

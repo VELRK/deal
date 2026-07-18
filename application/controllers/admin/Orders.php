@@ -45,9 +45,31 @@ class Orders extends Sk_Base {
 
         $tracking = $this->input->post('tracking_number', TRUE);
         $orderBefore = $this->Sk_Order_model->get_by_id($id);
-        if ($status === 'cancelled' && $orderBefore) {
-            $this->_jt_cancel_if_needed($orderBefore);
+        if (!$orderBefore) {
+            return $this->json(['success' => false, 'message' => 'Order not found.']);
         }
+
+        if ($status === 'cancelled') {
+            if ($orderBefore['status'] !== 'cancelled') {
+                $this->_jt_cancel_if_needed($orderBefore);
+                $settings = $this->Sk_Admin_model->get_settings();
+                $result = $this->Sk_Order_model->cancel_order((int)$id, null, $settings, true);
+                if (!$result['ok']) {
+                    return $this->json(['success' => false, 'message' => $result['message']]);
+                }
+            }
+            $order = $this->Sk_Order_model->get_by_id($id);
+            if ($order) {
+                $this->load->helper('sk_mailer');
+                $settings = $this->Sk_Admin_model->get_settings();
+                if ($tracking) {
+                    $order['tracking_number'] = $tracking;
+                }
+                sk_mail_order_status($order, $status, $settings);
+            }
+            return $this->json(['success' => true, 'message' => 'Order cancelled.']);
+        }
+
         $this->Sk_Order_model->update_status($id, $status);
         if ($tracking) {
             $this->db->where('id', $id)->update('orders', ['tracking_number' => $tracking]);
