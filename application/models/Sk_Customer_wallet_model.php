@@ -237,10 +237,13 @@ class Sk_Customer_wallet_model extends CI_Model {
 
         $CI->load->helper('sk_isms');
         $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
+        $email = sk_razorpay_prefill_email($user['email'] ?? '');
         $prefill = [
-            'name'  => $user['name'] ?? 'Customer',
-            'email' => $user['email'] ?? '',
+            'name' => $user['name'] ?? 'Customer',
         ];
+        if ($email !== '') {
+            $prefill['email'] = $email;
+        }
         if ($contact !== '') {
             $prefill['contact'] = $contact;
         }

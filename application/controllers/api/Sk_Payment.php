@@ -84,13 +84,21 @@ class Sk_Payment extends Sk_Base_Api {
         if ($contact === '') {
             $contact = sk_razorpay_contact($order['billing_phone'] ?? '', $settings);
         }
+        if ($contact === '') {
+            return $this->error(
+                'A valid Malaysian mobile number is required for Curlec online payment. Update your delivery address or profile phone (e.g. 0123456789).',
+                422
+            );
+        }
+
+        $email = sk_razorpay_prefill_email($user['email'] ?? '');
 
         $prefill = [
-            'name'  => $order['shipping_name'],
-            'email' => $user['email'] ?? '',
+            'name'    => $order['shipping_name'],
+            'contact' => $contact,
         ];
-        if ($contact !== '') {
-            $prefill['contact'] = $contact;
+        if ($email !== '') {
+            $prefill['email'] = $email;
         }
 
         $this->success([

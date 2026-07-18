@@ -153,7 +153,9 @@
         <div class="card-body">
           <div class="alert alert-info small">
             <i class="bi bi-info-circle me-1"></i>
-            Get your keys from <a href="https://dashboard.razorpay.com/app/keys" target="_blank">Razorpay Dashboard</a>.
+            Malaysia payments use <strong>Razorpay Curlec</strong>. Get API keys from the
+            <a href="https://curlec.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/" target="_blank">Curlec dashboard</a>
+            (MYR, keys like <code>rzp_test_...</code>). Checkout needs a valid Malaysian mobile on the delivery address (<code>+60...</code>).
           </div>
           <div class="row g-3">
             <div class="col-md-6">

@@ -306,7 +306,7 @@ function sk_isms_normalize_phone($phone, array $settings = null) {
 }
 
 /**
- * Digits-only contact for Razorpay prefill (E.164 without '+').
+ * Contact for Razorpay Curlec prefill: +{country}{mobile} (e.g. +60123456789).
  * Returns empty string when the number is missing or invalid.
  */
 function sk_razorpay_contact($phone, array $settings = null) {
@@ -315,6 +315,23 @@ function sk_razorpay_contact($phone, array $settings = null) {
         return '';
     }
     $digits = preg_replace('/\D/', '', $normalized);
-    // Razorpay: at least 8 digits including country code; MY mobiles are 60 + 9–10 digits.
-    return strlen($digits) >= 10 ? $digits : '';
+    // Curlec MY: 60 + 9–10 digit mobile (min 11 digits total).
+    if (strlen($digits) < 11) {
+        return '';
+    }
+    return '+' . $digits;
+}
+
+/**
+ * Email safe to pass into Razorpay Curlec checkout prefill.
+ */
+function sk_razorpay_prefill_email($email) {
+    $email = trim((string)$email);
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return '';
+    }
+    if (stripos($email, '@shopkart.app') !== false || stripos($email, 'ph_') === 0) {
+        return '';
+    }
+    return $email;
 }
