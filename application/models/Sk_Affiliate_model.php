@@ -300,55 +300,70 @@ class Sk_Affiliate_model extends CI_Model {
     public function resend_notification_email(int $id): array {
         $aff = $this->get_by_id($id);
         if (!$aff) {
-            return ['sent' => false, 'type' => 'none', 'message' => 'Affiliate not found.'];
+            return ['sent' => false, 'type' => 'none', 'message' => 'Affiliate not found.', 'mail_error' => ''];
         }
 
         $this->ensure_invite_schema();
         $email = $aff['email'] ?? '';
+        $mailError = '';
 
         if (!empty($aff['must_set_password'])) {
             $token = $this->create_invite_token($id);
             $aff = $this->get_by_id($id);
             $sent = $this->send_invite_email($aff, $token);
             if (!$sent) {
-                log_message('error', 'Affiliate invite resend failed for ' . $email);
+                $this->load->helper('sk_mailer');
+                $mailError = sk_mailer_last_error();
+                log_message('error', 'Affiliate invite resend failed for ' . $email . ' — ' . $mailError);
             }
             return [
-                'sent'    => $sent,
-                'type'    => 'invite',
-                'token'   => $token,
-                'message' => $sent
+                'sent'       => $sent,
+                'type'       => 'invite',
+                'token'      => $token,
+                'mail_error' => $mailError,
+                'message'    => $sent
                     ? 'Password setup link emailed to ' . $email . '.'
-                    : 'Could not send invite email — check SMTP settings in Admin → Settings.',
+                    : 'Could not send invite email — check SMTP in Admin → Settings → Email.',
             ];
         }
 
         if (($aff['status'] ?? '') === 'pending') {
             $sent = $this->send_registration_emails($aff);
+            if (!$sent) {
+                $this->load->helper('sk_mailer');
+                $mailError = sk_mailer_last_error();
+            }
             return [
-                'sent'    => $sent,
-                'type'    => 'registration',
-                'message' => $sent
+                'sent'       => $sent,
+                'type'       => 'registration',
+                'mail_error' => $mailError,
+                'message'    => $sent
                     ? 'Registration confirmation emailed to ' . $email . '.'
-                    : 'Could not send registration email — check SMTP settings in Admin → Settings.',
+                    : 'Could not send registration email — check SMTP in Admin → Settings → Email.',
             ];
         }
 
         if (($aff['status'] ?? '') === 'approved') {
             $sent = $this->send_approved_email($aff);
+            if (!$sent) {
+                $this->load->helper('sk_mailer');
+                $mailError = sk_mailer_last_error();
+            }
             return [
-                'sent'    => $sent,
-                'type'    => 'approved',
-                'message' => $sent
+                'sent'       => $sent,
+                'type'       => 'approved',
+                'mail_error' => $mailError,
+                'message'    => $sent
                     ? 'Approval email sent to ' . $email . '.'
-                    : 'Could not send approval email — check SMTP settings in Admin → Settings.',
+                    : 'Could not send approval email — check SMTP in Admin → Settings → Email.',
             ];
         }
 
         return [
-            'sent'    => false,
-            'type'    => 'none',
-            'message' => 'No notification email applies for status "' . ($aff['status'] ?? '') . '".',
+            'sent'       => false,
+            'type'       => 'none',
+            'mail_error' => '',
+            'message'    => 'No notification email applies for status "' . ($aff['status'] ?? '') . '".',
         ];
     }
 

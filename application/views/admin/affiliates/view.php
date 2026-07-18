@@ -16,7 +16,9 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
     <a href="<?= site_url('admin/affiliates/reject/'.$a['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Reject affiliate?')">Reject</a>
     <?php endif; ?>
     <?php if (!empty($a['must_set_password']) || in_array($a['status'], ['pending', 'approved'], true)): ?>
-    <a href="<?= site_url('admin/affiliates/resend_email/'.$a['id']) ?>" class="btn btn-outline-primary btn-sm" title="Resend invite, registration, or approval email">Resend Email</a>
+    <form method="post" action="<?= site_url('admin/affiliates/resend_email/'.$a['id']) ?>" class="d-inline">
+      <button type="submit" class="btn btn-outline-primary btn-sm" title="Resend invite, registration, or approval email">Resend Email</button>
+    </form>
     <?php endif; ?>
     <?php if ($a['kyc_status']!=='verified'): ?>
     <a href="<?= site_url('admin/affiliates/verify_kyc/'.$a['id']) ?>" class="btn btn-outline-success btn-sm">Verify KYC</a>
@@ -44,6 +46,14 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
   <?php if (!empty($a['invite_token']) && !$inviteExpired): ?>
   <button type="button" class="btn btn-sm btn-outline-dark" data-copy-url="<?= htmlspecialchars($inviteUrl, ENT_QUOTES) ?>" onclick="navigator.clipboard.writeText(this.dataset.copyUrl); this.textContent='Copied!';">Copy set-password link</button>
   <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($mail_status) && empty($mail_status['ok'])): ?>
+<div class="alert alert-danger mb-3">
+  <strong>Email not configured.</strong> Affiliate emails cannot send until SMTP is set up.
+  <?= htmlspecialchars(implode(' ', $mail_status['issues'] ?? [])) ?>
+  <a href="<?= site_url('admin/settings?tab=email') ?>" class="alert-link">Open Email settings</a>
 </div>
 <?php endif; ?>
 

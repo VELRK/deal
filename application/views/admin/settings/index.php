@@ -205,6 +205,17 @@
               <label class="form-label">SMTP Password</label>
               <input type="password" name="smtp_pass" class="form-control" value="<?= htmlspecialchars($settings['smtp_pass'] ?? '') ?>">
             </div>
+            <div class="col-12">
+              <div class="alert alert-info small mb-0">
+                Use your mailbox SMTP (e.g. Hostinger: <code>smtp.hostinger.com</code>, port <code>465</code> SSL or <code>587</code> TLS).
+                <strong>Site Email</strong> (General tab) must match the mailbox address you send from.
+              </div>
+            </div>
+            <div class="col-12">
+              <button type="submit" formaction="<?= site_url('admin/settings/test_smtp') ?>" formmethod="post" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-envelope-check me-1"></i> Send SMTP test email
+              </button>
+            </div>
           </div>
         </div>
       </div>

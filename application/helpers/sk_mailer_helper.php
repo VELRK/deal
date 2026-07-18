@@ -20,40 +20,100 @@ function sk_mailer_notify_email(array $settings = []): string {
     return trim($settings['site_email'] ?? $settings['smtp_user'] ?? '');
 }
 
+/** @return string ssl|tls|empty */
+function sk_mailer_smtp_crypto(array $settings): string {
+    $explicit = strtolower(trim($settings['smtp_crypto'] ?? ''));
+    if (in_array($explicit, ['ssl', 'tls'], true)) {
+        return $explicit;
+    }
+    $port = (int)($settings['smtp_port'] ?? 587);
+    return $port === 465 ? 'ssl' : 'tls';
+}
+
+/** Human-readable SMTP readiness check (does not send mail). */
+function sk_mailer_config_status(array $settings = []): array {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+
+    $issues = [];
+    $host = trim($settings['smtp_host'] ?? '');
+    $user = trim($settings['smtp_user'] ?? '');
+    $pass = trim($settings['smtp_pass'] ?? '');
+    $from = trim($settings['site_email'] ?? $user);
+
+    if ($host === '') {
+        $issues[] = 'SMTP host is empty.';
+    }
+    if ($user === '') {
+        $issues[] = 'SMTP username is empty.';
+    }
+    if ($pass === '') {
+        $issues[] = 'SMTP password is empty.';
+    }
+    if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
+        $issues[] = 'Site Email (General tab) must be a valid From address.';
+    }
+
+    return [
+        'ok'     => empty($issues),
+        'issues' => $issues,
+        'from'   => $from,
+        'host'   => $host,
+        'port'   => (int)($settings['smtp_port'] ?? 587),
+        'crypto' => sk_mailer_smtp_crypto($settings),
+    ];
+}
+
+function sk_mailer_last_error(): string {
+    $CI =& get_instance();
+    return (string)($CI->sk_mailer_last_error ?? '');
+}
+
+function sk_mailer_set_last_error(string $message): void {
+    $CI =& get_instance();
+    $CI->sk_mailer_last_error = $message;
+}
+
 function sk_send_mail($to_email, $to_name, $subject, $html_body) {
     if (empty($to_email) || strpos($to_email, '@shopkart.app') !== false) {
-        return false; // Skip placeholder emails
+        sk_mailer_set_last_error('Invalid recipient email.');
+        return false;
     }
 
     $CI =& get_instance();
     $CI->load->library('email');
     $settings = sk_mailer_settings();
+    $status   = sk_mailer_config_status($settings);
 
-    $smtp_host = $settings['smtp_host'] ?? '';
-    $smtp_user = $settings['smtp_user'] ?? '';
-    $smtp_pass = $settings['smtp_pass'] ?? '';
-    $smtp_port = $settings['smtp_port'] ?? 587;
-    $from_email = $settings['site_email'] ?? $smtp_user;
-    $from_name  = $settings['smtp_from_name'] ?? ($settings['site_name'] ?? 'ShopKart');
-
-    if (!$smtp_host || !$smtp_user || !$smtp_pass || !filter_var($from_email, FILTER_VALIDATE_EMAIL)) {
-        // SMTP not configured — log and bail
-        log_message('info', "sk_mailer: SMTP not configured, skipping email to {$to_email}");
+    if (!$status['ok']) {
+        $msg = implode(' ', $status['issues']);
+        sk_mailer_set_last_error($msg);
+        log_message('info', "sk_mailer: {$msg} Skipping email to {$to_email}");
         return false;
     }
 
+    $smtp_host = $status['host'];
+    $smtp_user = trim($settings['smtp_user'] ?? '');
+    $smtp_pass = trim($settings['smtp_pass'] ?? '');
+    $smtp_port = $status['port'];
+    $from_email = $status['from'];
+    $from_name  = $settings['smtp_from_name'] ?? ($settings['site_name'] ?? 'ShopKart');
+
     $CI->email->clear(true);
     $CI->email->initialize([
-        'useragent'  => 'ShopKart Mailer',
-        'protocol'   => 'smtp',
-        'smtp_host'  => $smtp_host,
-        'smtp_port'  => (int)$smtp_port,
-        'smtp_user'  => $smtp_user,
-        'smtp_pass'  => $smtp_pass,
-        'smtp_crypto'=> ((int)$smtp_port === 465) ? 'ssl' : 'tls',
-        'mailtype'   => 'html',
-        'charset'    => 'utf-8',
-        'newline'    => "\r\n",
+        'useragent'    => 'ShopKart Mailer',
+        'protocol'     => 'smtp',
+        'smtp_host'    => $smtp_host,
+        'smtp_port'    => $smtp_port,
+        'smtp_user'    => $smtp_user,
+        'smtp_pass'    => $smtp_pass,
+        'smtp_crypto'  => $status['crypto'],
+        'smtp_timeout' => 20,
+        'mailtype'     => 'html',
+        'charset'      => 'utf-8',
+        'newline'      => "\r\n",
+        'crlf'         => "\r\n",
     ]);
 
     $CI->email->from($from_email, $from_name);
@@ -63,7 +123,11 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body) {
 
     $result = $CI->email->send(false);
     if (!$result) {
+        $debug = trim(strip_tags($CI->email->print_debugger(['headers'])));
+        sk_mailer_set_last_error($debug !== '' ? $debug : 'SMTP send failed.');
         log_message('error', 'sk_mailer send error: ' . $CI->email->print_debugger(['headers', 'subject', 'body']));
+    } else {
+        sk_mailer_set_last_error('');
     }
     return $result;
 }

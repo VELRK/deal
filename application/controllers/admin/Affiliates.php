@@ -148,6 +148,10 @@ class Affiliates extends Sk_Base {
             $this->session->set_flashdata('success', $result['message']);
         } else {
             $flash = $result['message'];
+            $mailErr = trim($result['mail_error'] ?? '');
+            if ($mailErr !== '') {
+                $flash .= ' Detail: ' . $mailErr;
+            }
             if (($result['type'] ?? '') === 'invite' && !empty($result['token']) && $aff) {
                 $flash .= ' Manual link: ' . $this->Sk_Affiliate_model->invite_set_password_url($aff, $result['token']);
             }
@@ -167,6 +171,8 @@ class Affiliates extends Sk_Base {
         $data['commissions'] = $this->Sk_Affiliate_model->get_commissions((int)$id, 10, 0)['rows'];
         $data['payouts'] = $this->Sk_Affiliate_model->get_payouts((int)$id, 10, 0)['rows'];
         $data['is_vendor_scope'] = (bool)$this->scoped_vendor_id();
+        $this->load->helper('sk_mailer');
+        $data['mail_status'] = sk_mailer_config_status();
         $this->render('affiliates/view', $data);
     }
 

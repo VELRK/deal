@@ -24,6 +24,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 // Auto-detect host + port (works on localhost:80, :8080, and production)
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+    $forwarded = strtolower(trim(explode(',', (string)$_SERVER['HTTP_X_FORWARDED_PROTO'])[0]));
+    if ($forwarded === 'https') {
+        $_SERVER['HTTPS'] = 'on';
+    }
+}
 if (!empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host   = $_SERVER['HTTP_HOST'];

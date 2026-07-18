@@ -139,6 +139,53 @@ class Settings extends Sk_Base {
         redirect('admin/settings?tab=sms');
     }
 
+    public function test_smtp() {
+        $settings = $this->Sk_Admin_model->get_settings();
+        $posted = [
+            'smtp_host'      => trim($this->input->post('smtp_host', TRUE) ?? ''),
+            'smtp_port'      => trim($this->input->post('smtp_port', TRUE) ?? ''),
+            'smtp_user'      => trim($this->input->post('smtp_user', TRUE) ?? ''),
+            'smtp_pass'      => $this->input->post('smtp_pass', FALSE),
+            'smtp_from_name' => trim($this->input->post('smtp_from_name', TRUE) ?? ''),
+            'site_email'     => trim($this->input->post('site_email', TRUE) ?? ''),
+        ];
+        foreach ($posted as $key => $val) {
+            if ($key === 'smtp_pass') {
+                if (trim((string)$val) !== '') {
+                    $settings[$key] = $val;
+                }
+                continue;
+            }
+            if ($val !== '') {
+                $settings[$key] = $val;
+            }
+        }
+
+        $this->load->helper('sk_mailer');
+        $status = sk_mailer_config_status($settings);
+        if (!$status['ok']) {
+            $this->session->set_flashdata('error', 'SMTP not ready: ' . implode(' ', $status['issues']));
+            redirect('admin/settings?tab=email');
+        }
+
+        $to = trim($settings['site_email'] ?? $this->admin['email'] ?? '');
+        $site = $settings['site_name'] ?? 'ShopKart';
+        $sent = sk_send_mail(
+            $to,
+            $this->admin['name'] ?? 'Admin',
+            'SMTP test – ' . $site,
+            '<p>This is a test email from ' . htmlspecialchars($site) . ' at ' . date('Y-m-d H:i:s') . '.</p>'
+        );
+
+        if ($sent) {
+            $this->session->set_flashdata('success', 'SMTP test sent to ' . $to . '. Check inbox and spam folder.');
+        } else {
+            $detail = sk_mailer_last_error();
+            $this->session->set_flashdata('error', 'SMTP test failed.' . ($detail ? ' ' . $detail : ''));
+        }
+        redirect('admin/settings?tab=email');
+    }
+
     public function save_isms() {
         $this->load->helper('sk_isms');
         sk_isms_ensure_schema();
