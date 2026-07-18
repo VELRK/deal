@@ -312,7 +312,7 @@
           <div class="alert alert-info small">
             <i class="bi bi-phone me-1"></i>
             Login OTP via <a href="https://www.isms.com.my/" target="_blank" rel="noopener">iSMS Malaysia</a>.
-            Use your portal <strong>Username</strong> (e.g. <code>2Deal</code> — not your email) plus either your
+            Use sub-account <strong>Username</strong> <code>2DEAL1</code> (or main portal username — not your email) plus either your
             <strong>portal login password</strong> or the <strong>API Key</strong> from your iSMS account page (both are sent as <code>pwd</code> to iSMS).
             If the portal lets you sign in with <em>email</em>, open your iSMS profile and copy the <strong>Username</strong> field for API use.
             Buy SMS credits in the iSMS portal before sending OTPs.
@@ -340,7 +340,7 @@
               <label class="form-label">iSMS Username</label>
               <input type="text" name="isms_username" class="form-control font-monospace"
                      value="<?= htmlspecialchars($settings['isms_username'] ?? '') ?>" autocomplete="off"
-                     placeholder="Portal username (not email)">
+                     placeholder="Sub-account username e.g. 2DEAL1">
               <?php if (!empty($settings['isms_username'])): ?>
                 <div class="form-text">Saved: <?= htmlspecialchars(sk_isms_mask_username($settings['isms_username'])) ?> (<?= strlen($settings['isms_username']) ?> chars)</div>
               <?php endif; ?>

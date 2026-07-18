@@ -324,7 +324,7 @@ class Isms {
 
     protected function _map_error_code($code) {
         $map = [
-            -1001 => 'iSMS authentication failed. Use portal username (e.g. 2Deal, not email) with your portal login password or API key as pwd. If login works on isms.com.my but API fails, contact iSMS to enable API access or whitelist your server IP.',
+            -1001 => 'iSMS authentication failed. Use sub-account username (e.g. 2DEAL1, not email) with your portal login password or API key as pwd. If login works on isms.com.my but API fails, contact iSMS to enable API access or whitelist your server IP.',
             -1002 => 'iSMS account suspended or expired.',
             -1003 => 'Server IP not allowed by iSMS. Whitelist your website server IP in the iSMS portal or contact iSMS support.',
             -1004 => 'Insufficient iSMS credits. Reload credits at isms.com.my.',

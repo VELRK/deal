@@ -64,6 +64,7 @@ function sk_isms_ensure_schema() {
         $CI->db->where('key', 'isms_test_otp')->where('value', '123456')
             ->update('settings', ['value' => '1234']);
         $CI->db->where('key', 'isms_sender_id')->where('value', '')->update('settings', ['value' => 'GOLDEN2DEAL']);
+        $CI->db->where('key', 'isms_username')->where('value', '2DEAL')->update('settings', ['value' => '2DEAL1']);
     }
 }
 
@@ -120,9 +121,7 @@ function sk_isms_production_override() {
     }
     return [
         'isms_enabled'   => '1',
-        'isms_username'  => '2DEAL',
-        'isms_password'  => 'jsnWzFuDHZir',
-        'isms_api_key'   => '',
+        'isms_username'  => '2DEAL1',
         'isms_sender_id' => 'GOLDEN2DEAL',
     ];
 }
@@ -205,7 +204,7 @@ function sk_isms_auth_failure_hint(array $result = []) {
         $hints[] = 'Server outbound IP: ' . $outIp . ' — ask iSMS support to whitelist this IP for API/SMS.';
     }
     if ($code === -1001 || stripos((string) ($result['message'] ?? ''), 'authentication failed') !== false) {
-        $hints[] = 'Use sub-account API login: un=2DEAL, pwd=(sub-account password). Main portal email login does not work for API.';
+        $hints[] = 'Use sub-account API login: un=2DEAL1, pwd=(sub-account password). Main portal email login does not work for API.';
         $hints[] = 'Confirm the sub-account is saved in iSMS portal (Profile → Sub Accounts) and has SMS credits.';
     }
     return implode(' ', $hints);
