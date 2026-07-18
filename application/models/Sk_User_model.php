@@ -127,8 +127,12 @@ class Sk_User_model extends CI_Model {
         $id = !empty($data['id']) ? (int)$data['id'] : 0;
         $allowed = ['user_id','full_name','company_name','phone','line1','line2','city','state','pincode','country','label','is_default','address_type'];
         $row = array_intersect_key($data, array_flip($allowed));
+        $row['address_type'] = in_array(($row['address_type'] ?? 'shipping'), ['shipping', 'billing'], true)
+            ? $row['address_type'] : 'shipping';
         if (!empty($row['is_default'])) {
-            $this->db->where('user_id', $row['user_id'])->update('addresses', ['is_default' => 0]);
+            $this->db->where('user_id', $row['user_id'])
+                     ->where('address_type', $row['address_type'])
+                     ->update('addresses', ['is_default' => 0]);
         }
         if ($id) {
             $this->db->where(['id' => $id, 'user_id' => $row['user_id']])->update('addresses', $row);

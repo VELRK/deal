@@ -45,17 +45,20 @@ class Sk_Auth extends Sk_Base_Api {
         // Save address if provided
         $address = $data['address'] ?? null;
         if ($address && !empty($address['line1'])) {
-            $this->db->insert('user_addresses', [
-                'user_id'    => $user_id,
-                'label'      => 'Home',
-                'full_name'  => $name,
-                'phone'      => $phone !== '' ? $phone : ($data['phone'] ?? ''),
-                'line1'      => $address['line1'],
-                'city'       => $address['city'] ?? '',
-                'state'      => $address['state'] ?? '',
-                'pincode'    => $address['pincode'] ?? '',
-                'country'    => 'Malaysia',
-                'is_default' => 1,
+            $this->Sk_User_model->ensure_address_schema();
+            $this->Sk_User_model->save_address([
+                'user_id'      => $user_id,
+                'label'        => 'Home',
+                'full_name'    => $name,
+                'phone'        => $phone !== '' ? $phone : ($data['phone'] ?? ''),
+                'line1'        => $address['line1'],
+                'line2'        => $address['line2'] ?? '',
+                'city'         => $address['city'] ?? '',
+                'state'        => $address['state'] ?? '',
+                'pincode'      => $address['pincode'] ?? '',
+                'country'      => 'Malaysia',
+                'address_type' => 'shipping',
+                'is_default'   => 1,
             ]);
         }
 
