@@ -218,13 +218,14 @@ function sk_mail_order_confirmation($order, $settings = []) {
     ]);
     $addr_html = implode('<br>', $addr_parts);
 
-    // Coupon row
+    // Coupon / discount rows
     $coupon_html = '';
-    if (!empty($order['promo_code']) && $order['discount'] > 0) {
-        $coupon_html = "<tr>
-          <td colspan='2' style='padding:6px 0;color:#16a34a;'>Coupon ({$order['promo_code']})</td>
-          <td style='padding:6px 0;text-align:right;color:#16a34a;'>-{$currency}" . number_format($order['discount'], 2) . "</td>
-        </tr>";
+    if (($order['discount'] ?? 0) > 0) {
+        $CI =& get_instance();
+        $CI->load->helper('sk_invoice');
+        $orderForDisc = $order;
+        $orderForDisc['discount_breakdown'] = sk_order_discount_breakdown($order, $settings);
+        $coupon_html = sk_invoice_discount_rows_html($orderForDisc, $currency, '2', 'padding:6px 0;color:#16a34a;');
     }
 
     $payment_label = strtoupper($order['payment_method'] ?? 'COD');

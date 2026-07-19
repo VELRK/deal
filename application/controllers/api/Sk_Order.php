@@ -80,6 +80,9 @@ class Sk_Order extends Sk_Base_Api {
             if ($this->db->field_exists('variant_label', 'order_items')) {
                 $line['variant_label'] = $variant_label;
             }
+            if ($this->db->field_exists('vendor_id', 'order_items') && !empty($p['vendor_id'])) {
+                $line['vendor_id'] = (int)$p['vendor_id'];
+            }
             $order_items[] = $line;
         }
 
@@ -123,6 +126,8 @@ class Sk_Order extends Sk_Base_Api {
             return $this->error('Wallet payments are not enabled.');
         }
 
+        $code_discount = $discount;
+
         if ($uses_wallet && $wallet_enabled) {
             $walletPct = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
             if ($walletPct > 0) {
@@ -153,12 +158,19 @@ class Sk_Order extends Sk_Base_Api {
         $is_paid_now    = ($payment_method === 'wallet');
 
         $this->_ensure_order_wallet_schema();
+        $this->_ensure_order_discount_schema();
+        $this->load->helper(['sk_jt_express', 'sk_vendor_dashboard']);
+        sk_jt_express_ensure_schema();
+        sk_vendor_dashboard_ensure_schema();
+        $now = date('Y-m-d H:i:s');
         $order_data = [
             'user_id'          => $user_id,
             'subtotal'         => $subtotal,
             'shipping'         => $shipping,
             'tax'              => $tax,
             'discount'         => $discount,
+            'affiliate_discount' => $affiliate_id ? $code_discount : 0,
+            'wallet_discount'  => $wallet_discount,
             'promo_code'       => $promo_code,
             'affiliate_id'     => $affiliate_id,
             'affiliate_promo'  => $affiliate_promo,
@@ -167,6 +179,8 @@ class Sk_Order extends Sk_Base_Api {
             'payment_method'   => $payment_method,
             'payment_status'   => $is_paid_now ? 'paid' : 'pending',
             'status'           => $is_paid_now ? 'confirmed' : 'pending',
+            'status_updated_at'=> $now,
+            'confirmed_at'     => $is_paid_now ? $now : null,
             'notes'            => $wallet_discount > 0
                 ? trim(($data['note'] ?? $data['notes'] ?? '') . ' [Wallet discount: ' . $wallet_discount . ']')
                 : ($data['note'] ?? $data['notes'] ?? null),
@@ -241,11 +255,18 @@ class Sk_Order extends Sk_Base_Api {
             sk_mail_order_invoice($order, $settings);
         }
 
+        if ($is_paid_now) {
+            $this->load->model('Sk_Wallet_model');
+            $this->Sk_Wallet_model->credit_order((int)$order_id);
+        }
+
         $this->success(['order' => $order], 'Order placed successfully.', 201);
     }
 
     public function index() {
         $this->auth_required();
+        $this->load->helper('sk_jt_express');
+        sk_jt_express_ensure_schema();
         $page   = max(1, (int)($this->input->get('page') ?? 1));
         $limit  = 10;
         $offset = ($page - 1) * $limit;
@@ -253,6 +274,7 @@ class Sk_Order extends Sk_Base_Api {
         // Attach items to each order for frontend display
         foreach ($orders as &$o) {
             $o['items'] = $this->Sk_Order_model->get_items($o['id']);
+            sk_order_attach_tracking($o);
         }
         unset($o);
         $this->success($orders);
@@ -260,8 +282,11 @@ class Sk_Order extends Sk_Base_Api {
 
     public function show($id) {
         $this->auth_required();
+        $this->load->helper('sk_jt_express');
+        sk_jt_express_ensure_schema();
         $order = $this->Sk_Order_model->get_by_id($id, $this->user['user_id']);
         if (!$order) return $this->error('Order not found.', 404);
+        sk_order_attach_tracking($order);
         $this->success($order);
     }
 
@@ -321,6 +346,20 @@ class Sk_Order extends Sk_Base_Api {
         $done = true;
         if (!$this->db->field_exists('wallet_amount', 'orders')) {
             $this->db->query('ALTER TABLE `orders` ADD COLUMN `wallet_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `total`');
+        }
+    }
+
+    private function _ensure_order_discount_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('affiliate_discount', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `affiliate_discount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `discount`');
+        }
+        if (!$this->db->field_exists('wallet_discount', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `wallet_discount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `affiliate_discount`');
         }
     }
 

@@ -52,9 +52,24 @@ class Sk_Order_model extends CI_Model {
     }
 
     public function update_status($order_id, $status) {
-        $data = ['status' => $status];
-        if ($status === 'shipped') $data['shipped_at'] = date('Y-m-d H:i:s');
-        if ($status === 'delivered') $data['delivered_at'] = date('Y-m-d H:i:s');
+        $this->ensure_jt_schema();
+        $now = date('Y-m-d H:i:s');
+        $data = [
+            'status'            => $status,
+            'status_updated_at' => $now,
+        ];
+        if ($status === 'confirmed') {
+            $data['confirmed_at'] = $now;
+        }
+        if ($status === 'processing') {
+            $data['processing_at'] = $now;
+        }
+        if ($status === 'shipped') {
+            $data['shipped_at'] = $now;
+        }
+        if ($status === 'delivered') {
+            $data['delivered_at'] = $now;
+        }
         $this->db->where('id', $order_id)->update('orders', $data);
     }
 
@@ -63,6 +78,7 @@ class Sk_Order_model extends CI_Model {
         $allowed = [
             'courier_provider', 'jt_txlogistic_id', 'jt_bill_code', 'jt_courier_status',
             'jt_label_data', 'jt_track_data', 'jt_shipment_created_at', 'tracking_number', 'status',
+            'confirmed_at', 'processing_at', 'status_updated_at', 'shipped_at', 'delivered_at',
         ];
         $update = [];
         foreach ($allowed as $k) {

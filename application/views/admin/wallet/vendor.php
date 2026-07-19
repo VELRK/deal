@@ -4,7 +4,7 @@
   <div>
     <h5 class="sk-page-title mb-1"><i class="bi bi-wallet2 me-2 text-success"></i><?= htmlspecialchars($vendor['business_name']) ?></h5>
     <div class="display-6 fw-bold text-success"><?= $currency . number_format((float)($wallet['balance'] ?? 0), 2) ?></div>
-    <small class="text-muted d-block mt-1">Vendor settlement wallet · Top-up by admin only · No withdrawals</small>
+    <small class="text-muted d-block mt-1">Vendor settlement wallet · Sales from paid orders are credited automatically · Admin can also add funds</small>
   </div>
   <?php if (empty($impersonating) && ($admin['role'] ?? '') === 'superadmin'): ?>
   <a href="<?= site_url('admin/wallet') ?>" class="btn btn-sm btn-outline-secondary">All Wallets</a>

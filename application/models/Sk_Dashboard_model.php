@@ -21,31 +21,54 @@ class Sk_Dashboard_model extends CI_Model {
     }
 
     public function vendor_stats(int $vendor_id): array {
+        $this->load->helper('sk_vendor_dashboard');
+        sk_vendor_dashboard_ensure_schema();
+        sk_vendor_backfill_order_item_vendors($vendor_id);
+
         $products = $this->db->where('vendor_id', $vendor_id)->count_all_results('products');
         $active_products = $this->db->where('vendor_id', $vendor_id)->where('status', 'active')->count_all_results('products');
         $low_stock = $this->db->where('vendor_id', $vendor_id)
                                ->where('stock <= low_stock_alert', null, false)
                                ->count_all_results('products');
 
-        $revenue = $this->db->select_sum('oi.subtotal', 'total')
-                            ->from('order_items oi')
-                            ->join('orders o', 'o.id = oi.order_id')
-                            ->where('oi.vendor_id', $vendor_id)
-                            ->where('o.payment_status', 'paid')
-                            ->get()->row()->total ?? 0;
+        $vendorScope = function () use ($vendor_id) {
+            $this->db->group_start()
+                     ->where('oi.vendor_id', $vendor_id)
+                     ->or_where('p.vendor_id', $vendor_id)
+                     ->group_end();
+        };
 
-        $orders = $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
-                           ->from('order_items oi')
-                           ->where('oi.vendor_id', $vendor_id)
-                           ->get()->row()->cnt ?? 0;
+        $this->db->select_sum('oi.subtotal', 'total')
+                 ->from('order_items oi')
+                 ->join('orders o', 'o.id = oi.order_id')
+                 ->join('products p', 'p.id = oi.product_id', 'left');
+        $vendorScope();
+        $revenue = (float)($this->db->where('o.payment_status', 'paid')->get()->row()->total ?? 0);
 
-        $pending = $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
-                            ->from('order_items oi')
-                            ->join('orders o', 'o.id = oi.order_id')
-                            ->where('oi.vendor_id', $vendor_id)
-                            ->where('o.status', 'pending')
-                            ->get()->row()->cnt ?? 0;
+        $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
+                 ->from('order_items oi')
+                 ->join('products p', 'p.id = oi.product_id', 'left');
+        $vendorScope();
+        $orders = (int)($this->db->get()->row()->cnt ?? 0);
 
+        $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
+                 ->from('order_items oi')
+                 ->join('orders o', 'o.id = oi.order_id')
+                 ->join('products p', 'p.id = oi.product_id', 'left');
+        $vendorScope();
+        $pending = (int)($this->db->where('o.status', 'pending')->get()->row()->cnt ?? 0);
+
+        $this->db->select_sum('oi.subtotal', 'total')
+                 ->from('order_items oi')
+                 ->join('orders o', 'o.id = oi.order_id')
+                 ->join('products p', 'p.id = oi.product_id', 'left');
+        $vendorScope();
+        $monthly_revenue = (float)($this->db->where('o.payment_status', 'paid')
+            ->where('MONTH(o.created_at) = MONTH(NOW()) AND YEAR(o.created_at) = YEAR(NOW())', null, false)
+            ->get()->row()->total ?? 0);
+
+        $this->load->model('Sk_Wallet_model');
+        $this->Sk_Wallet_model->sync_unsettled_sales($vendor_id);
         $wallet = $this->db->where('vendor_id', $vendor_id)->get('vendor_wallets')->row_array();
 
         return [
@@ -55,6 +78,7 @@ class Sk_Dashboard_model extends CI_Model {
             'orders'           => (int)$orders,
             'pending_orders'   => (int)$pending,
             'revenue'          => (float)$revenue,
+            'monthly_revenue'  => (float)$monthly_revenue,
             'wallet_balance'   => (float)($wallet['balance'] ?? 0),
         ];
     }
@@ -63,7 +87,11 @@ class Sk_Dashboard_model extends CI_Model {
         $rows = $this->db->select('DATE(o.created_at) as date, SUM(oi.subtotal) as revenue', false)
                          ->from('order_items oi')
                          ->join('orders o', 'o.id = oi.order_id')
-                         ->where('oi.vendor_id', $vendor_id)
+                         ->join('products p', 'p.id = oi.product_id', 'left')
+                         ->group_start()
+                             ->where('oi.vendor_id', $vendor_id)
+                             ->or_where('p.vendor_id', $vendor_id)
+                         ->group_end()
                          ->where('o.payment_status', 'paid')
                          ->where('o.created_at >=', date('Y-m-d', strtotime("-{$days} days")))
                          ->group_by('DATE(o.created_at)')
@@ -85,10 +113,14 @@ class Sk_Dashboard_model extends CI_Model {
         return $this->db->select('oi.product_name, oi.product_id, SUM(oi.quantity) as qty_sold, SUM(oi.subtotal) as revenue')
                         ->from('order_items oi')
                         ->join('orders o', 'o.id = oi.order_id')
-                        ->where('oi.vendor_id', $vendor_id)
+                        ->join('products p', 'p.id = oi.product_id', 'left')
+                        ->group_start()
+                            ->where('oi.vendor_id', $vendor_id)
+                            ->or_where('p.vendor_id', $vendor_id)
+                        ->group_end()
                         ->where('o.payment_status', 'paid')
                         ->group_by('oi.product_id')
-                        ->order_by('qty_sold', 'DESC')
+                        ->order_by('revenue', 'DESC')
                         ->limit($limit)
                         ->get()->result_array();
     }
@@ -98,7 +130,11 @@ class Sk_Dashboard_model extends CI_Model {
                         ->from('order_items oi')
                         ->join('orders o', 'o.id = oi.order_id')
                         ->join('users u', 'u.id = o.user_id', 'left')
-                        ->where('oi.vendor_id', $vendor_id)
+                        ->join('products p', 'p.id = oi.product_id', 'left')
+                        ->group_start()
+                            ->where('oi.vendor_id', $vendor_id)
+                            ->or_where('p.vendor_id', $vendor_id)
+                        ->group_end()
                         ->group_by('o.id')
                         ->order_by('o.created_at', 'DESC')
                         ->limit($limit)

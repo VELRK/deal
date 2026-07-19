@@ -5,6 +5,12 @@ require_once APPPATH . 'controllers/api/Sk_Base_Api.php';
 
 class Sk_Shipping extends Sk_Base_Api {
 
+    public function __construct() {
+        parent::__construct();
+        $this->load->helper('sk_jt_express');
+        sk_jt_express_ensure_schema();
+    }
+
     /**
      * POST /shopkart-api/shipping/track
      * Body: { tracking_number } or { order_number }
@@ -35,18 +41,21 @@ class Sk_Shipping extends Sk_Base_Api {
             $this->load->library('Jt_express', $settings);
             $result = $this->jt_express->track($billCode);
             if ($result['success']) {
-                $this->Sk_Order_model->update_jt_shipment((int)$order['id'], [
-                    'jt_track_data' => json_encode($result['raw'] ?? $result['data']),
-                ]);
+                sk_jt_sync_order_tracking((int)$order['id'], $result);
+                $order = $this->Sk_Order_model->get_by_id((int)$order['id']);
             }
             return $this->success([
-                'order_number'     => $order['order_number'],
-                'tracking_number'  => $billCode,
-                'order_status'     => $order['status'],
-                'courier'          => 'jt_express',
-                'courier_status'   => $order['jt_courier_status'] ?? null,
-                'tracks'           => $this->_normalize_tracks($result),
-                'raw'              => $result['raw'] ?? null,
+                'order_number'       => $order['order_number'],
+                'tracking_number'    => $billCode,
+                'order_status'       => $order['status'],
+                'courier'            => 'jt_express',
+                'courier_status'     => $order['jt_courier_status'] ?? null,
+                'processing_at'      => $order['processing_at'] ?? null,
+                'jt_shipment_created_at' => $order['jt_shipment_created_at'] ?? null,
+                'shipped_at'         => $order['shipped_at'] ?? null,
+                'delivered_at'       => $order['delivered_at'] ?? null,
+                'tracks'             => sk_jt_normalize_tracks($result),
+                'raw'                => $result['raw'] ?? null,
             ], $result['message'] ?? 'Tracking fetched.');
         }
 
@@ -54,22 +63,8 @@ class Sk_Shipping extends Sk_Base_Api {
             'order_number'    => $order['order_number'],
             'tracking_number' => $billCode,
             'order_status'    => $order['status'],
-            'tracks'          => [],
+            'tracks'          => sk_jt_tracks_from_order($order),
             'message'         => 'Courier tracking not available for this order.',
         ]);
-    }
-
-    private function _normalize_tracks(array $result) {
-        $data = $result['data'] ?? $result['raw']['data'] ?? [];
-        if (isset($data['details']) && is_array($data['details'])) {
-            return $data['details'];
-        }
-        if (isset($data[0]['details']) && is_array($data[0]['details'])) {
-            return $data[0]['details'];
-        }
-        if (isset($data['traces']) && is_array($data['traces'])) {
-            return $data['traces'];
-        }
-        return is_array($data) ? $data : [];
     }
 }

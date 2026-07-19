@@ -46,11 +46,19 @@
           </tbody>
           <tfoot class="table-light">
             <tr><td colspan="3" class="text-end fw-semibold">Subtotal</td><td><?= $currency . number_format($order['subtotal'],2) ?></td></tr>
-            <?php if ($order['discount'] > 0): ?>
-            <tr><td colspan="3" class="text-end text-success">Discount<?php
-              $promoLabel = !empty($order['affiliate_promo']) ? $order['affiliate_promo'] . ' (Affiliate)' : ($order['promo_code'] ?? '');
-              if ($promoLabel) echo ' (' . htmlspecialchars($promoLabel) . ')';
-            ?></td><td class="text-success">-<?= $currency . number_format($order['discount'],2) ?></td></tr>
+            <?php
+            $this->load->helper('sk_invoice');
+            $disc = sk_order_discount_breakdown($order, $settings ?? []);
+            $affDiscPct = (!empty($affiliate['customer_discount_percent']) && (float)$affiliate['customer_discount_percent'] > 0)
+                ? rtrim(rtrim(number_format((float)$affiliate['customer_discount_percent'], 2), '0'), '.') . '%'
+                : '';
+            if (($disc['affiliate'] ?? 0) > 0): ?>
+            <tr><td colspan="3" class="text-end text-success">Affiliate checkout discount (<?= htmlspecialchars($disc['affiliate_promo']) ?><?= $affDiscPct ? ', ' . $affDiscPct : '' ?>)</td><td class="text-success">-<?= $currency . number_format($disc['affiliate'], 2) ?></td></tr>
+            <?php elseif (($disc['promo'] ?? 0) > 0): ?>
+            <tr><td colspan="3" class="text-end text-success">Discount (<?= htmlspecialchars($disc['promo_code']) ?>)</td><td class="text-success">-<?= $currency . number_format($disc['promo'], 2) ?></td></tr>
+            <?php endif; ?>
+            <?php if (($disc['wallet'] ?? 0) > 0): ?>
+            <tr><td colspan="3" class="text-end text-success">Wallet payment discount<?= !empty($disc['wallet_percent']) ? ' (' . rtrim(rtrim(number_format((float)$disc['wallet_percent'], 2), '0'), '.') . '%)' : '' ?></td><td class="text-success">-<?= $currency . number_format($disc['wallet'], 2) ?></td></tr>
             <?php endif; ?>
             <tr><td colspan="3" class="text-end">Shipping</td><td><?= $currency . number_format($order['shipping'],2) ?></td></tr>
             <tr><td colspan="3" class="text-end">Tax</td><td><?= $currency . number_format($order['tax'],2) ?></td></tr>
@@ -84,11 +92,11 @@
     <!-- Order Progress Stepper -->
     <?php
     $status_steps = [
-      ['key' => 'pending',    'label' => 'Order Placed', 'icon' => 'bi-receipt'],
-      ['key' => 'confirmed',  'label' => 'Confirmed',    'icon' => 'bi-check2-circle'],
-      ['key' => 'processing', 'label' => 'Processing',   'icon' => 'bi-gear'],
-      ['key' => 'shipped',    'label' => 'Shipped',      'icon' => 'bi-truck'],
-      ['key' => 'delivered',  'label' => 'Delivered',    'icon' => 'bi-house-check'],
+      ['key' => 'pending',    'label' => 'Order Placed',     'icon' => 'bi-receipt',       'time' => $order['created_at'] ?? null],
+      ['key' => 'confirmed',  'label' => 'Confirmed',        'icon' => 'bi-check2-circle', 'time' => $order['confirmed_at'] ?? null],
+      ['key' => 'processing', 'label' => 'Ready to Pick Up', 'icon' => 'bi-box-seam',      'time' => $order['processing_at'] ?? $order['jt_shipment_created_at'] ?? null],
+      ['key' => 'shipped',    'label' => 'Shipped',          'icon' => 'bi-truck',         'time' => $order['shipped_at'] ?? null],
+      ['key' => 'delivered',  'label' => 'Delivered',        'icon' => 'bi-house-check',   'time' => $order['delivered_at'] ?? null],
     ];
     $step_keys   = array_column($status_steps, 'key');
     $current_idx = array_search($order['status'], $step_keys);
@@ -125,6 +133,9 @@
                   <small style="display:block;font-size:10px;white-space:nowrap;color:<?= ($done||$active) ? '#0f172a' : '#94a3b8' ?>;font-weight:<?= ($done||$active) ? 600 : 400 ?>;">
                     <?= $step['label'] ?>
                   </small>
+                  <?php if (!empty($step['time']) && ($done || $active)): ?>
+                  <small style="display:block;font-size:9px;color:#64748b;margin-top:2px;"><?= sk_jt_format_datetime($step['time']) ?></small>
+                  <?php endif; ?>
                 </div>
                 <?php if ($i < count($status_steps) - 1): ?>
                   <div class="flex-grow-1" style="height:2px;margin-bottom:20px;background:<?= $done ? '#0f172a' : '#e2e8f0' ?>;"></div>
@@ -144,7 +155,7 @@
           <label class="form-label">Order Status</label>
           <select id="orderStatus" class="form-select">
             <?php foreach (['pending','confirmed','processing','shipped','delivered','cancelled','returned'] as $s): ?>
-              <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
+              <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= $s === 'processing' ? 'Ready to Pick Up (Processing)' : ucfirst($s) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -168,11 +179,25 @@
         <?php endif; ?>
       </div>
       <div class="card-body">
+        <?php $jtTracks = sk_jt_tracks_from_order($order); ?>
         <div class="small mb-3">
           <div><span class="text-muted">AWB:</span> <strong id="jtAwb"><?= htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—') ?></strong></div>
           <div><span class="text-muted">Courier status:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
+          <div><span class="text-muted">Ready to pick up:</span> <?= sk_jt_format_datetime($order['processing_at'] ?? $order['jt_shipment_created_at'] ?? null) ?></div>
+          <?php if (!empty($order['confirmed_at'])): ?>
+          <div><span class="text-muted">Confirmed:</span> <?= sk_jt_format_datetime($order['confirmed_at']) ?></div>
+          <?php endif; ?>
           <?php if (!empty($order['jt_shipment_created_at'])): ?>
-          <div><span class="text-muted">Created:</span> <?= date('d M Y, h:i A', strtotime($order['jt_shipment_created_at'])) ?></div>
+          <div><span class="text-muted">JT shipment created:</span> <?= sk_jt_format_datetime($order['jt_shipment_created_at']) ?></div>
+          <?php endif; ?>
+          <?php if (!empty($order['shipped_at'])): ?>
+          <div><span class="text-muted">Shipped:</span> <?= sk_jt_format_datetime($order['shipped_at']) ?></div>
+          <?php endif; ?>
+          <?php if (!empty($order['delivered_at'])): ?>
+          <div><span class="text-muted">Delivered:</span> <?= sk_jt_format_datetime($order['delivered_at']) ?></div>
+          <?php endif; ?>
+          <?php if (!empty($order['status_updated_at'])): ?>
+          <div><span class="text-muted">Last status change:</span> <?= sk_jt_format_datetime($order['status_updated_at']) ?></div>
           <?php endif; ?>
         </div>
         <div class="d-grid gap-2">
@@ -194,10 +219,49 @@
           <?php endif; ?>
           <?php endif; ?>
         </div>
-        <div id="jtTrackBox" class="mt-3 small d-none">
-          <div class="fw-semibold mb-1">Tracking events</div>
-          <ul id="jtTrackList" class="list-unstyled mb-0"></ul>
+        <div id="jtTrackBox" class="mt-3 small <?= $jtTracks ? '' : 'd-none' ?>">
+          <div class="fw-semibold mb-1">JT Express tracking events</div>
+          <ul id="jtTrackList" class="list-unstyled mb-0">
+            <?php foreach ($jtTracks as $ev): ?>
+            <li class="border-bottom py-1"><?= htmlspecialchars(sk_jt_track_event_label($ev)) ?></li>
+            <?php endforeach; ?>
+          </ul>
         </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($order['affiliate_promo']) || !empty($affiliate)): ?>
+    <div class="card sk-table-card shadow-sm mb-3 border-success">
+      <div class="card-header bg-white border-0 py-3 fw-semibold">
+        <i class="bi bi-link-45deg me-2 text-success"></i>Affiliate
+      </div>
+      <div class="card-body small">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Promo code</span>
+          <code><?= htmlspecialchars($order['affiliate_promo'] ?? ($affiliate['promo_code'] ?? '')) ?></code>
+        </div>
+        <?php if (!empty($affiliate['name'])): ?>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Affiliate</span>
+          <strong><?= htmlspecialchars($affiliate['name']) ?></strong>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($affiliate['commission_rate'])): ?>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Commission rate</span>
+          <strong><?= rtrim(rtrim(number_format((float)$affiliate['commission_rate'], 2), '0'), '.') ?>%</strong>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($affiliate_commission['commission_amount'])): ?>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Commission earned</span>
+          <strong class="text-success"><?= $currency . number_format((float)$affiliate_commission['commission_amount'], 2) ?></strong>
+        </div>
+        <?php if (!empty($affiliate_commission['order_total'])): ?>
+        <div class="text-muted" style="font-size:11px;">On order value <?= $currency . number_format((float)$affiliate_commission['order_total'], 2) ?> after discounts</div>
+        <?php endif; ?>
+        <?php endif; ?>
       </div>
     </div>
     <?php endif; ?>
@@ -260,6 +324,10 @@ function updateStatus(orderId) {
     status: status, tracking_number: tracking
   }, function(res) {
     if (res.success) {
+      var toastBody = document.querySelector('#statusToast .toast-body');
+      if (toastBody) {
+        toastBody.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + (res.message || 'Order status updated!');
+      }
       var toast = new bootstrap.Toast(document.querySelector('#statusToast .toast'));
       toast.show();
       setTimeout(function() { location.reload(); }, 1800);
@@ -295,6 +363,7 @@ function jtAction(action, orderId) {
         list.appendChild(li);
       });
       box.classList.remove('d-none');
+      setTimeout(function() { location.reload(); }, 1500);
       return;
     }
     alert(res.message || (res.success ? 'Done.' : 'Request failed.'));

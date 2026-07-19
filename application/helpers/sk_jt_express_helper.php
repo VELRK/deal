@@ -25,6 +25,9 @@ function sk_jt_express_ensure_schema() {
         'jt_label_data'          => 'MEDIUMTEXT NULL',
         'jt_track_data'          => 'MEDIUMTEXT NULL',
         'jt_shipment_created_at' => 'DATETIME NULL DEFAULT NULL',
+        'confirmed_at'           => 'DATETIME NULL DEFAULT NULL',
+        'processing_at'          => 'DATETIME NULL DEFAULT NULL',
+        'status_updated_at'      => 'DATETIME NULL DEFAULT NULL',
     ];
     foreach ($cols as $col => $def) {
         if (!$CI->db->field_exists($col, 'orders')) {
@@ -62,4 +65,108 @@ function sk_jt_express_ensure_schema() {
         }
         $CI->db->insert('settings', $row);
     }
+}
+
+/** Normalize JT Express trace payload to a flat event list. */
+function sk_jt_normalize_tracks(array $result): array {
+    $data = $result['data'] ?? $result['raw']['data'] ?? $result['raw'] ?? [];
+    if (isset($data['details']) && is_array($data['details'])) {
+        return $data['details'];
+    }
+    if (isset($data[0]['details']) && is_array($data[0]['details'])) {
+        return $data[0]['details'];
+    }
+    if (isset($data['traces']) && is_array($data['traces'])) {
+        return $data['traces'];
+    }
+    if (is_array($data) && isset($data[0]['scanTime'])) {
+        return $data;
+    }
+    return is_array($data) ? $data : [];
+}
+
+/** Human-readable line for one JT tracking event. */
+function sk_jt_track_event_label(array $event): string {
+    $time = trim((string)($event['scanTime'] ?? $event['time'] ?? $event['acceptTime'] ?? $event['date'] ?? ''));
+    $desc = trim((string)($event['desc'] ?? $event['remark'] ?? $event['scanType'] ?? $event['status'] ?? ''));
+    if ($desc === '') {
+        $desc = json_encode($event);
+    }
+    return $time !== '' ? ($time . ' — ' . $desc) : $desc;
+}
+
+/** Parse stored jt_track_data JSON from orders row. */
+function sk_jt_tracks_from_order(array $order): array {
+    if (empty($order['jt_track_data'])) {
+        return [];
+    }
+    $raw = json_decode((string)$order['jt_track_data'], true);
+    if (!is_array($raw)) {
+        return [];
+    }
+    return sk_jt_normalize_tracks(['raw' => $raw]);
+}
+
+/** Infer portal order status from latest JT scan text. */
+function sk_jt_infer_order_status(array $tracks, string $currentStatus): ?string {
+    if (!$tracks) {
+        return null;
+    }
+    $latest = $tracks[0];
+    $text = strtolower(sk_jt_track_event_label($latest));
+    if (strpos($text, 'deliver') !== false && strpos($text, 'fail') === false) {
+        return 'delivered';
+    }
+    if (preg_match('/pick.?up|picked|ship|transit|out for delivery|depart|arriv/', $text)) {
+        if ($currentStatus !== 'delivered') {
+            return 'shipped';
+        }
+    }
+    return null;
+}
+
+function sk_jt_format_datetime(?string $value): string {
+    if (!$value) {
+        return '—';
+    }
+    $ts = strtotime($value);
+    return $ts ? date('d M Y, h:i A', $ts) : '—';
+}
+
+/** Persist JT tracking payload and optionally bump order status from scan events. */
+function sk_jt_sync_order_tracking(int $orderId, array $trackResult): void {
+    $CI =& get_instance();
+    $CI->load->model('Sk_Order_model');
+
+    $order = $CI->Sk_Order_model->get_by_id($orderId);
+    if (!$order) {
+        return;
+    }
+
+    $tracks = sk_jt_normalize_tracks($trackResult);
+    $latestLabel = $tracks ? sk_jt_track_event_label($tracks[0]) : '';
+    $update = [
+        'jt_track_data' => json_encode($trackResult['raw'] ?? $trackResult['data']),
+    ];
+    if ($latestLabel !== '') {
+        $update['jt_courier_status'] = mb_substr($latestLabel, 0, 80);
+    }
+
+    $inferred = sk_jt_infer_order_status($tracks, (string)$order['status']);
+    if ($inferred && $inferred !== $order['status']) {
+        $CI->Sk_Order_model->update_status($orderId, $inferred);
+        $update['status'] = $inferred;
+    }
+
+    $CI->Sk_Order_model->update_jt_shipment($orderId, $update);
+}
+
+/** Attach JT tracking fields for customer order API responses. */
+function sk_order_attach_tracking(array &$order): void {
+    $order['tracking_number'] = $order['jt_bill_code'] ?? $order['tracking_number'] ?? null;
+    $order['courier_status']  = $order['jt_courier_status'] ?? null;
+    $order['jt_tracks']       = sk_jt_tracks_from_order($order);
+    $order['latest_track']    = !empty($order['jt_tracks'][0])
+        ? sk_jt_track_event_label($order['jt_tracks'][0])
+        : null;
 }

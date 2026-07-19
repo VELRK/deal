@@ -35,6 +35,23 @@ class Orders extends Sk_Base {
         $data['title'] = 'Order Detail';
         $data['order'] = $this->Sk_Order_model->get_by_id($id);
         if (!$data['order']) show_404();
+
+        $data['affiliate'] = null;
+        $data['affiliate_commission'] = null;
+        if (!empty($data['order']['affiliate_id']) || !empty($data['order']['affiliate_promo'])) {
+            $this->load->model('Sk_Affiliate_model');
+            if (!empty($data['order']['affiliate_id'])) {
+                $data['affiliate'] = $this->Sk_Affiliate_model->get_by_id((int)$data['order']['affiliate_id']);
+            } elseif (!empty($data['order']['affiliate_promo'])) {
+                $data['affiliate'] = $this->Sk_Affiliate_model->get_by_promo($data['order']['affiliate_promo']);
+            }
+            $data['affiliate_commission'] = $this->db->where('order_id', (int)$id)
+                ->order_by('id', 'DESC')
+                ->limit(1)
+                ->get('affiliate_commissions')
+                ->row_array();
+        }
+
         $this->render('orders/view', $data);
     }
 
@@ -74,6 +91,7 @@ class Orders extends Sk_Base {
         if ($tracking) {
             $this->db->where('id', $id)->update('orders', ['tracking_number' => $tracking]);
         }
+        $jtNotes = $this->_jt_handle_status_change((int)$id, $status, $orderBefore);
         $order = $this->Sk_Order_model->get_by_id($id);
         if ($order) {
             $this->load->helper('sk_mailer');
@@ -81,7 +99,11 @@ class Orders extends Sk_Base {
             if ($tracking) $order['tracking_number'] = $tracking;
             sk_mail_order_status($order, $status, $settings);
         }
-        $this->json(['success' => true, 'message' => 'Order status updated.']);
+        $message = 'Order status updated.';
+        if ($jtNotes) {
+            $message .= ' ' . implode(' ', $jtNotes);
+        }
+        $this->json(['success' => true, 'message' => $message, 'jt_notes' => $jtNotes]);
     }
 
     public function invoice($id) {
@@ -111,20 +133,7 @@ class Orders extends Sk_Base {
         if (!$order) {
             return $this->json(['success' => false, 'message' => 'Order not found.']);
         }
-        if (!empty($order['jt_bill_code'])) {
-            return $this->json(['success' => false, 'message' => 'JT shipment already exists. AWB: ' . $order['jt_bill_code']]);
-        }
-        if (in_array($order['status'], ['cancelled', 'returned'], true)) {
-            return $this->json(['success' => false, 'message' => 'Cannot ship a cancelled/returned order.']);
-        }
-
-        $settings = $this->Sk_Admin_model->get_settings();
-        $this->load->library('Jt_express', $settings);
-        if (!$this->jt_express->is_enabled()) {
-            return $this->json(['success' => false, 'message' => 'Enable JT Express in Settings → JT Express tab.']);
-        }
-
-        $result = $this->jt_express->add_order($order);
+        $result = $this->_jt_create_shipment_for_order($order);
         if (!$result['success']) {
             return $this->json([
                 'success' => false,
@@ -132,23 +141,10 @@ class Orders extends Sk_Base {
                 'raw'     => $result['raw'] ?? null,
             ]);
         }
-
-        $billCode = $result['bill_code'] ?? '';
-        $txId     = $order['order_number'];
-        $this->Sk_Order_model->update_jt_shipment((int)$id, [
-            'courier_provider'       => 'jt_express',
-            'jt_txlogistic_id'       => $txId,
-            'jt_bill_code'           => $billCode ?: null,
-            'jt_courier_status'      => 'created',
-            'tracking_number'        => $billCode ?: ($order['tracking_number'] ?? null),
-            'jt_shipment_created_at' => date('Y-m-d H:i:s'),
-            'status'                 => in_array($order['status'], ['pending', 'confirmed', 'processing'], true) ? 'processing' : $order['status'],
-        ]);
-
         return $this->json([
             'success'   => true,
-            'message'   => $billCode ? 'JT shipment created. AWB: ' . $billCode : ($result['message'] ?? 'JT order submitted.'),
-            'bill_code' => $billCode,
+            'message'   => $result['message'] ?? 'JT shipment created.',
+            'bill_code' => $result['bill_code'] ?? '',
             'raw'       => $result['raw'] ?? null,
         ]);
     }
@@ -206,14 +202,13 @@ class Orders extends Sk_Base {
         $this->load->library('Jt_express', $settings);
         $result = $this->jt_express->track($billCode);
         if ($result['success']) {
-            $this->Sk_Order_model->update_jt_shipment((int)$id, [
-                'jt_track_data' => json_encode($result['raw'] ?? $result['data']),
-            ]);
+            $tracks = sk_jt_normalize_tracks($result);
+            $this->_jt_apply_tracking_sync((int)$id, $result, $tracks);
         }
         return $this->json([
             'success' => $result['success'],
             'message' => $result['message'] ?? '',
-            'tracks'  => $this->_jt_normalize_tracks($result),
+            'tracks'  => sk_jt_normalize_tracks($result),
             'raw'     => $result['raw'] ?? null,
         ]);
     }
@@ -247,6 +242,120 @@ class Orders extends Sk_Base {
         ]);
     }
 
+    private function _jt_create_shipment_for_order(array $order): array {
+        if (!empty($order['jt_bill_code'])) {
+            return [
+                'success'  => true,
+                'message'  => 'JT shipment already exists. AWB: ' . $order['jt_bill_code'],
+                'bill_code'=> $order['jt_bill_code'],
+            ];
+        }
+        if (in_array($order['status'], ['cancelled', 'returned'], true)) {
+            return ['success' => false, 'message' => 'Cannot ship a cancelled/returned order.'];
+        }
+
+        $settings = $this->Sk_Admin_model->get_settings();
+        $this->load->library('Jt_express', $settings);
+        if (!$this->jt_express->is_enabled()) {
+            return ['success' => false, 'message' => 'Enable JT Express in Settings → JT Express tab.'];
+        }
+
+        $result = $this->jt_express->add_order($order);
+        if (!$result['success']) {
+            return [
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to create JT shipment.',
+                'raw'     => $result['raw'] ?? null,
+            ];
+        }
+
+        $billCode = $result['bill_code'] ?? '';
+        $txId     = $order['order_number'];
+        $now      = date('Y-m-d H:i:s');
+        $update = [
+            'courier_provider'       => 'jt_express',
+            'jt_txlogistic_id'       => $txId,
+            'jt_bill_code'           => $billCode ?: null,
+            'jt_courier_status'      => 'ready_for_pickup',
+            'tracking_number'        => $billCode ?: ($order['tracking_number'] ?? null),
+            'jt_shipment_created_at' => $now,
+        ];
+        if (empty($order['processing_at'])) {
+            $update['processing_at'] = $now;
+        }
+        if (in_array($order['status'], ['pending', 'confirmed'], true)) {
+            $update['status'] = 'processing';
+        }
+        $this->Sk_Order_model->update_jt_shipment((int)$order['id'], $update);
+
+        return [
+            'success'   => true,
+            'message'   => $billCode ? 'JT shipment created. AWB: ' . $billCode : ($result['message'] ?? 'JT order submitted.'),
+            'bill_code' => $billCode,
+            'raw'       => $result['raw'] ?? null,
+        ];
+    }
+
+    private function _jt_handle_status_change(int $orderId, string $newStatus, array $orderBefore): array {
+        $notes = [];
+        $settings = $this->Sk_Admin_model->get_settings();
+        if (empty($settings['jt_express_enabled']) || $settings['jt_express_enabled'] === '0') {
+            return $notes;
+        }
+
+        $order = $this->Sk_Order_model->get_by_id($orderId);
+        if (!$order || in_array($newStatus, ['cancelled', 'returned'], true)) {
+            return $notes;
+        }
+
+        if ($newStatus === 'processing' && empty($order['jt_bill_code'])) {
+            $created = $this->_jt_create_shipment_for_order($order);
+            if (!empty($created['message'])) {
+                $notes[] = $created['message'];
+            }
+        }
+
+        $order = $this->Sk_Order_model->get_by_id($orderId);
+        if (!empty($order['jt_bill_code'])) {
+            $sync = $this->_jt_refresh_tracking($orderId);
+            if (!empty($sync['message'])) {
+                $notes[] = $sync['message'];
+            }
+        }
+
+        return $notes;
+    }
+
+    private function _jt_refresh_tracking(int $orderId): array {
+        $order = $this->Sk_Order_model->get_by_id($orderId);
+        if (!$order) {
+            return ['success' => false, 'message' => 'Order not found.'];
+        }
+        $billCode = $order['jt_bill_code'] ?? $order['tracking_number'] ?? '';
+        if ($billCode === '') {
+            return ['success' => false, 'message' => ''];
+        }
+
+        $settings = $this->Sk_Admin_model->get_settings();
+        $this->load->library('Jt_express', $settings);
+        if (!$this->jt_express->is_enabled()) {
+            return ['success' => false, 'message' => ''];
+        }
+
+        $result = $this->jt_express->track($billCode);
+        if (!$result['success']) {
+            return ['success' => false, 'message' => 'JT track sync failed: ' . ($result['message'] ?? 'Unknown error')];
+        }
+
+        $tracks = sk_jt_normalize_tracks($result);
+        $this->_jt_apply_tracking_sync($orderId, $result, $tracks);
+        return ['success' => true, 'message' => 'JT tracking synced.'];
+    }
+
+    private function _jt_apply_tracking_sync(int $orderId, array $trackResult, array $tracks): void {
+        sk_jt_sync_order_tracking($orderId, $trackResult);
+    }
+
     private function _jt_extract_label_base64(array $result) {
         $data = $result['data'] ?? [];
         if (is_string($data) && strlen($data) > 100) {
@@ -264,23 +373,6 @@ class Orders extends Sk_Base {
             return $data[0]['base64EncodeContent'];
         }
         return '';
-    }
-
-    private function _jt_normalize_tracks(array $result) {
-        $data = $result['data'] ?? $result['raw']['data'] ?? [];
-        if (isset($data['details']) && is_array($data['details'])) {
-            return $data['details'];
-        }
-        if (isset($data[0]['details']) && is_array($data[0]['details'])) {
-            return $data[0]['details'];
-        }
-        if (isset($data['traces']) && is_array($data['traces'])) {
-            return $data['traces'];
-        }
-        if (is_array($data) && isset($data[0]['scanTime'])) {
-            return $data;
-        }
-        return is_array($data) ? $data : [];
     }
 
     private function _jt_cancel_if_needed(array $order) {

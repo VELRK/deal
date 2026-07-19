@@ -1,6 +1,55 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * Split order.discount into affiliate promo, regular promo, and wallet payment parts.
+ */
+function sk_order_discount_breakdown(array $order, array $settings = []): array {
+    $total = round((float)($order['discount'] ?? 0), 2);
+
+    $wallet = 0.0;
+    if (array_key_exists('wallet_discount', $order)) {
+        $wallet = round((float)$order['wallet_discount'], 2);
+    } elseif (preg_match('/\[Wallet discount:\s*([\d.]+)\]/', (string)($order['notes'] ?? ''), $m)) {
+        $wallet = round((float)$m[1], 2);
+    }
+    $wallet = min(max(0, $wallet), $total);
+
+    $affiliate = 0.0;
+    if (!empty($order['affiliate_promo'])) {
+        if (array_key_exists('affiliate_discount', $order)) {
+            $affiliate = round((float)$order['affiliate_discount'], 2);
+        } else {
+            $affiliate = round(max(0, $total - $wallet), 2);
+        }
+    }
+
+    $promo = 0.0;
+    $promoCode = '';
+    if ($affiliate <= 0 && !empty($order['promo_code'])) {
+        $promo = round(max(0, $total - $wallet), 2);
+        $promoCode = (string)$order['promo_code'];
+    }
+
+    $walletPct = (float)($settings['customer_wallet_discount_percent'] ?? 0);
+    if ($walletPct <= 0 && $wallet > 0) {
+        $CI =& get_instance();
+        if (isset($CI->Sk_Customer_wallet_model)) {
+            $walletPct = (float)$CI->Sk_Customer_wallet_model->get_wallet_discount_percent();
+        }
+    }
+
+    return [
+        'total'            => $total,
+        'affiliate'        => $affiliate,
+        'affiliate_promo'  => (string)($order['affiliate_promo'] ?? ''),
+        'promo'            => $promo,
+        'promo_code'       => $promoCode,
+        'wallet'           => $wallet,
+        'wallet_percent'   => $walletPct > 0 ? $walletPct : null,
+    ];
+}
+
 /** Human-readable payment method for invoices and emails. */
 function sk_invoice_payment_method_label(array $order): string {
     $method = strtolower(trim($order['payment_method'] ?? 'cod'));
@@ -77,6 +126,8 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         $promoLabel = $order['promo_code'];
     }
 
+    $discountBreakdown = sk_order_discount_breakdown($order, $settings);
+
     $invoiceNo = sk_invoice_number($order, $seller);
 
     return [
@@ -105,6 +156,7 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'items'          => $items,
         'subtotal'       => $subtotal,
         'discount'       => $discount,
+        'discount_breakdown' => $discountBreakdown,
         'promo_code'     => $promoLabel,
         'shipping'       => $shipping,
         'tax'            => $tax,
@@ -192,6 +244,49 @@ function sk_invoice_number(array $order, array $seller): string {
     return strtoupper($prefix) . '-' . $date . '-' . str_pad((string)$id, 5, '0', STR_PAD_LEFT);
 }
 
+/** Build one or more discount rows for invoices/emails/admin views. */
+function sk_invoice_discount_rows_html(array $invoiceOrOrder, string $currencyHtml, string $colspan = '5', string $style = ''): string {
+    $bd = $invoiceOrOrder['discount_breakdown'] ?? null;
+    if (!$bd && !empty($invoiceOrOrder['discount'])) {
+        $bd = sk_order_discount_breakdown($invoiceOrOrder);
+    }
+    if (!$bd || ($bd['total'] ?? 0) <= 0) {
+        return '';
+    }
+
+    $rows = [];
+    $cellStyle = $style !== '' ? $style : 'padding:8px;text-align:right;color:#16a34a;';
+
+    if (($bd['affiliate'] ?? 0) > 0) {
+        $label = 'Discount (' . htmlspecialchars($bd['affiliate_promo'] ?: 'Affiliate') . ' Affiliate)';
+        $rows[] = "<tr><td colspan='{$colspan}' style='{$cellStyle}'>{$label}</td>"
+            . "<td style='{$cellStyle}'>-{$currencyHtml}" . number_format($bd['affiliate'], 2) . '</td></tr>';
+    } elseif (($bd['promo'] ?? 0) > 0) {
+        $label = 'Discount (' . htmlspecialchars($bd['promo_code'] ?: 'Promo') . ')';
+        $rows[] = "<tr><td colspan='{$colspan}' style='{$cellStyle}'>{$label}</td>"
+            . "<td style='{$cellStyle}'>-{$currencyHtml}" . number_format($bd['promo'], 2) . '</td></tr>';
+    }
+
+    if (($bd['wallet'] ?? 0) > 0) {
+        $walletLabel = 'Wallet payment discount';
+        if (!empty($bd['wallet_percent'])) {
+            $walletLabel .= ' (' . rtrim(rtrim(number_format((float)$bd['wallet_percent'], 2), '0'), '.') . '%)';
+        }
+        $rows[] = "<tr><td colspan='{$colspan}' style='{$cellStyle}'>" . htmlspecialchars($walletLabel) . '</td>'
+            . "<td style='{$cellStyle}'>-{$currencyHtml}" . number_format($bd['wallet'], 2) . '</td></tr>';
+    }
+
+    if (!$rows) {
+        $label = !empty($invoiceOrOrder['promo_code'])
+            ? 'Discount (' . htmlspecialchars($invoiceOrOrder['promo_code']) . ')'
+            : 'Discount';
+        $rows[] = "<tr><td colspan='{$colspan}' style='{$cellStyle}'>{$label}</td>"
+            . "<td style='{$cellStyle}'>-{$currencyHtml}" . number_format($bd['total'], 2) . '</td></tr>';
+    }
+
+    return implode('', $rows);
+}
+
 /** Render printable / emailable invoice HTML. */
 function sk_invoice_render_html(array $invoice, bool $forEmail = false): string {
     $s = $invoice['seller'];
@@ -216,12 +311,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
             . '</tr>';
     }
 
-    $discountRow = '';
-    if ($invoice['discount'] > 0) {
-        $label = $invoice['promo_code'] ? 'Discount (' . htmlspecialchars($invoice['promo_code']) . ')' : 'Discount';
-        $discountRow = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#16a34a;'>{$label}</td>"
-            . "<td style='padding:8px;text-align:right;color:#16a34a;'>-{$cur}" . number_format($invoice['discount'], 2) . '</td></tr>';
-    }
+    $discountRow = sk_invoice_discount_rows_html($invoice, $cur);
 
     $gstRows = '';
     $g = $invoice['gst'];

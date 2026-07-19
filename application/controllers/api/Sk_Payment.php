@@ -166,6 +166,9 @@ class Sk_Payment extends Sk_Base_Api {
         $this->Sk_Order_model->update_payment_status($order_id, 'paid');
         $this->Sk_Order_model->update_status($order_id, 'confirmed');
 
+        $this->load->model('Sk_Wallet_model');
+        $this->Sk_Wallet_model->credit_order($order_id);
+
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
 
         $this->load->helper(['sk_mailer', 'sk_invoice']);

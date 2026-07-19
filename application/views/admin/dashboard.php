@@ -45,7 +45,7 @@
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
         <div class="sk-stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-wallet2"></i></div>
-        <div><div class="fs-4 fw-bold"><?= $currency . number_format($s['wallet_balance'], 2) ?></div><div class="text-muted small">Wallet</div></div>
+        <div><div class="fs-4 fw-bold"><?= $currency . number_format($s['wallet_balance'], 2) ?></div><div class="text-muted small">Wallet (Sales + Top-ups)</div></div>
       </div>
     </div>
   </div>
@@ -104,7 +104,9 @@
     <div class="card sk-table-card shadow-sm h-100">
       <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
         <span class="fw-semibold">Revenue by Day (Last 30 Days)</span>
-        <?php if (empty($is_vendor_view)): ?>
+        <?php if (!empty($is_vendor_view)): ?>
+        <span class="badge bg-success"><?= $currency . number_format($s['monthly_revenue'] ?? 0, 0) ?> this month</span>
+        <?php elseif (empty($is_vendor_view)): ?>
         <span class="badge bg-success"><?= $currency . number_format($monthly_revenue, 0) ?> this month</span>
         <?php endif; ?>
       </div>
@@ -113,7 +115,7 @@
   </div>
   <div class="col-lg-4">
     <div class="card sk-table-card shadow-sm h-100">
-      <div class="card-header bg-white border-0 py-3"><span class="fw-semibold">Top Products</span></div>
+      <div class="card-header bg-white border-0 py-3"><span class="fw-semibold">Top Products by Revenue</span></div>
       <div class="card-body p-0">
         <ul class="list-group list-group-flush">
           <?php foreach ($top_products as $i => $tp): ?>
@@ -122,7 +124,10 @@
               <span class="badge bg-warning text-dark"><?= $i+1 ?></span>
               <span class="small text-truncate" style="max-width:130px;"><?= htmlspecialchars($tp['product_name']) ?></span>
             </span>
-            <span class="text-muted small"><?= number_format($tp['qty_sold']) ?> sold</span>
+            <span class="text-end small">
+              <div class="fw-semibold"><?= $currency . number_format((float)($tp['revenue'] ?? 0), 0) ?></div>
+              <div class="text-muted"><?= number_format((float)($tp['qty_sold'] ?? 0)) ?> sold</div>
+            </span>
           </li>
           <?php endforeach; ?>
           <?php if (empty($top_products)): ?><li class="list-group-item text-muted text-center small py-4">No data yet</li><?php endif; ?>
