@@ -1,0 +1,1 @@
+import{s as e}from"./index-CFlLXPh7.js";var t=e();function n({onSubmit:e,...n}){return(0,t.jsx)(`form`,{...n,onSubmit:t=>{t.preventDefault(),e?.(t)}})}export{n as t};
