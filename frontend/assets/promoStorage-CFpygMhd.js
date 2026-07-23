@@ -1,1 +1,0 @@
-var e=`sk_applied_promo`;function t(){try{let t=sessionStorage.getItem(e);if(!t)return null;let n=JSON.parse(t);return n?.code?{code:n.code,discount:Number(n.discount)||0}:null}catch{return null}}function n(t){if(!t?.code){sessionStorage.removeItem(e);return}sessionStorage.setItem(e,JSON.stringify(t))}export{n,t};
