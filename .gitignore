@@ -114,5 +114,3 @@ verify_colors.php
 
 # ── Deploy SSH keys (never commit) ────────────────────────────
 deploy-keys/
-/frontend/assets/
-/frontend/index.html
