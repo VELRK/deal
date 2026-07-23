@@ -17,7 +17,7 @@
 <?php if (!empty($is_vendor_view)): ?>
 <?php $s = $stats; ?>
 <div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
         <div class="sk-stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-box-seam"></i></div>
@@ -25,7 +25,7 @@
       </div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
         <div class="sk-stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-cart-check"></i></div>
@@ -33,19 +33,11 @@
       </div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
         <div class="sk-stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-currency-rupee"></i></div>
         <div><div class="fs-4 fw-bold"><?= $currency . number_format($s['revenue'], 0) ?></div><div class="text-muted small">Revenue</div></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card sk-stat-card shadow-sm h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="sk-stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-wallet2"></i></div>
-        <div><div class="fs-4 fw-bold"><?= $currency . number_format($s['wallet_balance'], 2) ?></div><div class="text-muted small">Wallet (Sales + Top-ups)</div></div>
       </div>
     </div>
   </div>
@@ -54,7 +46,7 @@
   <div class="col-auto"><span class="badge bg-danger"><?= $s['pending_orders'] ?> pending orders</span></div>
   <div class="col-auto"><span class="badge bg-secondary"><?= $s['low_stock'] ?> low stock</span></div>
   <div class="col-auto"><a href="<?= site_url('admin/stores/edit/'.$vendor['id']) ?>" class="btn btn-sm btn-outline-primary">Store Settings</a></div>
-  <div class="col-auto"><a href="<?= site_url('admin/wallet/vendor/'.$vendor['id']) ?>" class="btn btn-sm btn-outline-success">Wallet</a></div>
+  <div class="col-auto"><a href="<?= site_url('admin/customer-wallets') ?>" class="btn btn-sm btn-outline-success">Customer Wallets</a></div>
 </div>
 <?php else: ?>
 <div class="row g-3 mb-4">

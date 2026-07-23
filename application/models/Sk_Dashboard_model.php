@@ -67,10 +67,6 @@ class Sk_Dashboard_model extends CI_Model {
             ->where('MONTH(o.created_at) = MONTH(NOW()) AND YEAR(o.created_at) = YEAR(NOW())', null, false)
             ->get()->row()->total ?? 0);
 
-        $this->load->model('Sk_Wallet_model');
-        $this->Sk_Wallet_model->sync_unsettled_sales($vendor_id);
-        $wallet = $this->db->where('vendor_id', $vendor_id)->get('vendor_wallets')->row_array();
-
         return [
             'products'         => (int)$products,
             'active_products'  => (int)$active_products,
@@ -79,7 +75,6 @@ class Sk_Dashboard_model extends CI_Model {
             'pending_orders'   => (int)$pending,
             'revenue'          => (float)$revenue,
             'monthly_revenue'  => (float)$monthly_revenue,
-            'wallet_balance'   => (float)($wallet['balance'] ?? 0),
         ];
     }
 

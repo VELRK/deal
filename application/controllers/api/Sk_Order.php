@@ -255,11 +255,6 @@ class Sk_Order extends Sk_Base_Api {
             sk_mail_order_invoice($order, $settings);
         }
 
-        if ($is_paid_now) {
-            $this->load->model('Sk_Wallet_model');
-            $this->Sk_Wallet_model->credit_order((int)$order_id);
-        }
-
         $this->success(['order' => $order], 'Order placed successfully.', 201);
     }
 

@@ -191,9 +191,36 @@ class Sk_Customer_wallet_model extends CI_Model {
         return round($points / $this->points_per_rm(), 2);
     }
 
-    public function get_checkout_info(int $userId): array {
+    /** Use stored customer wallet balance; repair from latest ledger row if drifted. */
+    public function resolve_wallet_balance(int $userId): float {
         $wallet = $this->get_wallet($userId);
-        $balanceRm = (float)$wallet['balance'];
+        $stored = round((float)$wallet['balance'], 2);
+
+        $this->db->where('user_id', $userId);
+        $this->apply_completed_transactions_scope();
+        $last = $this->db->select('balance_after')
+            ->order_by('created_at', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('customer_wallet_transactions')
+            ->row_array();
+
+        if ($last !== null) {
+            $ledger = round((float)$last['balance_after'], 2);
+            if (abs($ledger - $stored) > 0.001) {
+                $this->db->where('user_id', $userId)->update('customer_wallets', [
+                    'balance'    => $ledger,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                return $ledger;
+            }
+        }
+
+        return $stored;
+    }
+
+    public function get_checkout_info(int $userId): array {
+        $balanceRm = $this->resolve_wallet_balance($userId);
         return [
             'enabled'           => $this->is_enabled(),
             'balance'           => $balanceRm,
@@ -258,7 +285,13 @@ class Sk_Customer_wallet_model extends CI_Model {
 
         $CI =& get_instance();
         $CI->load->model('Sk_User_model');
+        $CI->load->helper('sk_isms');
         $user = $CI->Sk_User_model->get_by_id($userId);
+        $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
+        if ($contact === '') {
+            return ['error' => 'A valid Malaysian mobile number is required for Curlec payment. Update your profile phone (e.g. 0123456789).'];
+        }
+
         $currency = strtoupper($settings['currency_code'] ?? 'MYR');
         if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
             $currency = 'MYR';
@@ -302,16 +335,13 @@ class Sk_Customer_wallet_model extends CI_Model {
         );
 
         $CI->load->helper('sk_isms');
-        $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
         $email = sk_razorpay_prefill_email($user['email'] ?? '');
         $prefill = [
-            'name' => $user['name'] ?? 'Customer',
+            'name'    => $user['name'] ?? 'Customer',
+            'contact' => $contact,
         ];
         if ($email !== '') {
             $prefill['email'] = $email;
-        }
-        if ($contact !== '') {
-            $prefill['contact'] = $contact;
         }
 
         return [

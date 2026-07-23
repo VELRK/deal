@@ -46,7 +46,11 @@ class Customer_wallets extends Sk_Base {
 
         $data['title'] = 'Wallet — ' . $user['name'];
         $data['user'] = $user;
-        $data['wallet'] = $this->Sk_Customer_wallet_model->get_wallet($user_id);
+        $wallet = $this->Sk_Customer_wallet_model->get_wallet($user_id);
+        if ($wallet) {
+            $wallet['balance'] = $this->Sk_Customer_wallet_model->resolve_wallet_balance($user_id);
+        }
+        $data['wallet'] = $wallet;
         $data['transactions'] = $result['rows'];
         $data['total'] = $result['total'];
         $data['page'] = $page;
