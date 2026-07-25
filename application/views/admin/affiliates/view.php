@@ -76,6 +76,8 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
       <div class="card-body small">
         <p class="mb-1"><strong>Email:</strong> <?= htmlspecialchars($a['email']) ?></p>
         <p class="mb-1"><strong>Phone:</strong> <?= htmlspecialchars($a['phone']) ?></p>
+        <p class="mb-1"><strong>MyKAD:</strong> <?= htmlspecialchars($a['mykad_number'] ?? '—') ?></p>
+        <p class="mb-1"><strong>Passport:</strong> <?= htmlspecialchars($a['passport_number'] ?? '—') ?></p>
         <?php if (!empty($a['address_line1']) || !empty($a['city'])): ?>
         <p class="mb-1"><strong>Address:</strong> <?= htmlspecialchars(trim(($a['address_line1']??'').', '.($a['city']??'').', '.($a['state']??''), ', ')) ?></p>
         <?php endif; ?>
@@ -84,20 +86,6 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
         <p class="mb-1"><strong>Checkout discount:</strong> <?= !empty($a['discount_active']) ? number_format((float)($a['customer_discount_percent']??0), 1).'% (active)' : 'Inactive' ?></p>
         <p class="mb-1"><strong>KYC:</strong> <?= ucfirst($a['kyc_status']) ?></p>
         <p class="mb-0"><strong>Bank:</strong> <?= htmlspecialchars($a['bank_name']??'—') ?> / <?= htmlspecialchars($a['bank_account_number']??'—') ?></p>
-      </div>
-    </div>
-    <div class="card shadow-sm">
-      <div class="card-header fw-semibold">KYC Documents</div>
-      <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>Type</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            <?php foreach ($documents as $d): ?>
-            <tr><td><?= ucfirst($d['doc_type']) ?></td><td><?= $d['status'] ?></td><td><a href="<?= base_url($d['file_path']) ?>" target="_blank">View</a></td></tr>
-            <?php endforeach; ?>
-            <?php if (empty($documents)): ?><tr><td colspan="3" class="text-muted text-center py-2">No documents</td></tr><?php endif; ?>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>

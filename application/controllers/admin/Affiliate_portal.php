@@ -37,21 +37,7 @@ class Affiliate_portal extends Sk_Affiliate_Base {
     }
 
     public function kyc() {
-        $aid = (int)$this->affiliate['id'];
-        if ($this->input->method() === 'post') {
-            $type = $this->input->post('doc_type', TRUE) ?: 'aadhaar';
-            $path = $this->upload_file('document', 'affiliate/kyc');
-            if ($path) {
-                $this->Sk_Affiliate_model->add_kyc_document($aid, $type, $path);
-                $this->session->set_flashdata('success', 'Document uploaded. Awaiting verification.');
-            } else {
-                $this->session->set_flashdata('error', 'Upload failed.');
-            }
-            redirect('admin/affiliate/kyc');
-        }
-        $data['title'] = 'KYC Verification';
-        $data['documents'] = $this->Sk_Affiliate_model->get_kyc_documents($aid);
-        $this->render('kyc', $data);
+        redirect('admin/affiliate/profile#identity');
     }
 
     public function profile() {
@@ -108,6 +94,8 @@ class Affiliate_portal extends Sk_Affiliate_Base {
                 'pincode'             => $this->input->post('pincode', TRUE),
                 'country'             => $this->input->post('country', TRUE) ?: 'India',
                 'about'               => $this->input->post('about', TRUE),
+                'mykad_number'        => $this->input->post('mykad_number', TRUE),
+                'passport_number'     => $this->input->post('passport_number', TRUE),
                 'bank_account_name'   => $this->input->post('bank_account_name', TRUE),
                 'bank_account_number' => $this->input->post('bank_account_number', TRUE),
                 'bank_ifsc'           => $this->input->post('bank_ifsc', TRUE),

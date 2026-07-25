@@ -259,7 +259,7 @@
           <strong class="text-success"><?= $currency . number_format((float)$affiliate_commission['commission_amount'], 2) ?></strong>
         </div>
         <?php if (!empty($affiliate_commission['order_total'])): ?>
-        <div class="text-muted" style="font-size:11px;">On order value <?= $currency . number_format((float)$affiliate_commission['order_total'], 2) ?> after discounts</div>
+        <div class="text-muted" style="font-size:11px;">On subtotal <?= $currency . number_format((float)$affiliate_commission['order_total'], 2) ?> (before discount/tax/shipping)</div>
         <?php endif; ?>
         <?php endif; ?>
       </div>

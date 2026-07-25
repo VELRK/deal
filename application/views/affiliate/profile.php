@@ -25,6 +25,15 @@
               <label class="form-label">Promo Code</label>
               <input type="text" class="form-control" value="<?= htmlspecialchars($affiliate['promo_code']) ?>" readonly disabled>
             </div>
+            <div class="col-md-6 mb-3" id="identity">
+              <label class="form-label">MyKAD Number</label>
+              <input type="text" name="mykad_number" class="form-control" placeholder="e.g. 900101-14-5678" value="<?= htmlspecialchars($affiliate['mykad_number'] ?? '') ?>" <?= ($affiliate['kyc_status'] ?? '') === 'verified' ? 'readonly' : '' ?>>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Passport Number</label>
+              <input type="text" name="passport_number" class="form-control" placeholder="If no MyKAD" value="<?= htmlspecialchars($affiliate['passport_number'] ?? '') ?>" <?= ($affiliate['kyc_status'] ?? '') === 'verified' ? 'readonly' : '' ?>>
+              <small class="text-muted">Enter MyKAD and/or passport for identity verification.</small>
+            </div>
             <div class="col-12 mb-3">
               <label class="form-label">Address Line 1</label>
               <input type="text" name="address_line1" class="form-control" value="<?= htmlspecialchars($affiliate['address_line1'] ?? '') ?>">

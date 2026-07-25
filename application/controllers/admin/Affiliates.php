@@ -119,6 +119,7 @@ class Affiliates extends Sk_Base {
         }
 
         $this->Sk_Affiliate_model->ensure_invite_schema();
+        $this->Sk_Affiliate_model->ensure_identity_schema();
         $id = $this->Sk_Affiliate_model->create($payload);
         $token = $this->Sk_Affiliate_model->create_invite_token($id);
         $aff = $this->Sk_Affiliate_model->get_by_id($id);
@@ -216,6 +217,7 @@ class Affiliates extends Sk_Base {
             $payload['vendor_id'] = $postedVendor ?: null;
         }
 
+        $this->Sk_Affiliate_model->ensure_identity_schema();
         $this->Sk_Affiliate_model->update($id, $payload);
         $this->activity_log->log_admin('affiliates', 'update', $id);
         $this->session->set_flashdata('success', 'Affiliate updated.');
@@ -337,6 +339,8 @@ class Affiliates extends Sk_Base {
             'pincode'             => $this->input->post('pincode', TRUE),
             'country'             => $this->input->post('country', TRUE) ?: 'India',
             'about'               => $this->input->post('about', TRUE),
+            'mykad_number'        => $this->input->post('mykad_number', TRUE),
+            'passport_number'     => $this->input->post('passport_number', TRUE),
             'bank_account_name'   => $this->input->post('bank_account_name', TRUE),
             'bank_account_number' => $this->input->post('bank_account_number', TRUE),
             'bank_ifsc'           => $this->input->post('bank_ifsc', TRUE),

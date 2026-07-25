@@ -8,7 +8,6 @@
       <li><a href="<?= site_url('admin/affiliate/dashboard') ?>" class="nav-link sk-nav-link text-white-50"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
       <li><a href="<?= site_url('admin/affiliate/commissions') ?>" class="nav-link sk-nav-link text-white-50"><i class="bi bi-currency-rupee me-2"></i> Commissions</a></li>
       <li><a href="<?= site_url('admin/affiliate/payouts') ?>" class="nav-link sk-nav-link text-white-50"><i class="bi bi-cash-stack me-2"></i> Payouts</a></li>
-      <li><a href="<?= site_url('admin/affiliate/kyc') ?>" class="nav-link sk-nav-link text-white-50"><i class="bi bi-shield-check me-2"></i> KYC</a></li>
       <li><a href="<?= site_url('admin/affiliate/profile') ?>" class="nav-link sk-nav-link text-white-50"><i class="bi bi-person-circle me-2"></i> My Profile</a></li>
       <li class="mt-3"><a href="<?= site_url('admin/affiliate/logout') ?>" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Logout</a></li>
     </ul>

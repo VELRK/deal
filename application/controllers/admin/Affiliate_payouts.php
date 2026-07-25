@@ -69,6 +69,17 @@ class Affiliate_payouts extends Sk_Base {
         }
         if ($this->Sk_Affiliate_model->mark_payout_paid((int)$id, $this->admin['id'], $ref)) {
             $this->activity_log->log_admin('affiliate_payouts', 'paid', (int)$id, null, ['reference' => $ref], $this->scoped_vendor_id());
+            $payout = $this->db->where('id', (int)$id)->get('affiliate_payouts')->row_array();
+            if ($payout) {
+                $affiliate = $this->Sk_Affiliate_model->get_by_id((int)$payout['affiliate_id']);
+                if ($affiliate) {
+                    try {
+                        $this->Sk_Affiliate_model->send_payout_paid_email($affiliate, $payout);
+                    } catch (Throwable $e) {
+                        log_message('error', 'Affiliate payout email exception: ' . $e->getMessage());
+                    }
+                }
+            }
             $this->session->set_flashdata('success', 'Marked as paid.');
         } else {
             $this->session->set_flashdata('error', 'Could not mark paid.');

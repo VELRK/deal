@@ -38,6 +38,7 @@ class Sk_Affiliate_model extends CI_Model {
     }
 
     public function get_by_id(int $id): ?array {
+        $this->ensure_identity_schema();
         return $this->db->where('id', $id)->where('deleted_at IS NULL', null, false)->get($this->table)->row_array() ?: null;
     }
 
@@ -130,15 +131,47 @@ class Sk_Affiliate_model extends CI_Model {
         return [
             'name', 'phone', 'address_line1', 'address_line2', 'city', 'state',
             'pincode', 'country', 'about',
+            'mykad_number', 'passport_number',
             'bank_account_name', 'bank_account_number', 'bank_ifsc', 'bank_name',
         ];
     }
 
     public function update_profile(int $id, array $data): bool {
+        $this->ensure_identity_schema();
         $allowed = array_flip($this->profile_editable_fields());
         $filtered = array_intersect_key($data, $allowed);
         if (empty($filtered)) return false;
-        return $this->update($id, $filtered);
+        $ok = $this->update($id, $filtered);
+        if ($ok) {
+            $mykad = trim((string)($filtered['mykad_number'] ?? ''));
+            $passport = trim((string)($filtered['passport_number'] ?? ''));
+            if ($mykad !== '' || $passport !== '') {
+                $aff = $this->get_by_id($id);
+                if ($aff && in_array($aff['kyc_status'] ?? '', ['pending', 'rejected', ''], true)) {
+                    $this->update($id, [
+                        'kyc_status' => 'submitted',
+                        'kyc_submitted_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
+        return $ok;
+    }
+
+    /** Ensure MyKAD / passport columns exist. */
+    public function ensure_identity_schema(): void {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        if (!$this->db->field_exists('mykad_number', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `mykad_number` VARCHAR(32) NULL DEFAULT NULL AFTER `phone`");
+        }
+        if (!$this->db->field_exists('passport_number', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `passport_number` VARCHAR(32) NULL DEFAULT NULL AFTER `mykad_number`");
+        }
+        if ($this->db->field_exists('kyc_status', $this->table) && !$this->db->field_exists('kyc_submitted_at', $this->table)) {
+            $this->db->query("ALTER TABLE `{$this->table}` ADD COLUMN `kyc_submitted_at` DATETIME NULL DEFAULT NULL AFTER `kyc_status`");
+        }
     }
 
     /** Create a secure reset link token (forgot password). Expires in 1 hour. */
@@ -332,6 +365,17 @@ class Sk_Affiliate_model extends CI_Model {
         $sent = sk_mail_affiliate_approved($affiliate, $settings);
         if (!$sent) {
             log_message('error', 'Affiliate approval email failed for ' . ($affiliate['email'] ?? ''));
+        }
+        return $sent;
+    }
+
+    public function send_payout_paid_email(array $affiliate, array $payout): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $sent = sk_mail_affiliate_payout_paid($affiliate, $payout, $settings);
+        if (!$sent) {
+            log_message('error', 'Affiliate payout paid email failed for ' . ($affiliate['email'] ?? ''));
         }
         return $sent;
     }
@@ -910,6 +954,7 @@ class Sk_Affiliate_model extends CI_Model {
 
     /**
      * Credit affiliate commission when their promo code is used at checkout.
+     * $orderTotal is the commission base (cart subtotal before discount/tax/shipping).
      */
     public function record_order_commission(int $affiliateId, int $orderId, float $orderTotal, int $userId): bool {
         $aff = $this->get_by_id($affiliateId);

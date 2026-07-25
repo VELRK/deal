@@ -612,6 +612,61 @@ function sk_mail_affiliate_approved(array $affiliate, array $settings = []) {
     return sk_send_mail($to_email, $to_name, $subject, $body);
 }
 
+/** Affiliate payout paid: notify affiliate that payment was sent. */
+function sk_mail_affiliate_payout_paid(array $affiliate, array $payout, array $settings = []) {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $to_email  = $affiliate['email'] ?? '';
+    $to_name   = $affiliate['name'] ?? 'Affiliate';
+    if ($to_email === '') {
+        return false;
+    }
+    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $currency  = $settings['currency_symbol'] ?? 'RM';
+    $amount    = number_format((float)($payout['amount'] ?? 0), 2);
+    $ref       = htmlspecialchars($payout['payment_reference'] ?? '');
+    $paidAt    = !empty($payout['paid_at']) ? date('d M Y, h:i A', strtotime($payout['paid_at'])) : date('d M Y, h:i A');
+    $pending   = number_format((float)($affiliate['pending_commission'] ?? 0), 2);
+    $paidTotal = number_format((float)($affiliate['paid_commission'] ?? 0), 2);
+    $safeName  = htmlspecialchars($to_name);
+    $loginUrl  = htmlspecialchars(site_url('admin/affiliate/login'));
+    $subject   = "Payout of {$currency}{$amount} paid – {$site_name}";
+
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;'>
+<div style='max-width:520px;margin:30px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.07);'>
+  <div style='background:#065f46;padding:28px 32px;text-align:center;'>
+    <h1 style='color:#fff;margin:0;font-size:22px;'>{$site_name}</h1>
+    <p style='color:#a7f3d0;margin:6px 0 0;font-size:13px;'>Affiliate Payout Paid</p>
+  </div>
+  <div style='padding:36px 32px;'>
+    <p style='color:#334155;font-size:16px;'>Hi <strong>{$safeName}</strong>,</p>
+    <p style='color:#334155;'>Your affiliate payout has been <strong>paid</strong>.</p>
+    <div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;margin:20px 0;'>
+      <p style='margin:0 0 8px;color:#065f46;font-size:14px;'><strong>Amount:</strong> {$currency}{$amount}</p>
+      <p style='margin:0 0 8px;color:#065f46;font-size:14px;'><strong>Payment reference:</strong> {$ref}</p>
+      <p style='margin:0;color:#065f46;font-size:14px;'><strong>Paid on:</strong> {$paidAt}</p>
+    </div>
+    <p style='color:#64748b;font-size:14px;margin:0 0 6px;'>Pending balance: <strong>{$currency}{$pending}</strong></p>
+    <p style='color:#64748b;font-size:14px;margin:0;'>Total paid to date: <strong>{$currency}{$paidTotal}</strong></p>
+    <div style='text-align:center;margin:28px 0 0;'>
+      <a href='{$loginUrl}' style='display:inline-block;background:#059669;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;'>Affiliate Login</a>
+    </div>
+  </div>
+  <div style='background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;'>
+    <p style='margin:0;color:#94a3b8;font-size:13px;'>{$site_name} &copy; " . date('Y') . "</p>
+  </div>
+</div>
+</body>
+</html>";
+
+    return sk_send_mail($to_email, $to_name, $subject, $body);
+}
+
 /** Contact / affiliate enquiry: ack to user + notify admin. */
 function sk_mail_contact_enquiry(string $name, string $email, string $message, array $settings = []): array {
     if (empty($settings)) {

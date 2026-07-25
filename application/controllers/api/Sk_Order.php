@@ -239,7 +239,7 @@ class Sk_Order extends Sk_Base_Api {
         // Affiliate commission when market code used
         if ($affiliate_id) {
             $this->load->model('Sk_Affiliate_model');
-            $this->Sk_Affiliate_model->record_order_commission($affiliate_id, $order_id, $taxable_amount, $user_id);
+            $this->Sk_Affiliate_model->record_order_commission($affiliate_id, $order_id, $subtotal, $user_id);
         }
 
         // Clear cart
