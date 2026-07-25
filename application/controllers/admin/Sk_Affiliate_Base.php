@@ -22,8 +22,9 @@ class Sk_Affiliate_Base extends CI_Controller {
             redirect('admin/affiliate/login');
         }
         $this->affiliate = $this->Sk_Affiliate_model->get_by_id($id);
-        if (!$this->affiliate || $this->affiliate['status'] === 'rejected') {
-            $this->session->unset_userdata(['sk_affiliate_login', 'sk_affiliate_id', 'sk_affiliate_name']);
+        $impersonating = (bool)$this->session->userdata('sk_affiliate_impersonating');
+        if (!$this->affiliate || (!$impersonating && $this->affiliate['status'] === 'rejected')) {
+            $this->session->unset_userdata(['sk_affiliate_login', 'sk_affiliate_id', 'sk_affiliate_name', 'sk_affiliate_impersonating']);
             redirect('admin/affiliate/login');
         }
     }

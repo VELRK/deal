@@ -20,8 +20,6 @@ $is_vendor = !empty($is_vendor_scope);
 
   <div class="d-flex gap-2">
 
-    <a href="<?= site_url('admin/affiliate/login') ?>" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1"></i>Affiliate Login</a>
-
     <a href="<?= site_url('admin/affiliates/export') ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export CSV</a>
 
     <a href="<?= site_url('admin/affiliates/add') ?>" class="btn btn-success btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Affiliate</a>
@@ -157,6 +155,8 @@ $is_vendor = !empty($is_vendor_scope);
           <td><span class="badge <?= $status_badges[$a['status']]??'bg-secondary' ?>"><?= ucfirst($a['status']) ?></span></td>
 
           <td class="text-end text-nowrap">
+
+            <a href="<?= site_url('admin/affiliates/login_as/'.$a['id']) ?>" class="btn btn-sm btn-success" title="Login as this affiliate" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
 
             <a href="<?= site_url('admin/affiliates/toggle_discount/'.$a['id']) ?>" class="btn btn-sm btn-outline-<?= !empty($a['discount_active']) ? 'warning' : 'success' ?>" title="Toggle checkout discount"><?= !empty($a['discount_active']) ? 'Disable' : 'Enable' ?></a>
 

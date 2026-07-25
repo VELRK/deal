@@ -23,6 +23,7 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
     <?php if ($a['kyc_status']!=='verified'): ?>
     <a href="<?= site_url('admin/affiliates/verify_kyc/'.$a['id']) ?>" class="btn btn-outline-success btn-sm">Verify KYC</a>
     <?php endif; ?>
+    <a href="<?= site_url('admin/affiliates/login_as/'.$a['id']) ?>" class="btn btn-success btn-sm" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-in-right me-1"></i>Login as Affiliate</a>
     <a href="<?= site_url('admin/affiliates/edit/'.$a['id']) ?>" class="btn btn-outline-secondary btn-sm">Edit</a>
     <a href="<?= site_url('admin/affiliates/delete/'.$a['id']) ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this affiliate?')">Delete</a>
     <a href="<?= site_url('admin/affiliates') ?>" class="btn btn-outline-dark btn-sm">Back</a>

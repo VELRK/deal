@@ -315,6 +315,7 @@ $route['shopkart/affiliates/check_promo'] = 'admin/Affiliates/check_promo';
 $route['shopkart/affiliates/settings'] = 'admin/Affiliates/settings';
 $route['shopkart/affiliates/toggle_discount/(:num)'] = 'admin/Affiliates/toggle_discount/$1';
 $route['shopkart/affiliates/delete/(:num)'] = 'admin/Affiliates/delete/$1';
+$route['shopkart/affiliates/login_as/(:num)'] = 'admin/Affiliates/login_as/$1';
 $route['shopkart/affiliates/export'] = 'admin/Affiliates/export';
 
 $route['shopkart/affiliate-payouts'] = 'admin/Affiliate_payouts/index';

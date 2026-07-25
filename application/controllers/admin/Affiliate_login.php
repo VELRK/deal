@@ -157,7 +157,7 @@ class Affiliate_login extends CI_Controller {
     }
 
     public function logout() {
-        $this->session->unset_userdata(['sk_affiliate_login', 'sk_affiliate_id', 'sk_affiliate_name']);
+        $this->session->unset_userdata(['sk_affiliate_login', 'sk_affiliate_id', 'sk_affiliate_name', 'sk_affiliate_impersonating']);
         redirect('admin/affiliate/login');
     }
 

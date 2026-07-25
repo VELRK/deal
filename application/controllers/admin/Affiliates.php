@@ -237,6 +237,20 @@ class Affiliates extends Sk_Base {
         redirect('admin/affiliates');
     }
 
+    /** Admin/vendor auto-login into affiliate portal for this affiliate. */
+    public function login_as($id) {
+        $aff = $this->Sk_Affiliate_model->get_by_id((int)$id);
+        $this->assert_affiliate_access($aff);
+        $this->session->set_userdata([
+            'sk_affiliate_login'         => true,
+            'sk_affiliate_id'            => (int)$aff['id'],
+            'sk_affiliate_name'          => $aff['name'],
+            'sk_affiliate_impersonating' => true,
+        ]);
+        $this->activity_log->log_admin('affiliates', 'login_as', (int)$id);
+        redirect('admin/affiliate/dashboard');
+    }
+
     public function approve($id) {
         $aff = $this->Sk_Affiliate_model->get_by_id((int)$id);
         $this->assert_affiliate_access($aff);
