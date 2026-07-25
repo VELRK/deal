@@ -393,9 +393,9 @@ function opt($list, $val) {
               <input type="text" name="hsn_code" class="form-control" placeholder="e.g. 5407">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Tax Code (GST %)</label>
+              <label class="form-label">Tax Code (%)</label>
               <select name="tax_code" class="form-select">
-                <option value="">Select GST Slab</option>
+                <option value="">Select tax %</option>
                 <option value="GST_0">0%</option>
                 <option value="GST_5">5%</option>
                 <option value="GST_12">12%</option>

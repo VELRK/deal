@@ -416,9 +416,9 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
               <input type="text" name="hsn_code" class="form-control" value="<?= htmlspecialchars($p['hsn_code'] ?? '') ?>">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Tax Code (GST %)</label>
+              <label class="form-label">Tax Code (%)</label>
               <select name="tax_code" class="form-select">
-                <option value="">Select GST Slab</option>
+                <option value="">Select tax %</option>
                 <?php foreach (['GST_0'=>'0%','GST_5'=>'5%','GST_12'=>'12%','GST_18'=>'18%','GST_28'=>'28%'] as $v=>$l): ?>
                   <option value="<?= $v ?>" <?= ($p['tax_code']??'')===$v?'selected':'' ?>><?= $l ?></option>
                 <?php endforeach; ?>

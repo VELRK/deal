@@ -75,9 +75,24 @@
           <input type="hidden" name="action" value="profile">
           <div class="mb-3"><label class="form-label">Account Name</label><input type="text" name="bank_account_name" class="form-control" value="<?= htmlspecialchars($affiliate['bank_account_name'] ?? '') ?>"></div>
           <div class="mb-3"><label class="form-label">Account Number</label><input type="text" name="bank_account_number" class="form-control" value="<?= htmlspecialchars($affiliate['bank_account_number'] ?? '') ?>"></div>
-          <div class="row g-2">
-            <div class="col-md-6 mb-3"><label class="form-label">IFSC</label><input type="text" name="bank_ifsc" class="form-control" value="<?= htmlspecialchars($affiliate['bank_ifsc'] ?? '') ?>"></div>
-            <div class="col-md-6 mb-3"><label class="form-label">Bank Name</label><input type="text" name="bank_name" class="form-control" value="<?= htmlspecialchars($affiliate['bank_name'] ?? '') ?>"></div>
+          <div class="mb-3">
+            <label class="form-label">Bank</label>
+            <select name="bank_name" class="form-select" required>
+              <option value="">Select bank</option>
+              <?php
+                $banks = $banks ?? [];
+                $currentBank = $affiliate['bank_name'] ?? '';
+                $found = false;
+                foreach ($banks as $bank):
+                  $sel = ($currentBank === $bank['name']);
+                  if ($sel) $found = true;
+              ?>
+              <option value="<?= htmlspecialchars($bank['name']) ?>" <?= $sel ? 'selected' : '' ?>><?= htmlspecialchars($bank['name']) ?></option>
+              <?php endforeach; ?>
+              <?php if ($currentBank !== '' && !$found): ?>
+              <option value="<?= htmlspecialchars($currentBank) ?>" selected><?= htmlspecialchars($currentBank) ?> (current)</option>
+              <?php endif; ?>
+            </select>
           </div>
           <input type="hidden" name="name" value="<?= htmlspecialchars($affiliate['name']) ?>">
           <input type="hidden" name="phone" value="<?= htmlspecialchars($affiliate['phone']) ?>">

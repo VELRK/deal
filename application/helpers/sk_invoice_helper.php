@@ -315,22 +315,20 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 
     $gstRows = '';
     $g = $invoice['gst'];
-    if ($g['cgst'] > 0) {
-        $half = round($g['rate'] / 2, 2);
-        $gstRows .= "<tr><td colspan='5' style='padding:6px 8px;text-align:right;color:#64748b;'>CGST @ {$half}%</td>"
-            . "<td style='padding:6px 8px;text-align:right;'>{$cur}" . number_format($g['cgst'], 2) . '</td></tr>';
-        $gstRows .= "<tr><td colspan='5' style='padding:6px 8px;text-align:right;color:#64748b;'>SGST @ {$half}%</td>"
-            . "<td style='padding:6px 8px;text-align:right;'>{$cur}" . number_format($g['sgst'], 2) . '</td></tr>';
-    } elseif ($g['igst'] > 0) {
-        $gstRows .= "<tr><td colspan='5' style='padding:6px 8px;text-align:right;color:#64748b;'>IGST @ {$g['rate']}%</td>"
-            . "<td style='padding:6px 8px;text-align:right;'>{$cur}" . number_format($g['igst'], 2) . '</td></tr>';
+    $taxAmt = (float)($g['cgst'] + $g['sgst'] + $g['igst']);
+    if ($taxAmt <= 0 && !empty($invoice['tax'])) {
+        $taxAmt = (float)$invoice['tax'];
+    }
+    if ($taxAmt > 0) {
+        $rateLabel = !empty($g['rate']) ? ' @ ' . rtrim(rtrim(number_format((float)$g['rate'], 2), '0'), '.') . '%' : '';
+        $gstRows .= "<tr><td colspan='5' style='padding:6px 8px;text-align:right;color:#64748b;'>Tax{$rateLabel}</td>"
+            . "<td style='padding:6px 8px;text-align:right;'>{$cur}" . number_format($taxAmt, 2) . '</td></tr>';
     }
 
     $shipLabel = $invoice['shipping'] == 0 ? '<span style="color:#16a34a;">Free</span>' : $cur . number_format($invoice['shipping'], 2);
 
     $sellerMeta = array_filter([
-        $s['gstin'] ? 'GSTIN: ' . htmlspecialchars($s['gstin']) : '',
-        $s['pan'] ? 'PAN: ' . htmlspecialchars($s['pan']) : '',
+        $s['gstin'] ? 'Tax ID: ' . htmlspecialchars($s['gstin']) : '',
         $s['email'] ? htmlspecialchars($s['email']) : '',
         $s['phone'] ? htmlspecialchars($s['phone']) : '',
     ]);

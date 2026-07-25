@@ -46,7 +46,7 @@ $store   = $vendor['store'] ?? [];
 
       <div class="col-12 mt-2"><h6 class="text-muted text-uppercase small fw-bold">Store & Tax</h6></div>
       <div class="col-md-4">
-        <label class="form-label">GST / VAT</label>
+        <label class="form-label">Tax ID</label>
         <input type="text" name="gst_vat" class="form-control" value="<?= htmlspecialchars($store['gst_vat'] ?? '') ?>">
       </div>
       <div class="col-md-4">

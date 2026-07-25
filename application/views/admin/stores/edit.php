@@ -22,7 +22,7 @@ $delivery = $store['delivery_settings'] ?? [];
           <input type="text" name="store_name" class="form-control" value="<?= htmlspecialchars($store['store_name'] ?? '') ?>" required>
         </div>
         <div class="col-md-6">
-          <label class="form-label">GSTIN / GST Number</label>
+          <label class="form-label">Tax ID</label>
           <input type="text" name="gst_vat" class="form-control" value="<?= htmlspecialchars($store['gst_vat'] ?? '') ?>" placeholder="Shown on tax invoices">
         </div>
         <div class="col-md-6">
@@ -30,8 +30,8 @@ $delivery = $store['delivery_settings'] ?? [];
           <input type="text" name="pan_no" class="form-control" value="<?= htmlspecialchars($store['pan_no'] ?? '') ?>">
         </div>
         <div class="col-md-4">
-          <label class="form-label">State Code</label>
-          <input type="text" name="state_code" class="form-control" value="<?= htmlspecialchars($store['state_code'] ?? '') ?>" placeholder="For CGST/SGST vs IGST">
+          <label class="form-label">State / Region Code</label>
+          <input type="text" name="state_code" class="form-control" value="<?= htmlspecialchars($store['state_code'] ?? '') ?>" placeholder="Optional">
         </div>
         <div class="col-md-4">
           <label class="form-label">Invoice Prefix</label>

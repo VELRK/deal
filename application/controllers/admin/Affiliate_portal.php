@@ -98,7 +98,6 @@ class Affiliate_portal extends Sk_Affiliate_Base {
                 'passport_number'     => $this->input->post('passport_number', TRUE),
                 'bank_account_name'   => $this->input->post('bank_account_name', TRUE),
                 'bank_account_number' => $this->input->post('bank_account_number', TRUE),
-                'bank_ifsc'           => $this->input->post('bank_ifsc', TRUE),
                 'bank_name'           => $this->input->post('bank_name', TRUE),
             ]);
             $this->session->set_userdata('sk_affiliate_name', trim($this->input->post('name', TRUE)));
@@ -106,7 +105,9 @@ class Affiliate_portal extends Sk_Affiliate_Base {
             redirect('admin/affiliate/profile');
         }
 
+        $this->load->model('Sk_Bank_model');
         $data['title'] = 'My Profile';
+        $data['banks'] = $this->Sk_Bank_model->get_all(true);
         $this->affiliate = $this->Sk_Affiliate_model->get_by_id($aid);
         $this->render('profile', $data);
     }

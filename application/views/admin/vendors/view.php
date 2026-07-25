@@ -61,7 +61,7 @@ $status_badges = [
       <div class="card-header fw-semibold">Store</div>
       <div class="card-body row g-3">
         <div class="col-md-6"><small class="text-muted d-block">Store Name</small><?= htmlspecialchars($store['store_name'] ?? '—') ?></div>
-        <div class="col-md-6"><small class="text-muted d-block">GST/VAT</small><?= htmlspecialchars($store['gst_vat'] ?? '—') ?></div>
+        <div class="col-md-6"><small class="text-muted d-block">Tax ID</small><?= htmlspecialchars($store['gst_vat'] ?? '—') ?></div>
         <div class="col-md-6"><small class="text-muted d-block">Business Reg.</small><?= htmlspecialchars($store['business_reg_no'] ?? '—') ?></div>
         <div class="col-12"><small class="text-muted d-block">Description</small><?= nl2br(htmlspecialchars($store['description'] ?? '—')) ?></div>
         <div class="col-12"><small class="text-muted d-block">Pickup</small>
@@ -86,7 +86,6 @@ $status_badges = [
       <div class="card-body small">
         <div><?= htmlspecialchars($b['account_holder']) ?></div>
         <div class="text-muted"><?= htmlspecialchars($b['bank_name']) ?> · ****<?= substr($b['account_number'], -4) ?></div>
-        <?php if ($b['ifsc_code']): ?><div>IFSC: <?= htmlspecialchars($b['ifsc_code']) ?></div><?php endif; ?>
       </div>
     </div>
     <?php endif; ?>

@@ -379,6 +379,17 @@ $route['shopkart/brands/store'] = 'admin/Brands/store';
 $route['shopkart/brands/edit/(:num)'] = 'admin/Brands/edit/$1';
 $route['shopkart/brands/update/(:num)'] = 'admin/Brands/update/$1';
 $route['shopkart/brands/delete/(:num)'] = 'admin/Brands/delete/$1';
+// Banks master
+$route['shopkart/banks'] = 'admin/Banks/index';
+$route['shopkart/banks/store'] = 'admin/Banks/store';
+$route['shopkart/banks/edit/(:num)'] = 'admin/Banks/edit/$1';
+$route['shopkart/banks/update/(:num)'] = 'admin/Banks/update/$1';
+$route['shopkart/banks/delete/(:num)'] = 'admin/Banks/delete/$1';
+$route['admin/banks'] = 'admin/Banks/index';
+$route['admin/banks/store'] = 'admin/Banks/store';
+$route['admin/banks/edit/(:num)'] = 'admin/Banks/edit/$1';
+$route['admin/banks/update/(:num)'] = 'admin/Banks/update/$1';
+$route['admin/banks/delete/(:num)'] = 'admin/Banks/delete/$1';
 // Variant units
 $route['shopkart/variant-units'] = 'admin/Variant_units/index';
 $route['shopkart/variant-units/store'] = 'admin/Variant_units/store';

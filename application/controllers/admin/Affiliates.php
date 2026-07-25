@@ -66,6 +66,8 @@ class Affiliates extends Sk_Base {
     public function add() {
         $data['title'] = 'Add Affiliate';
         $data['is_vendor_scope'] = (bool)$this->scoped_vendor_id();
+        $this->load->model('Sk_Bank_model');
+        $data['banks'] = $this->Sk_Bank_model->get_all(true);
         if ($this->is_super_admin() && !$this->scoped_vendor_id()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 500, 0)['rows'] ?? [];
         }
@@ -183,6 +185,8 @@ class Affiliates extends Sk_Base {
         $data['title'] = 'Edit Affiliate';
         $data['affiliate'] = $aff;
         $data['is_vendor_scope'] = (bool)$this->scoped_vendor_id();
+        $this->load->model('Sk_Bank_model');
+        $data['banks'] = $this->Sk_Bank_model->get_all(true);
         if ($this->is_super_admin() && !$this->scoped_vendor_id()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 500, 0)['rows'] ?? [];
         }
@@ -343,7 +347,6 @@ class Affiliates extends Sk_Base {
             'passport_number'     => $this->input->post('passport_number', TRUE),
             'bank_account_name'   => $this->input->post('bank_account_name', TRUE),
             'bank_account_number' => $this->input->post('bank_account_number', TRUE),
-            'bank_ifsc'           => $this->input->post('bank_ifsc', TRUE),
             'bank_name'           => $this->input->post('bank_name', TRUE),
         ];
     }

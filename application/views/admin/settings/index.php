@@ -124,8 +124,8 @@
               <input type="text" name="company_legal_name" class="form-control" value="<?= htmlspecialchars($settings['company_legal_name'] ?? $settings['site_name'] ?? '') ?>" placeholder="Registered business name on invoice">
             </div>
             <div class="col-md-6">
-              <label class="form-label">GSTIN</label>
-              <input type="text" name="gstin" class="form-control" value="<?= htmlspecialchars($settings['gstin'] ?? '') ?>" placeholder="22AAAAA0000A1Z5">
+              <label class="form-label">Tax ID</label>
+              <input type="text" name="gstin" class="form-control" value="<?= htmlspecialchars($settings['gstin'] ?? '') ?>" placeholder="Business tax ID">
             </div>
             <div class="col-md-4">
               <label class="form-label">PAN</label>

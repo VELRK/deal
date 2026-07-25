@@ -32,8 +32,25 @@
       <div class="row mt-2">
         <div class="col-md-6 mb-3"><label class="form-label">Account Name</label><input type="text" name="bank_account_name" class="form-control" value="<?= htmlspecialchars($a['bank_account_name']??'') ?>"></div>
         <div class="col-md-6 mb-3"><label class="form-label">Account No.</label><input type="text" name="bank_account_number" class="form-control" value="<?= htmlspecialchars($a['bank_account_number']??'') ?>"></div>
-        <div class="col-md-6 mb-3"><label class="form-label">IFSC</label><input type="text" name="bank_ifsc" class="form-control" value="<?= htmlspecialchars($a['bank_ifsc']??'') ?>"></div>
-        <div class="col-md-6 mb-3"><label class="form-label">Bank</label><input type="text" name="bank_name" class="form-control" value="<?= htmlspecialchars($a['bank_name']??'') ?>"></div>
+        <div class="col-md-12 mb-3">
+          <label class="form-label">Bank</label>
+          <select name="bank_name" class="form-select">
+            <option value="">Select bank</option>
+            <?php
+              $banks = $banks ?? [];
+              $currentBank = $a['bank_name'] ?? '';
+              $found = false;
+              foreach ($banks as $bank):
+                $sel = ($currentBank === $bank['name']);
+                if ($sel) $found = true;
+            ?>
+            <option value="<?= htmlspecialchars($bank['name']) ?>" <?= $sel ? 'selected' : '' ?>><?= htmlspecialchars($bank['name']) ?></option>
+            <?php endforeach; ?>
+            <?php if ($currentBank !== '' && !$found): ?>
+            <option value="<?= htmlspecialchars($currentBank) ?>" selected><?= htmlspecialchars($currentBank) ?> (current)</option>
+            <?php endif; ?>
+          </select>
+        </div>
       </div>
       <div class="mb-3">
         <label class="form-label">Promo Code</label>

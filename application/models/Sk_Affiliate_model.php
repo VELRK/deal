@@ -132,7 +132,7 @@ class Sk_Affiliate_model extends CI_Model {
             'name', 'phone', 'address_line1', 'address_line2', 'city', 'state',
             'pincode', 'country', 'about',
             'mykad_number', 'passport_number',
-            'bank_account_name', 'bank_account_number', 'bank_ifsc', 'bank_name',
+            'bank_account_name', 'bank_account_number', 'bank_name',
         ];
     }
 
