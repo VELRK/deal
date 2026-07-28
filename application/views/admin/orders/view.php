@@ -60,6 +60,9 @@
             <?php if (($disc['wallet'] ?? 0) > 0): ?>
             <tr><td colspan="3" class="text-end text-success">Wallet payment discount<?= !empty($disc['wallet_percent']) ? ' (' . rtrim(rtrim(number_format((float)$disc['wallet_percent'], 2), '0'), '.') . '%)' : '' ?></td><td class="text-success">-<?= $currency . number_format($disc['wallet'], 2) ?></td></tr>
             <?php endif; ?>
+            <?php if ((float)($order['royalty_used_rm'] ?? 0) > 0 || (int)($order['royalty_used_points'] ?? 0) > 0): ?>
+            <tr><td colspan="3" class="text-end text-warning">Royalty redeemed (<?= (int)$order['royalty_used_points'] ?> pts)</td><td class="text-warning">-<?= $currency . number_format((float)(($order['royalty_used_rm'] ?? 0) > 0 ? $order['royalty_used_rm'] : ($order['wallet_amount'] ?? 0)), 2) ?></td></tr>
+            <?php endif; ?>
             <tr><td colspan="3" class="text-end">Shipping</td><td><?= $currency . number_format($order['shipping'],2) ?></td></tr>
             <tr><td colspan="3" class="text-end">Tax</td><td><?= $currency . number_format($order['tax'],2) ?></td></tr>
             <tr><td colspan="3" class="text-end fw-bold fs-6">Total</td><td class="fw-bold fs-6"><?= $currency . number_format($order['total'],2) ?></td></tr>
@@ -67,6 +70,29 @@
         </table>
       </div>
     </div>
+
+    <?php if ((int)($order['royalty_earned_points'] ?? 0) > 0 || (int)($order['royalty_used_points'] ?? 0) > 0): ?>
+    <div class="card sk-table-card shadow-sm mb-3 border-warning">
+      <div class="card-header bg-white border-0 py-3 fw-semibold">
+        <i class="bi bi-stars me-2 text-warning"></i>Royalty Points
+      </div>
+      <div class="card-body small">
+        <?php if ((int)($order['royalty_earned_points'] ?? 0) > 0): ?>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Earned on this order</span>
+          <strong class="text-success"><?= (int)$order['royalty_earned_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_earned_rm'], 2) ?>)</strong>
+        </div>
+        <?php endif; ?>
+        <?php if ((int)($order['royalty_used_points'] ?? 0) > 0): ?>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Redeemed on checkout</span>
+          <strong class="text-danger"><?= (int)$order['royalty_used_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_used_rm'], 2) ?>)</strong>
+        </div>
+        <?php endif; ?>
+        <div class="text-muted" style="font-size:11px;">RM 500 purchase = 500 pts (RM 100). Shown on invoice for admin.</div>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Payment Info -->
     <?php if ($order['payment']): $pay = $order['payment']; ?>

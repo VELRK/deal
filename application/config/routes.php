@@ -329,8 +329,16 @@ $route['shopkart/customer-wallets'] = 'admin/Customer_wallets/index';
 $route['shopkart/customer-wallets/view/(:num)'] = 'admin/Customer_wallets/view/$1';
 $route['shopkart/customer-wallets/add_funds/(:num)'] = 'admin/Customer_wallets/add_funds/$1';
 $route['shopkart/customer-wallets/settings'] = 'admin/Customer_wallets/settings';
+$route['admin/customer-wallets'] = 'admin/Customer_wallets/index';
+$route['admin/customer-wallets/view/(:num)'] = 'admin/Customer_wallets/view/$1';
+$route['admin/customer-wallets/add_funds/(:num)'] = 'admin/Customer_wallets/add_funds/$1';
+$route['admin/customer-wallets/settings'] = 'admin/Customer_wallets/settings';
 $route['shopkart/wallet-recharge'] = 'admin/Wallet_recharge/index';
 $route['admin/wallet-recharge'] = 'admin/Wallet_recharge/index';
+$route['shopkart/royalty-report'] = 'admin/Royalty_report/index';
+$route['admin/royalty-report'] = 'admin/Royalty_report/index';
+$route['shopkart/royalty'] = 'admin/Royalty_report/index';
+$route['admin/royalty'] = 'admin/Royalty_report/index';
 
 $route['shopkart/affiliate-reports'] = 'admin/Affiliate_reports/index';
 $route['shopkart/affiliate-reports/export'] = 'admin/Affiliate_reports/export';

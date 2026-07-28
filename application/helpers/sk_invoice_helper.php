@@ -165,6 +165,10 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'total'          => $total,
         'payment_method' => sk_invoice_payment_method_label($order),
         'wallet_amount'  => (float)($order['wallet_amount'] ?? 0),
+        'royalty_earned_points' => (int)($order['royalty_earned_points'] ?? 0),
+        'royalty_earned_rm'     => (float)($order['royalty_earned_rm'] ?? 0),
+        'royalty_used_points'   => (int)($order['royalty_used_points'] ?? 0),
+        'royalty_used_rm'       => (float)($order['royalty_used_rm'] ?? 0),
         'payment_status' => ucfirst($order['payment_status'] ?? 'pending'),
         'order_status'   => ucfirst($order['status'] ?? 'pending'),
         'notes'          => $order['notes'] ?? '',
@@ -361,6 +365,18 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
             $walletPayHtml .= "<div><strong>Online:</strong> {$cur}" . number_format($onlinePaid, 2) . '</div>';
         }
     }
+    $royaltyUsedPts = (int)($invoice['royalty_used_points'] ?? 0);
+    $royaltyUsedRm  = (float)($invoice['royalty_used_rm'] ?? 0);
+    $royaltyEarnPts = (int)($invoice['royalty_earned_points'] ?? 0);
+    $royaltyEarnRm  = (float)($invoice['royalty_earned_rm'] ?? 0);
+    if ($royaltyUsedPts > 0 || $royaltyUsedRm > 0) {
+        $walletPayHtml .= "<div><strong>Royalty redeemed:</strong> {$royaltyUsedPts} pts ({$cur}"
+            . number_format($royaltyUsedRm > 0 ? $royaltyUsedRm : $walletPaid, 2) . ')</div>';
+    }
+    if ($royaltyEarnPts > 0 || $royaltyEarnRm > 0) {
+        $walletPayHtml .= "<div><strong>Royalty earned:</strong> {$royaltyEarnPts} pts ({$cur}"
+            . number_format($royaltyEarnRm, 2) . ')</div>';
+    }
 
     $printBtns = $forEmail ? '' : "
     <div class='no-print' style='text-align:center;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;'>
@@ -437,6 +453,14 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
           <td style='padding:14px 8px;text-align:right;font-size:16px;font-weight:700;border-top:2px solid #0f172a;'>{$cur}" . number_format($invoice['total'], 2) . "</td></tr>
       </tfoot>
     </table>
+
+    " . (($royaltyEarnPts > 0 || $royaltyUsedPts > 0)
+        ? "<div style='margin-top:12px;padding:12px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;color:#92400e;'>"
+            . "<strong style='display:block;margin-bottom:4px;'>Royalty Points</strong>"
+            . ($royaltyEarnPts > 0 ? "<div>Earned: <strong>{$royaltyEarnPts} pts</strong> ({$cur}" . number_format($royaltyEarnRm, 2) . ')</div>' : '')
+            . ($royaltyUsedPts > 0 ? "<div>Redeemed: <strong>{$royaltyUsedPts} pts</strong> ({$cur}" . number_format($royaltyUsedRm > 0 ? $royaltyUsedRm : $walletPaid, 2) . ')</div>' : '')
+            . '</div>'
+        : '') . "
 
     " . ($invoice['notes'] ? "<div style='margin-top:16px;padding:12px;background:#fffbeb;border-radius:6px;font-size:12px;color:#92400e;'><strong>Note:</strong> " . htmlspecialchars($invoice['notes']) . '</div>' : '') . "
 

@@ -4,7 +4,8 @@
     <h5 class="sk-page-title mb-1"><i class="bi bi-wallet2 me-2 text-primary"></i>Customer Wallets</h5>
     <small class="text-muted">MYR · 500 pts = RM 100 · Wallet pay discount <?= $discount_percent ?>%</small>
   </div>
-  <a href="<?= site_url('admin/wallet-recharge') ?>" class="btn btn-sm btn-outline-success">Recharge Report</a>
+  <a href="<?= site_url('shopkart/royalty-report') ?>" class="btn btn-sm btn-outline-warning">Royalty Report</a>
+  <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="btn btn-sm btn-outline-success">Recharge Report</a>
 </div>
 
 <?php if (!$is_vendor): ?>
@@ -14,7 +15,7 @@
       <div class="col-md-2">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="customer_wallet_enabled" id="wEnabled" value="1" <?= $wallet_enabled ? 'checked' : '' ?>>
-          <label class="form-check-label" for="wEnabled">Enabled</label>
+          <label class="form-check-label" for="wEnabled">Wallet enabled</label>
         </div>
       </div>
       <div class="col-md-2">
@@ -55,6 +56,21 @@
           <label class="form-check-label" for="tpSandbox">ToyyibPay sandbox</label>
         </div>
       </div>
+      <div class="col-12"><hr class="my-2"><div class="small fw-semibold text-warning"><i class="bi bi-stars me-1"></i>Royalty points</div></div>
+      <div class="col-md-2">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="royalty_enabled" id="rEnabled" value="1" <?= ($settings['royalty_enabled'] ?? '1') !== '0' ? 'checked' : '' ?>>
+          <label class="form-check-label" for="rEnabled">Royalty enabled</label>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Earn pts per RM purchase</label>
+        <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '1') ?>" title="RM 500 → 500 pts">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Min redeem pts (cart)</label>
+        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '100') ?>">
+      </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>
   </div>
@@ -62,6 +78,7 @@
 <?php else: ?>
 <div class="alert alert-info py-2 small mb-3">
   Add funds to customer wallets here. Customers get <strong><?= $discount_percent ?>%</strong> extra discount when paying with wallet at checkout. Withdrawals are not allowed.
+  <a href="<?= site_url('shopkart/royalty-report') ?>" class="ms-1">Royalty Points Report</a>
 </div>
 <?php endif; ?>
 

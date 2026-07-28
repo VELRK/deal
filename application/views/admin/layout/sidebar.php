@@ -50,18 +50,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
         <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
           <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
         </a>
+        <a href="<?= site_url('shopkart/royalty-report') ?>" class="nav-link sk-nav-link <?= in_array($uri, ['royalty-report','royalty'], true)?'active':'' ?>">
+          <i class="bi bi-stars me-2"></i> Royalty Points Report
+        </a>
       </li>
       <li class="nav-item">
         <a href="<?= site_url('shopkart/affiliate-reports') ?>" class="nav-link sk-nav-link <?= $uri==='affiliate-reports'?'active':'' ?>">
           <i class="bi bi-graph-up me-2"></i> Affiliate Reports
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="<?= site_url('shopkart/customer-wallets') ?>" class="nav-link sk-nav-link <?= $uri==='customer-wallets'?'active':'' ?>">
-          <i class="bi bi-credit-card me-2"></i> Customer Wallets
-        </a>
-        <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
-          <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
         </a>
       </li>
       <?php endif; ?>
@@ -91,6 +86,9 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
         </a>
         <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="nav-link sk-nav-link <?= $uri==='wallet-recharge'?'active':'' ?>">
           <i class="bi bi-graph-up-arrow me-2"></i> Wallet Recharge Report
+        </a>
+        <a href="<?= site_url('shopkart/royalty-report') ?>" class="nav-link sk-nav-link <?= in_array($uri, ['royalty-report','royalty'], true)?'active':'' ?>">
+          <i class="bi bi-stars me-2"></i> Royalty Points Report
         </a>
       </li>
       <li class="nav-item">

@@ -168,6 +168,10 @@ class Sk_Payment extends Sk_Base_Api {
 
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
 
+        $this->load->helper('sk_royalty');
+        sk_royalty_credit_for_order($order);
+        $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
+
         $this->load->helper(['sk_mailer', 'sk_invoice']);
         sk_invoice_ensure_vendor_schema();
         if (empty($order['invoice_emailed_at'])) {

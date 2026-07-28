@@ -89,6 +89,9 @@ class Customer_wallets extends Sk_Base {
                 'customer_wallet_enabled'          => $this->input->post('customer_wallet_enabled') ? '1' : '0',
                 'customer_wallet_discount_percent' => $this->input->post('customer_wallet_discount_percent') ?: '0',
                 'wallet_points_per_rm'             => $this->input->post('wallet_points_per_rm') ?: '5',
+                'royalty_enabled'                  => $this->input->post('royalty_enabled') ? '1' : '0',
+                'royalty_min_redeem_points'        => (string)max(1, (int)$this->input->post('royalty_min_redeem_points')),
+                'royalty_earn_points_per_rm'       => (string)max(0.01, (float)$this->input->post('royalty_earn_points_per_rm')),
                 'currency_symbol'                  => $this->input->post('currency_symbol') ?: 'RM',
                 'currency_code'                    => $this->input->post('currency_code') ?: 'MYR',
                 'toyyibpay_secret_key'             => $this->input->post('toyyibpay_secret_key') ?: '',
@@ -97,7 +100,7 @@ class Customer_wallets extends Sk_Base {
                 'payment_gateway'                  => in_array($this->input->post('payment_gateway'), ['razorpay', 'toyyibpay'], true)
                     ? $this->input->post('payment_gateway') : 'razorpay',
             ]);
-            $this->session->set_flashdata('success', 'Wallet settings saved.');
+            $this->session->set_flashdata('success', 'Wallet & royalty settings saved.');
             redirect('admin/customer-wallets');
         }
         redirect('admin/customer-wallets');

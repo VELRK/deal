@@ -171,7 +171,7 @@ class Sk_Cart extends Sk_Base_Api {
         $settings = $this->get_settings();
         $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
         $tax      = round($subtotal * ($settings['tax_rate'] ?? 18) / 100, 2);
-        return [
+        $summary = [
             'subtotal'     => round($subtotal, 2),
             'shipping'     => (float)$shipping,
             'tax'          => $tax,
@@ -179,5 +179,38 @@ class Sk_Cart extends Sk_Base_Api {
             'total'        => round($subtotal + $shipping + $tax, 2),
             'item_count'   => array_sum(array_column($items, 'quantity')),
         ];
+
+        // Royalty points offer (like coupon) when logged in and points >= 100
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
+        $userId = (int)($this->user['user_id'] ?? 0);
+        if ($userId > 0) {
+            $this->load->model('Sk_Customer_wallet_model');
+            $info = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
+            $royalty = $info['royalty'] ?? [];
+            $minPts = (int)($royalty['min_redeem_points'] ?? 100);
+            $pts = (int)($royalty['points'] ?? 0);
+            $summary['royalty'] = [
+                'enabled'           => !empty($royalty['enabled']),
+                'points'            => $pts,
+                'balance_rm'        => (float)($royalty['balance_rm'] ?? 0),
+                'min_redeem_points' => $minPts,
+                'can_redeem'        => !empty($royalty['can_redeem']),
+                'show_on_cart'      => !empty($royalty['enabled']) && $pts >= $minPts,
+                'conversion_label'  => $royalty['conversion_label'] ?? '500 points = RM 100',
+                'earn_label'        => $royalty['earn_label'] ?? 'RM 500 purchase = 500 pts (RM 100)',
+                'hint'              => ($pts >= $minPts)
+                    ? ('You have ' . $pts . ' royalty points (RM ' . number_format((float)($royalty['balance_rm'] ?? 0), 2) . '). Apply at checkout like a coupon.')
+                    : ('Earn royalty on every paid order. Need ' . $minPts . '+ points to redeem on cart.'),
+            ];
+        } else {
+            $summary['royalty'] = [
+                'enabled'      => sk_royalty_enabled($settings),
+                'show_on_cart' => false,
+                'hint'         => 'Login to see and redeem royalty points.',
+            ];
+        }
+
+        return $summary;
     }
 }

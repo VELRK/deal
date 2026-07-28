@@ -114,13 +114,40 @@ class Sk_Order extends Sk_Base_Api {
 
         $payment_method = $data['payment_method'] ?? 'razorpay';
         $use_wallet     = !empty($data['use_wallet']);
+        $use_royalty    = !empty($data['use_royalty']) || !empty($data['apply_royalty']);
+        $royalty_points_req = (int)($data['royalty_points'] ?? 0);
         $wallet_discount = 0;
         $wallet_amount   = 0.0;
+        $royalty_used_points = 0;
+        $royalty_used_rm     = 0.0;
 
         $this->load->model('Sk_Customer_wallet_model');
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
         $wallet_enabled = $this->Sk_Customer_wallet_model->is_enabled();
+        $settingsAll = $settings;
+        $royalty_enabled = sk_royalty_enabled($settingsAll);
+        $minRoyaltyPts = sk_royalty_min_redeem_points($settingsAll);
+
+        // Royalty redeem acts like coupon → pays via wallet RM
+        if ($use_royalty && $royalty_enabled) {
+            $wInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
+            $availPts = (int)($wInfo['points'] ?? 0);
+            if ($availPts < $minRoyaltyPts) {
+                return $this->error('Need at least ' . $minRoyaltyPts . ' royalty points to redeem. You have ' . $availPts . '.');
+            }
+            $ptsToUse = $royalty_points_req > 0 ? min($royalty_points_req, $availPts) : $availPts;
+            if ($ptsToUse < $minRoyaltyPts) {
+                return $this->error('Minimum redeem is ' . $minRoyaltyPts . ' royalty points.');
+            }
+            $royalty_used_points = $ptsToUse;
+            $royalty_used_rm = $this->Sk_Customer_wallet_model->points_to_rm($ptsToUse);
+            $use_wallet = true;
+        }
+
         $uses_wallet    = ($payment_method === 'wallet')
-            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled);
+            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled)
+            || ($use_royalty && $royalty_enabled);
 
         if ($payment_method === 'wallet' && !$wallet_enabled) {
             return $this->error('Wallet payments are not enabled.');
@@ -143,7 +170,13 @@ class Sk_Order extends Sk_Base_Api {
 
         if ($uses_wallet && $wallet_enabled && $total > 0) {
             $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
-            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
+            if ($royalty_used_rm > 0) {
+                $wallet_amount = round(min($royalty_used_rm, (float)($walletInfo['balance'] ?? 0), $total), 2);
+                $royalty_used_rm = $wallet_amount;
+                $royalty_used_points = $this->Sk_Customer_wallet_model->rm_to_points($wallet_amount);
+            } else {
+                $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
+            }
         }
 
         if ($payment_method === 'wallet') {
@@ -176,14 +209,18 @@ class Sk_Order extends Sk_Base_Api {
             'affiliate_promo'  => $affiliate_promo,
             'total'            => $total,
             'wallet_amount'    => $wallet_amount,
+            'royalty_used_points' => $royalty_used_points,
+            'royalty_used_rm'     => $royalty_used_rm,
             'payment_method'   => $payment_method,
             'payment_status'   => $is_paid_now ? 'paid' : 'pending',
             'status'           => $is_paid_now ? 'confirmed' : 'pending',
             'status_updated_at'=> $now,
             'confirmed_at'     => $is_paid_now ? $now : null,
-            'notes'            => $wallet_discount > 0
-                ? trim(($data['note'] ?? $data['notes'] ?? '') . ' [Wallet discount: ' . $wallet_discount . ']')
-                : ($data['note'] ?? $data['notes'] ?? null),
+            'notes'            => trim(
+                ($data['note'] ?? $data['notes'] ?? '')
+                . ($wallet_discount > 0 ? ' [Wallet discount: ' . $wallet_discount . ']' : '')
+                . ($royalty_used_points > 0 ? ' [Royalty redeemed: ' . $royalty_used_points . ' pts / RM ' . number_format($royalty_used_rm, 2) . ']' : '')
+            ) ?: null,
             'shipping_name'    => $addr['full_name'],
             'shipping_phone'   => $shippingPhone,
             'shipping_line1'   => $addr['line1'],
@@ -217,13 +254,16 @@ class Sk_Order extends Sk_Base_Api {
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
         if ($wallet_amount > 0) {
+            $payDesc = $royalty_used_points > 0
+                ? ('Royalty ' . $royalty_used_points . ' pts for order #' . $order_id)
+                : ($gateway_amount > 0
+                    ? ('Partial wallet payment for order #' . $order_id)
+                    : ('Order #' . $order_id));
             if (!$this->Sk_Customer_wallet_model->apply_wallet_payment(
                 $user_id,
                 $wallet_amount,
                 $order_id,
-                $gateway_amount > 0
-                    ? ('Partial wallet payment for order #' . $order_id)
-                    : ('Order #' . $order_id)
+                $payDesc
             )) {
                 $this->db->where('id', $order_id)->delete('orders');
                 $this->db->where('order_id', $order_id)->delete('order_items');
@@ -246,6 +286,13 @@ class Sk_Order extends Sk_Base_Api {
         $this->db->where('user_id', $user_id)->delete('cart');
 
         $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
+
+        // Royalty earn after paid order, or immediately for COD
+        if (($order['payment_status'] ?? '') === 'paid'
+            || strtolower((string)($order['payment_method'] ?? '')) === 'cod') {
+            sk_royalty_credit_for_order($order);
+            $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
+        }
 
         // Email tax invoice (COD/wallet immediately; Razorpay after payment verify)
         $this->load->helper(['sk_mailer', 'sk_invoice']);
