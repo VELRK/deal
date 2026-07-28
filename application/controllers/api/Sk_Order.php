@@ -30,6 +30,7 @@ class Sk_Order extends Sk_Base_Api {
 
         $subtotal = 0;
         $order_items = [];
+        $stock_issues = [];
 
         foreach ($items as $item) {
             $p = $this->Sk_Product_model->get_by_id($item['product_id']);
@@ -54,8 +55,18 @@ class Sk_Order extends Sk_Base_Api {
             }
 
             $stock = $variant ? (int)$variant['stock'] : (int)$p['stock'];
-            if ($stock < $item['quantity']) {
-                return $this->error("Insufficient stock for '{$p['name']}'.");
+            $need  = (int)$item['quantity'];
+            if ($stock < $need) {
+                $label = trim((string)($variant['label'] ?? ''));
+                $title = $label !== '' ? ($p['name'] . ' (' . $label . ')') : $p['name'];
+                $stock_issues[] = [
+                    'product_id' => (int)$p['id'],
+                    'variant_id' => $variant ? ((int)($variant['id'] ?? 0) ?: null) : null,
+                    'name'       => $title,
+                    'available'  => $stock,
+                    'requested'  => $need,
+                ];
+                continue;
             }
 
             $price = $variant
@@ -84,6 +95,17 @@ class Sk_Order extends Sk_Base_Api {
                 $line['vendor_id'] = (int)$p['vendor_id'];
             }
             $order_items[] = $line;
+        }
+
+        if (!empty($stock_issues)) {
+            $parts = [];
+            foreach ($stock_issues as $s) {
+                $parts[] = "'{$s['name']}' (available {$s['available']}, requested {$s['requested']})";
+            }
+            $msg = count($stock_issues) === 1
+                ? ('Not enough stock for ' . $parts[0] . '.')
+                : ('Not enough stock for these items: ' . implode('; ', $parts) . '.');
+            return $this->error($msg, 400, ['stock_issues' => $stock_issues]);
         }
 
         // Promo — regular coupon or affiliate market code

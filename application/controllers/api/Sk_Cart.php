@@ -45,6 +45,26 @@ class Sk_Cart extends Sk_Base_Api {
         return $this->db->get('cart')->row_array();
     }
 
+    private function _stock_label(array $product, $variant = null): string {
+        $name = (string)($product['name'] ?? 'Product');
+        $label = is_array($variant) ? trim((string)($variant['label'] ?? '')) : '';
+        return $label !== '' ? "{$name} ({$label})" : $name;
+    }
+
+    private function _stock_error(array $product, $variant, int $need, int $available) {
+        $title = $this->_stock_label($product, $variant);
+        $msg = "Not enough stock for '{$title}'. Available: {$available}, requested: {$need}.";
+        return $this->error($msg, 400, [
+            'stock_issues' => [[
+                'product_id' => (int)($product['id'] ?? 0),
+                'variant_id' => is_array($variant) ? (int)($variant['id'] ?? 0) ?: null : null,
+                'name'       => $title,
+                'available'  => $available,
+                'requested'  => $need,
+            ]],
+        ]);
+    }
+
     public function index() {
         $key   = $this->_cart_key();
         $items = $this->_get_cart_items($key);
@@ -62,14 +82,18 @@ class Sk_Cart extends Sk_Base_Api {
 
         $variant = $this->_resolve_variant($product, $variant_id);
         $stock = $variant ? (int)$variant['stock'] : (int)$product['stock'];
-        if ($stock < $quantity) return $this->error('Not enough stock.');
+        if ($stock < $quantity) {
+            return $this->_stock_error($product, $variant, $quantity, $stock);
+        }
 
         $key = $this->_cart_key();
         $existing = $this->_find_cart_row($key, $product_id, $variant ? (int)$variant['id'] : null);
 
         if ($existing) {
             $new_qty = $existing['quantity'] + $quantity;
-            if ($stock < $new_qty) return $this->error('Not enough stock.');
+            if ($stock < $new_qty) {
+                return $this->_stock_error($product, $variant, $new_qty, $stock);
+            }
             $this->db->where('id', $existing['id'])->update('cart', ['quantity' => $new_qty]);
         } else {
             $insert = array_filter($key) + [
@@ -99,9 +123,12 @@ class Sk_Cart extends Sk_Base_Api {
             $this->db->delete('cart');
         } else {
             $product = $this->Sk_Product_model->get_by_id($product_id);
+            if (!$product) return $this->error('Product not found.');
             $variant = $this->_resolve_variant($product, $variant_id);
             $stock = $variant ? (int)$variant['stock'] : (int)$product['stock'];
-            if ($stock < $quantity) return $this->error('Not enough stock.');
+            if ($stock < $quantity) {
+                return $this->_stock_error($product, $variant, $quantity, $stock);
+            }
             $this->_apply_cart_filters($key, $product_id, $variant_id);
             $this->db->update('cart', ['quantity' => $quantity]);
         }
