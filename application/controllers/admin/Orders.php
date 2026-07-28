@@ -36,6 +36,14 @@ class Orders extends Sk_Base {
         $data['order'] = $this->Sk_Order_model->get_by_id($id);
         if (!$data['order']) show_404();
 
+        // Keep DB in sync with JT Express when admin opens the order
+        if (!empty($data['order']['jt_bill_code'])
+            && !in_array($data['order']['status'], ['cancelled', 'returned'], true)
+        ) {
+            $this->_jt_refresh_tracking((int)$id);
+            $data['order'] = $this->Sk_Order_model->get_by_id($id);
+        }
+
         $data['affiliate'] = null;
         $data['affiliate_commission'] = null;
         if (!empty($data['order']['affiliate_id']) || !empty($data['order']['affiliate_promo'])) {
@@ -155,13 +163,14 @@ class Orders extends Sk_Base {
             return $this->json(['success' => false, 'message' => 'Order not found.']);
         }
         $billCode = $order['jt_bill_code'] ?? $order['tracking_number'] ?? '';
-        if ($billCode === '') {
+        $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
+        if ($billCode === '' && $txId === '') {
             return $this->json(['success' => false, 'message' => 'No AWB yet. Create JT shipment first.']);
         }
 
         $settings = $this->Sk_Admin_model->get_settings();
         $this->load->library('Jt_express', $settings);
-        $result = $this->jt_express->print_order($billCode);
+        $result = $this->jt_express->print_order($billCode, $txId);
         if (!$result['success']) {
             return $this->json(['success' => false, 'message' => $result['message'] ?? 'Print failed.', 'raw' => $result['raw'] ?? null]);
         }
@@ -177,6 +186,13 @@ class Orders extends Sk_Base {
             header('Content-Type: application/pdf');
             header('Content-Disposition: inline; filename="jt-label-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $order['order_number']) . '.pdf"');
             echo base64_decode($pdfB64);
+            return;
+        }
+
+        // Docs: sometimes only urlContent PDF link is returned (no base64)
+        $url = $this->_jt_extract_label_url($result);
+        if ($url !== '') {
+            redirect($url);
             return;
         }
 
@@ -201,14 +217,47 @@ class Orders extends Sk_Base {
         $settings = $this->Sk_Admin_model->get_settings();
         $this->load->library('Jt_express', $settings);
         $result = $this->jt_express->track($billCode);
-        if ($result['success']) {
-            $tracks = sk_jt_normalize_tracks($result);
+        $tracks = sk_jt_normalize_tracks($result);
+        $msg = (string)($result['message'] ?? '');
+        $rawCode = (string)(($result['raw']['code'] ?? '') ?: '');
+
+        // Sandbox often returns "数据未找到" until the first scan exists — AWB create still succeeded
+        $noTrackYet = (
+            stripos($msg, '数据未找到') !== false
+            || stripos($msg, 'not found') !== false
+            || stripos($msg, 'no data') !== false
+            || $rawCode === '999001030'
+        );
+
+        if (!empty($result['success'])) {
             $this->_jt_apply_tracking_sync((int)$id, $result, $tracks);
+            return $this->json([
+                'success' => true,
+                'message' => $msg !== '' ? $msg : 'Tracking fetched.',
+                'tracks'  => $tracks,
+                'bill_code' => $billCode,
+                'raw'     => $result['raw'] ?? null,
+            ]);
         }
+
+        if ($noTrackYet && $billCode !== '') {
+            $this->Sk_Order_model->update_jt_shipment((int)$id, [
+                'jt_courier_status' => 'AWB created — waiting for first JT scan',
+            ]);
+            return $this->json([
+                'success' => true,
+                'message' => 'AWB ' . $billCode . ' is valid, but JT has no tracking scans yet (normal in sandbox until pickup).',
+                'tracks'  => [],
+                'bill_code' => $billCode,
+                'raw'     => $result['raw'] ?? null,
+            ]);
+        }
+
         return $this->json([
-            'success' => $result['success'],
-            'message' => $result['message'] ?? '',
-            'tracks'  => sk_jt_normalize_tracks($result),
+            'success' => false,
+            'message' => $msg !== '' ? $msg : 'Track failed.',
+            'tracks'  => $tracks,
+            'bill_code' => $billCode,
             'raw'     => $result['raw'] ?? null,
         ]);
     }
@@ -219,14 +268,15 @@ class Orders extends Sk_Base {
             return $this->json(['success' => false, 'message' => 'Order not found.']);
         }
         $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
-        if ($txId === '' && empty($order['jt_bill_code'])) {
+        $billCode = trim((string)($order['jt_bill_code'] ?? $order['tracking_number'] ?? ''));
+        if ($txId === '' && $billCode === '') {
             return $this->json(['success' => false, 'message' => 'No JT shipment to cancel.']);
         }
 
         $settings = $this->Sk_Admin_model->get_settings();
         $this->load->library('Jt_express', $settings);
         $reason = trim((string)$this->input->post('reason', TRUE)) ?: 'Cancelled by admin';
-        $result = $this->jt_express->cancel_order($txId, $reason);
+        $result = $this->jt_express->cancel_order($txId, $reason, $billCode);
 
         if ($result['success']) {
             $this->Sk_Order_model->update_jt_shipment((int)$id, [
@@ -260,8 +310,31 @@ class Orders extends Sk_Base {
             return ['success' => false, 'message' => 'Enable JT Express in Settings → JT Express tab.'];
         }
 
+        // Validate sender config before calling JT (common cause of "order not create")
+        $missing = [];
+        foreach (['jt_express_sender_phone' => 'Sender phone', 'jt_express_sender_address' => 'Sender address',
+                  'jt_express_sender_city' => 'Sender city', 'jt_express_sender_state' => 'Sender state',
+                  'jt_express_sender_postcode' => 'Sender postcode'] as $key => $label) {
+            if (trim((string)($settings[$key] ?? '')) === '') {
+                $missing[] = $label;
+            }
+        }
+        if ($missing) {
+            return [
+                'success' => false,
+                'message' => 'Cannot create JT order. Fill in Settings → JT Express: ' . implode(', ', $missing) . '.',
+            ];
+        }
+        if (trim((string)($order['shipping_phone'] ?? '')) === '' || trim((string)($order['shipping_pincode'] ?? '')) === '') {
+            return [
+                'success' => false,
+                'message' => 'Cannot create JT order. Customer shipping phone and postcode are required.',
+            ];
+        }
+
         $result = $this->jt_express->add_order($order);
         if (!$result['success']) {
+            log_message('error', 'JT addOrder failed for order ' . $order['order_number'] . ': ' . json_encode($result['raw'] ?? $result['message']));
             return [
                 'success' => false,
                 'message' => $result['message'] ?? 'Failed to create JT shipment.',
@@ -270,20 +343,30 @@ class Orders extends Sk_Base {
         }
 
         $billCode = $result['bill_code'] ?? '';
+        if ($billCode === '' && is_array($result['data'] ?? null)) {
+            foreach (['billCode', 'billcode', 'waybillNo', 'mailNo'] as $k) {
+                if (!empty($result['data'][$k])) {
+                    $billCode = (string)$result['data'][$k];
+                    break;
+                }
+            }
+        }
         $txId     = $order['order_number'];
         $now      = date('Y-m-d H:i:s');
         $update = [
             'courier_provider'       => 'jt_express',
             'jt_txlogistic_id'       => $txId,
             'jt_bill_code'           => $billCode ?: null,
-            'jt_courier_status'      => 'ready_for_pickup',
+            'jt_courier_status'      => $billCode ? 'ready_for_pickup' : 'submitted_no_awb',
             'tracking_number'        => $billCode ?: ($order['tracking_number'] ?? null),
             'jt_shipment_created_at' => $now,
+            'jt_track_data'          => json_encode($result['raw'] ?? $result['data']),
         ];
         if (empty($order['processing_at'])) {
             $update['processing_at'] = $now;
         }
         if (in_array($order['status'], ['pending', 'confirmed'], true)) {
+            $this->Sk_Order_model->update_status((int)$order['id'], 'processing');
             $update['status'] = 'processing';
         }
         $this->Sk_Order_model->update_jt_shipment((int)$order['id'], $update);
@@ -308,10 +391,14 @@ class Orders extends Sk_Base {
             return $notes;
         }
 
-        if ($newStatus === 'processing' && empty($order['jt_bill_code'])) {
+        // Create JT order when moving to Ready to Pick Up / Shipped if not created yet
+        if (in_array($newStatus, ['processing', 'shipped'], true) && empty($order['jt_bill_code'])) {
             $created = $this->_jt_create_shipment_for_order($order);
             if (!empty($created['message'])) {
                 $notes[] = $created['message'];
+            }
+            if (empty($created['success'])) {
+                $notes[] = 'JT shipment was NOT created — check Settings → JT Express (sender address/phone) and API credentials.';
             }
         }
 
@@ -375,9 +462,29 @@ class Orders extends Sk_Base {
         return '';
     }
 
+    private function _jt_extract_label_url(array $result): string {
+        $data = $result['data'] ?? [];
+        if (!is_array($data)) {
+            $data = $result['raw']['data'] ?? [];
+        }
+        if (!is_array($data)) {
+            return '';
+        }
+        foreach (['urlContent', 'url', 'pdfUrl', 'fileUrl'] as $k) {
+            if (!empty($data[$k]) && is_string($data[$k]) && preg_match('#^https?://#i', $data[$k])) {
+                return $data[$k];
+            }
+        }
+        if (!empty($data[0]['urlContent']) && is_string($data[0]['urlContent'])) {
+            return $data[0]['urlContent'];
+        }
+        return '';
+    }
+
     private function _jt_cancel_if_needed(array $order) {
         $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
-        if ($txId === '' && empty($order['jt_bill_code'])) {
+        $billCode = trim((string)($order['jt_bill_code'] ?? $order['tracking_number'] ?? ''));
+        if ($txId === '' && $billCode === '') {
             return;
         }
         if (($order['jt_courier_status'] ?? '') === 'cancelled') {
@@ -391,7 +498,7 @@ class Orders extends Sk_Base {
         if (!$this->jt_express->is_enabled()) {
             return;
         }
-        $result = $this->jt_express->cancel_order($txId, 'Cancelled with order');
+        $result = $this->jt_express->cancel_order($txId, 'Cancelled with order', $billCode);
         if (!empty($result['success'])) {
             $this->Sk_Order_model->update_jt_shipment((int)$order['id'], [
                 'jt_courier_status' => 'cancelled',

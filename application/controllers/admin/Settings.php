@@ -12,6 +12,7 @@ class Settings extends Sk_Base {
         sk_isms_ensure_schema();
         $data['title']    = 'Settings - ShopKart Admin';
         $data['settings'] = $this->Sk_Admin_model->get_settings();
+        $data['jt_config'] = sk_jt_express_config();
         $this->render('settings/index', $data);
     }
 

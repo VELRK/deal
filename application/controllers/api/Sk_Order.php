@@ -310,7 +310,8 @@ class Sk_Order extends Sk_Base_Api {
 
     private function _jt_cancel_if_needed(array $order) {
         $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
-        if ($txId === '' && empty($order['jt_bill_code'])) {
+        $billCode = trim((string)($order['jt_bill_code'] ?? $order['tracking_number'] ?? ''));
+        if ($txId === '' && $billCode === '') {
             return;
         }
         if (($order['jt_courier_status'] ?? '') === 'cancelled') {
@@ -324,7 +325,7 @@ class Sk_Order extends Sk_Base_Api {
         if (!$this->jt_express->is_enabled()) {
             return;
         }
-        $result = $this->jt_express->cancel_order($txId, 'Cancelled by customer');
+        $result = $this->jt_express->cancel_order($txId, 'Cancelled by customer', $billCode);
         if (!empty($result['success'])) {
             $this->Sk_Order_model->update_jt_shipment((int)$order['id'], [
                 'jt_courier_status' => 'cancelled',

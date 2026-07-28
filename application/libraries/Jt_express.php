@@ -35,14 +35,43 @@ class Jt_express {
     }
 
     public function load_from_settings(array $settings) {
-        $this->enabled           = !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0';
-        $this->sandbox             = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
-        $this->api_account         = trim($settings['jt_express_api_account'] ?? '');
-        $this->private_key         = trim($settings['jt_express_private_key'] ?? '');
-        $this->customer_code       = trim($settings['jt_express_customer_code'] ?? '');
-        $this->customer_password   = trim($settings['jt_express_customer_password'] ?? '');
-        $this->demo_uuid           = trim($settings['jt_express_demo_uuid'] ?? '5ba402abcfdc4dff9cb1c589afcf9682');
-        $this->default_weight      = trim($settings['jt_express_default_weight'] ?? '1') ?: '1';
+        $this->CI->load->helper('sk_jt_express');
+        $jtCfg = sk_jt_express_config();
+
+        $this->enabled = !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0';
+        $this->sandbox = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
+        $this->default_weight = trim($settings['jt_express_default_weight'] ?? '1') ?: '1';
+
+        // Production credentials always come from config (not editable DB fields).
+        if (!$this->sandbox && !empty($jtCfg['production']) && is_array($jtCfg['production'])) {
+            $prod = $jtCfg['production'];
+            $this->api_account       = trim($prod['api_account'] ?? '');
+            $this->private_key       = trim($prod['private_key'] ?? '');
+            $this->customer_code     = trim($prod['customer_code'] ?? '');
+            $this->customer_password = trim($prod['customer_password'] ?? '');
+            $this->demo_uuid         = trim($prod['demo_uuid'] ?? '');
+            $address = trim($prod['sender_address'] ?? '');
+            $this->sender = [
+                'name'        => trim($prod['sender_name'] ?? ($settings['site_name'] ?? 'Shop')),
+                'mobile'      => $this->normalize_phone($prod['sender_phone'] ?? ''),
+                'phone'       => $this->normalize_phone($prod['sender_phone'] ?? ''),
+                'postCode'    => trim($prod['sender_postcode'] ?? ''),
+                'prov'        => trim($prod['sender_state'] ?? ''),
+                'city'        => trim($prod['sender_city'] ?? ''),
+                'area'        => $address,
+                'address'     => $address,
+                'countryCode' => 'MYS',
+            ];
+            return;
+        }
+
+        // Sandbox: Settings DB (with config sandbox defaults as fallback).
+        $sb = is_array($jtCfg['sandbox'] ?? null) ? $jtCfg['sandbox'] : [];
+        $this->api_account       = trim($settings['jt_express_api_account'] ?? ($sb['api_account'] ?? ''));
+        $this->private_key       = trim($settings['jt_express_private_key'] ?? ($sb['private_key'] ?? ''));
+        $this->customer_code     = trim($settings['jt_express_customer_code'] ?? ($sb['customer_code'] ?? ''));
+        $this->customer_password = trim($settings['jt_express_customer_password'] ?? ($sb['customer_password'] ?? ''));
+        $this->demo_uuid         = trim($settings['jt_express_demo_uuid'] ?? ($sb['demo_uuid'] ?? '5ba402abcfdc4dff9cb1c589afcf9682'));
 
         $address = trim($settings['jt_express_sender_address'] ?? '');
         $this->sender = [
@@ -73,39 +102,38 @@ class Jt_express {
         foreach ($order['items'] ?? [] as $item) {
             $qty = max(1, (int)($item['quantity'] ?? 1));
             $totalQty += $qty;
+            $itemWeightGrams = max(1, (int)round(((float)$this->default_weight * 1000) / max(1, $qty)));
             $items[] = [
-                'itemName'      => mb_substr($item['product_name'] ?? 'Product', 0, 100),
-                'number'        => $qty,
-                'itemValue'     => number_format((float)($item['price'] ?? 0), 2, '.', ''),
-                'priceCurrency' => 'MYR',
-                'desc'          => mb_substr($item['product_sku'] ?? '', 0, 50),
+                'itemName'     => mb_substr($item['product_name'] ?? 'Product', 0, 100),
+                'number'       => (string)$qty,
+                'itemValue'    => number_format((float)($item['price'] ?? 0), 2, '.', ''),
+                'itemCurrency' => 'MYR',
+                'weight'       => (string)$itemWeightGrams,
+                'itemDesc'     => mb_substr($item['product_sku'] ?? '', 0, 50),
             ];
         }
         if ($totalQty < 1) {
             $totalQty = 1;
             $items[]  = [
-                'itemName'      => 'Order ' . $txlogisticId,
-                'number'        => 1,
-                'itemValue'     => number_format((float)($order['subtotal'] ?? $order['total'] ?? 0), 2, '.', ''),
-                'priceCurrency' => 'MYR',
-                'desc'          => '',
+                'itemName'     => 'Order ' . $txlogisticId,
+                'number'       => '1',
+                'itemValue'    => number_format((float)($order['subtotal'] ?? $order['total'] ?? 0), 2, '.', ''),
+                'itemCurrency' => 'MYR',
+                'weight'       => (string)max(1, (int)round((float)$this->default_weight * 1000)),
+                'itemDesc'     => '',
             ];
         }
+
+        $itemsValue = number_format((float)($order['total'] ?? 0), 2, '.', '');
+        $weight     = number_format((float)$this->default_weight, 2, '.', '');
 
         $payload = [
             'customerCode'  => $this->customer_code,
             'txlogisticId'  => $txlogisticId,
+            'actionType'    => 'add',
             'expressType'   => 'EZ',
-            'orderType'     => '2',
             'serviceType'   => '1',
-            'deliveryType'  => '1',
             'payType'       => 'PP_PM',
-            'goodsType'     => 'ITN1',
-            'weight'        => $this->default_weight,
-            'totalQuantity' => $totalQty,
-            'itemsValue'    => number_format((float)($order['total'] ?? 0), 2, '.', ''),
-            'priceCurrency' => 'MYR',
-            'operateType'   => 1,
             'sender'        => $this->sender,
             'receiver'      => [
                 'name'        => trim($order['shipping_name'] ?? 'Customer'),
@@ -118,6 +146,15 @@ class Jt_express {
                 'address'     => $receiverAddr,
                 'countryCode' => 'MYS',
             ],
+            'packageInfo'   => [
+                'packageQuantity' => (string)max(1, $totalQty),
+                'weight'          => $weight,
+                'packageValue'    => $itemsValue,
+                'goodsType'       => 'ITN8',
+                'length'          => '10.00',
+                'width'           => '10.00',
+                'height'          => '10.00',
+            ],
             'items'         => $items,
         ];
 
@@ -126,40 +163,61 @@ class Jt_express {
 
     /**
      * Print airway bill (printOrder).
+     * Docs require customerCode + password + txlogisticId; billCode optional but preferred.
      */
-    public function print_order($billCode, $printSize = 0) {
+    public function print_order($billCode, $txlogisticId = '', $printSize = 0) {
         if (!$this->is_enabled()) {
             return $this->fail('JT Express is not configured.');
         }
-        if ($billCode === '') {
-            return $this->fail('AWB / bill code is required.');
+        $billCode = trim((string)$billCode);
+        $txlogisticId = trim((string)$txlogisticId);
+        if ($billCode === '' && $txlogisticId === '') {
+            return $this->fail('AWB / bill code or txlogisticId is required.');
         }
 
-        return $this->request('/api/order/printOrder', [
-            'customerCode' => $this->customer_code,
-            'billCode'     => $billCode,
-            'printSize'    => (int)$printSize,
-            'printCod'     => 0,
-        ]);
+        $payload = [
+            'customerCode'  => $this->customer_code,
+            'txlogisticId'  => $txlogisticId !== '' ? $txlogisticId : $billCode,
+            'enableNewPrint'=> 'mdzt',
+        ];
+        if ($billCode !== '') {
+            $payload['billCode'] = $billCode;
+        }
+        // printSize kept for older templates; new mid-platform uses enableNewPrint
+        if ((int)$printSize > 0) {
+            $payload['printSize'] = (int)$printSize;
+        }
+
+        return $this->request('/api/order/printOrder', $payload);
     }
 
     /**
      * Cancel shipment (cancelOrder).
+     * JT MY requires billCode once an AWB has been issued.
      */
-    public function cancel_order($txlogisticId, $reason = 'Cancelled by merchant') {
+    public function cancel_order($txlogisticId, $reason = 'Cancelled by merchant', $billCode = '') {
         if (!$this->is_enabled()) {
             return $this->fail('JT Express is not configured.');
         }
-        if ($txlogisticId === '') {
-            return $this->fail('txlogisticId is required.');
+        $txlogisticId = trim((string)$txlogisticId);
+        $billCode = trim((string)$billCode);
+        if ($txlogisticId === '' && $billCode === '') {
+            return $this->fail('txlogisticId or billCode is required.');
         }
 
-        return $this->request('/api/order/cancelOrder', [
+        $payload = [
             'customerCode' => $this->customer_code,
-            'txlogisticId' => $txlogisticId,
             'orderType'    => 1,
-            'reason'       => mb_substr($reason, 0, 200),
-        ]);
+            'reason'       => mb_substr((string)$reason, 0, 200),
+        ];
+        if ($txlogisticId !== '') {
+            $payload['txlogisticId'] = $txlogisticId;
+        }
+        if ($billCode !== '') {
+            $payload['billCode'] = $billCode;
+        }
+
+        return $this->request('/api/order/cancelOrder', $payload);
     }
 
     /**
@@ -173,14 +231,20 @@ class Jt_express {
             return $this->fail('AWB / bill code is required.');
         }
 
+        // Sandbox/production both require business password on trace
         return $this->request('/api/logistics/trace', [
-            'billCodes' => $billCode,
-        ], false);
+            'customerCode' => $this->customer_code,
+            'billCodes'    => $billCode,
+        ], true);
     }
 
     protected function request($path, array $biz, $with_business_digest = true) {
         if ($with_business_digest) {
-            $biz['digest'] = $this->business_digest();
+            // MY Open Platform: business password = MD5(plain + jadada369t3) uppercase
+            $biz['password'] = $this->business_password_hash();
+            if (empty($biz['customerCode']) && $this->customer_code !== '') {
+                $biz['customerCode'] = $this->customer_code;
+            }
         }
 
         $bizJson = json_encode($biz, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -259,27 +323,53 @@ class Jt_express {
     }
 
     protected function extract_bill_code(array $res) {
-        $data = $res['data'] ?? [];
-        if (is_string($data) && $data !== '') {
-            return $data;
+        $candidates = [];
+        if (isset($res['data'])) {
+            $candidates[] = $res['data'];
         }
-        if (!is_array($data)) {
-            return '';
+        $candidates[] = $res;
+        if (isset($res['data']['orderList']) && is_array($res['data']['orderList'])) {
+            $candidates = array_merge($candidates, $res['data']['orderList']);
         }
-        foreach (['billCode', 'billcode', 'waybillNo', 'waybill_no', 'mailNo'] as $k) {
-            if (!empty($data[$k])) {
-                return (string)$data[$k];
+        if (isset($res['data'][0]) && is_array($res['data'][0])) {
+            $candidates[] = $res['data'][0];
+        }
+
+        foreach ($candidates as $data) {
+            if (is_string($data) && $data !== '' && !preg_match('/[\{\[]/', $data)) {
+                return $data;
             }
-        }
-        if (!empty($data[0]['billCode'])) {
-            return (string)$data[0]['billCode'];
+            if (!is_array($data)) {
+                continue;
+            }
+            foreach (['billCode', 'billcode', 'waybillNo', 'waybill_no', 'mailNo', 'awb'] as $k) {
+                if (!empty($data[$k])) {
+                    return (string)$data[$k];
+                }
+            }
         }
         return '';
     }
 
+    /** Plaintext customer password (from settings), fallback private key for demo. */
+    protected function customer_plain_password() {
+        return $this->customer_password !== '' ? $this->customer_password : $this->private_key;
+    }
+
+    /**
+     * Business param password = MD5(plain + jadada369t3) uppercase.
+     * If settings already store a 32-char hex hash (Flutter Firestore app_data/hash style), use it as-is.
+     */
+    protected function business_password_hash() {
+        $plain = $this->customer_plain_password();
+        if (preg_match('/^[A-Fa-f0-9]{32}$/', $plain)) {
+            return strtoupper($plain);
+        }
+        return strtoupper(md5($plain . 'jadada369t3'));
+    }
+
     protected function business_digest() {
-        $password = $this->customer_password !== '' ? $this->customer_password : $this->private_key;
-        $pwdHash  = strtoupper(md5($password . 'jadada369t3'));
+        $pwdHash = $this->business_password_hash();
         return base64_encode(md5($this->customer_code . $pwdHash, true));
     }
 
@@ -288,10 +378,13 @@ class Jt_express {
     }
 
     protected function base_url() {
+        $this->CI->load->helper('sk_jt_express');
+        $jtCfg = sk_jt_express_config();
+        $urls = is_array($jtCfg['api_urls'] ?? null) ? $jtCfg['api_urls'] : [];
         if ($this->sandbox) {
-            return 'https://demoopenapi.jtexpress.my/webopenplatformapi';
+            return $urls['sandbox'] ?? 'https://demoopenapi.jtexpress.my/webopenplatformapi';
         }
-        return 'https://ylopenapi.jtexpress.my/webopenplatformapi';
+        return $urls['production'] ?? 'https://ylopenapi.jtexpress.my/webopenplatformapi';
     }
 
     protected function normalize_phone($phone) {

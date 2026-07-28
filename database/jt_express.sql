@@ -12,14 +12,15 @@ ALTER TABLE `orders`
   ADD COLUMN IF NOT EXISTS `jt_shipment_created_at` DATETIME NULL DEFAULT NULL AFTER `jt_track_data`;
 
 -- Default JT Express settings (sandbox test credentials)
+-- Official JT Signature Tools sandbox sample credentials
 INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
 ('jt_express_enabled', '0'),
 ('jt_express_sandbox', '1'),
 ('jt_express_api_account', '640826271705595946'),
 ('jt_express_private_key', '8e88c8477d4e4939859c560192fcafbc'),
-('jt_express_customer_code', 'GOLDENEAGLEIMPORTS'),
-('jt_express_customer_name', 'GOLDENEAGLEIMPORTS'),
-('jt_express_customer_password', ''),
+('jt_express_customer_code', 'ITTEST0001'),
+('jt_express_customer_name', 'ITTEST0001'),
+('jt_express_customer_password', 'Sfx6H8d4'),
 ('jt_express_demo_uuid', '5ba402abcfdc4dff9cb1c589afcf9682'),
 ('jt_express_default_weight', '1'),
 ('jt_express_sender_name', 'GOLDENEAGLEIMPORTS'),

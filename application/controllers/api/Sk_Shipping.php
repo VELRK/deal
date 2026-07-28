@@ -67,4 +67,52 @@ class Sk_Shipping extends Sk_Base_Api {
             'message'         => 'Courier tracking not available for this order.',
         ]);
     }
+
+    /**
+     * JT Express status push webhook.
+     * Register in JT Open Platform:
+     *   POST {base}/shopkart-api/shipping/jt-webhook
+     *
+     * Every scan / status change must update our orders table
+     * (jt_courier_status, jt_track_data, and portal status when applicable).
+     */
+    public function jt_webhook() {
+        $raw = $this->input->raw_input_stream;
+        $payload = json_decode($raw, true);
+        if (!is_array($payload) || !$payload) {
+            $payload = $this->input->post(null, true);
+            if (!is_array($payload)) {
+                $payload = [];
+            }
+        }
+        // Also accept form field bizContent alone
+        if (!$payload && !empty($_POST['bizContent'])) {
+            $payload = ['bizContent' => $_POST['bizContent']];
+        }
+
+        if (!$payload) {
+            log_message('error', 'JT webhook empty payload: ' . substr((string)$raw, 0, 2000));
+            return $this->error('Empty webhook payload.', 400);
+        }
+
+        log_message('info', 'JT webhook received: ' . substr(json_encode($payload), 0, 2000));
+
+        // Batch: array of shipments / details
+        if (isset($payload[0]) && is_array($payload[0])) {
+            $results = [];
+            foreach ($payload as $item) {
+                if (is_array($item)) {
+                    $results[] = sk_jt_apply_webhook_payload($item);
+                }
+            }
+            return $this->success(['results' => $results], 'JT webhook batch processed.');
+        }
+
+        $result = sk_jt_apply_webhook_payload($payload);
+        if (empty($result['success'])) {
+            // Still 200 so JT does not keep retrying forever for unknown AWBs
+            return $this->success($result, $result['message'] ?? 'Order not matched.', 200);
+        }
+        return $this->success($result, 'JT status saved to database.');
+    }
 }
