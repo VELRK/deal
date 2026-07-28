@@ -65,7 +65,7 @@ class Jt_express {
                 'postCode'    => trim($prod['sender_postcode'] ?? ''),
                 'prov'        => trim($prod['sender_state'] ?? ''),
                 'city'        => trim($prod['sender_city'] ?? ''),
-                'area'        => $address,
+                'area'        => $this->limit_chars($address, 60),
                 'address'     => $address,
                 'countryCode' => 'MYS',
             ];
@@ -88,7 +88,7 @@ class Jt_express {
             'postCode'    => trim($settings['jt_express_sender_postcode'] ?? ''),
             'prov'        => trim($settings['jt_express_sender_state'] ?? ''),
             'city'        => trim($settings['jt_express_sender_city'] ?? ''),
-            'area'        => $address,
+            'area'        => $this->limit_chars($address, 60),
             'address'     => $address,
             'countryCode' => 'MYS',
         ];
@@ -159,7 +159,7 @@ class Jt_express {
                 'postCode'    => trim($order['shipping_pincode'] ?? ''),
                 'prov'        => trim($order['shipping_state'] ?? ''),
                 'city'        => trim($order['shipping_city'] ?? ''),
-                'area'        => $receiverAddr,
+                'area'        => $this->limit_chars($receiverAddr, 60),
                 'address'     => $receiverAddr,
                 'countryCode' => 'MYS',
             ],
@@ -402,6 +402,18 @@ class Jt_express {
             return $urls['sandbox'] ?? 'https://demoopenapi.jtexpress.my/webopenplatformapi';
         }
         return $urls['production'] ?? 'https://ylopenapi.jtexpress.my/webopenplatformapi';
+    }
+
+    /** JT Open Platform limits area to 60 characters. */
+    protected function limit_chars($value, $max = 60) {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        if (function_exists('mb_substr')) {
+            return mb_substr($value, 0, (int)$max);
+        }
+        return substr($value, 0, (int)$max);
     }
 
     protected function normalize_phone($phone) {
