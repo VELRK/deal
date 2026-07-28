@@ -53,6 +53,7 @@ frontend/amercereactjs/*
 !frontend/amercereactjs/package.json
 !frontend/amercereactjs/package-lock.json
 !frontend/amercereactjs/vite.config.ts
+!frontend/amercereactjs/build-live.cjs
 
 # Stray lockfile next to build output
 frontend/package-lock.json
