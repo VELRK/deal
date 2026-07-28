@@ -51,6 +51,12 @@ class Customer_wallets extends Sk_Base {
             $wallet['balance'] = $this->Sk_Customer_wallet_model->resolve_wallet_balance($user_id);
         }
         $data['wallet'] = $wallet;
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
+        $this->load->model('Sk_Royalty_model');
+        $royInfo = $this->Sk_Royalty_model->get_info($user_id);
+        $data['royalty_points'] = (int)($royInfo['points'] ?? 0);
+        $data['royalty_rm'] = (float)($royInfo['balance_rm'] ?? 0);
         $data['transactions'] = $result['rows'];
         $data['total'] = $result['total'];
         $data['page'] = $page;

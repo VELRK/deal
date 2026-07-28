@@ -37,9 +37,11 @@ class Sk_Customer_wallet_model extends CI_Model {
     public function get_transactions(int $userId, int $limit = 20, int $offset = 0): array {
         $this->db->where('user_id', $userId);
         $this->apply_completed_transactions_scope();
+        $this->apply_wallet_only_history_scope();
         $total = $this->db->count_all_results('customer_wallet_transactions');
         $this->db->where('user_id', $userId);
         $this->apply_completed_transactions_scope();
+        $this->apply_wallet_only_history_scope();
         $rows = $this->db->order_by('created_at', 'DESC')
             ->limit($limit, $offset)
             ->get('customer_wallet_transactions')
@@ -52,6 +54,14 @@ class Sk_Customer_wallet_model extends CI_Model {
         $this->db->where('source !=', 'topup_pending');
         $this->db->not_like('description', 'Pending Razorpay', 'after');
         $this->db->not_like('description', 'Pending ToyyibPay', 'after');
+    }
+
+    /** Royalty is a separate ledger — never mix into wallet history UI. */
+    private function apply_wallet_only_history_scope(): void {
+        $this->db->where('source !=', 'royalty_earn');
+        $this->db->not_like('reference', '-UNWALLET', 'before');
+        $this->db->not_like('description', 'Royalty points moved out of wallet', 'after');
+        $this->db->not_like('description', 'Royalty ', 'after');
     }
 
     /** Match pending top-up rows even if legacy ENUM stored an empty source. */
@@ -224,9 +234,8 @@ class Sk_Customer_wallet_model extends CI_Model {
         $points = $this->rm_to_points($balanceRm);
         $CI =& get_instance();
         $CI->load->helper('sk_royalty');
-        $CI->load->model('Sk_Admin_model');
-        $settings = $CI->Sk_Admin_model->get_settings();
-        $minRedeem = sk_royalty_min_redeem_points($settings);
+        sk_royalty_ensure_schema();
+        $CI->load->model('Sk_Royalty_model');
         return [
             'enabled'           => $this->is_enabled(),
             'balance'           => $balanceRm,
@@ -237,135 +246,8 @@ class Sk_Customer_wallet_model extends CI_Model {
             'currency'          => 'MYR',
             'currency_symbol'   => 'RM',
             'discount_percent'  => $this->get_wallet_discount_percent(),
-            'royalty'           => [
-                'enabled'            => sk_royalty_enabled($settings),
-                'points'             => $points,
-                'balance_rm'         => $balanceRm,
-                'min_redeem_points'  => $minRedeem,
-                'can_redeem'         => sk_royalty_enabled($settings) && $points >= $minRedeem,
-                'earn_label'         => 'RM 500 purchase = 500 pts (RM 100)',
-                'conversion_label'   => '500 points = RM 100',
-            ],
-        ];
-    }
-
-    /** Credit royalty earn (RM) after paid order. */
-    public function credit_royalty(int $userId, float $amountRm, int $points, string $reference, int $orderId = 0): bool {
-        if ($amountRm <= 0 || $points < 1) {
-            return false;
-        }
-        $wallet = $this->get_wallet($userId);
-        $newBal = round((float)$wallet['balance'] + $amountRm, 2);
-
-        $this->db->trans_start();
-        $this->db->where('user_id', $userId)->update('customer_wallets', [
-            'balance'    => $newBal,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
-        $this->db->insert('customer_wallet_transactions', [
-            'wallet_id'     => $wallet['id'],
-            'user_id'       => $userId,
-            'type'          => 'credit',
-            'amount'        => $amountRm,
-            'balance_after' => $newBal,
-            'source'        => 'royalty_earn',
-            'reference'     => $reference,
-            'description'   => 'Royalty earn ' . $points . ' pts (RM ' . number_format($amountRm, 2)
-                . ')' . ($orderId ? ' for order #' . $orderId : ''),
-            'created_at'    => date('Y-m-d H:i:s'),
-        ]);
-        $this->db->trans_complete();
-        return $this->db->trans_status();
-    }
-
-    /**
-     * Detailed royalty report (earn + redeem).
-     */
-    public function get_royalty_report(array $filters = [], int $limit = 50, int $offset = 0): array {
-        $sources = ['royalty_earn', 'order_payment'];
-        $this->db->from('customer_wallet_transactions t')
-            ->join('users u', 'u.id = t.user_id', 'left')
-            ->where_in('t.source', $sources);
-        // order_payment rows only if description mentions royalty OR we filter earns mainly
-        // Show all royalty_earn + order_payment that look like royalty (optional)
-        if (!empty($filters['type']) && $filters['type'] === 'earn') {
-            $this->db->where('t.source', 'royalty_earn');
-        } elseif (!empty($filters['type']) && $filters['type'] === 'redeem') {
-            $this->db->where('t.source', 'order_payment');
-            $this->db->group_start()
-                ->like('t.description', 'Royalty', 'both')
-                ->or_like('t.reference', 'ORD-', 'after')
-            ->group_end();
-        } else {
-            $this->db->group_start()
-                ->where('t.source', 'royalty_earn')
-                ->or_group_start()
-                    ->where('t.source', 'order_payment')
-                    ->like('t.description', 'Royalty', 'both')
-                ->group_end()
-            ->group_end();
-        }
-        if (!empty($filters['from'])) $this->db->where('t.created_at >=', $filters['from'] . ' 00:00:00');
-        if (!empty($filters['to'])) $this->db->where('t.created_at <=', $filters['to'] . ' 23:59:59');
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $this->db->group_start()->like('u.name', $s)->or_like('u.email', $s)->or_like('t.reference', $s)->group_end();
-        }
-        $total = $this->db->count_all_results();
-
-        $this->db->select('t.*, u.name, u.email, u.phone')
-            ->from('customer_wallet_transactions t')
-            ->join('users u', 'u.id = t.user_id', 'left')
-            ->where_in('t.source', $sources);
-        if (!empty($filters['type']) && $filters['type'] === 'earn') {
-            $this->db->where('t.source', 'royalty_earn');
-        } elseif (!empty($filters['type']) && $filters['type'] === 'redeem') {
-            $this->db->where('t.source', 'order_payment');
-            $this->db->group_start()
-                ->like('t.description', 'Royalty', 'both')
-                ->or_like('t.reference', 'ORD-', 'after')
-            ->group_end();
-        } else {
-            $this->db->group_start()
-                ->where('t.source', 'royalty_earn')
-                ->or_group_start()
-                    ->where('t.source', 'order_payment')
-                    ->like('t.description', 'Royalty', 'both')
-                ->group_end()
-            ->group_end();
-        }
-        if (!empty($filters['from'])) $this->db->where('t.created_at >=', $filters['from'] . ' 00:00:00');
-        if (!empty($filters['to'])) $this->db->where('t.created_at <=', $filters['to'] . ' 23:59:59');
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $this->db->group_start()->like('u.name', $s)->or_like('u.email', $s)->or_like('t.reference', $s)->group_end();
-        }
-        $rows = $this->db->order_by('t.created_at', 'DESC')->limit($limit, $offset)->get()->result_array();
-        foreach ($rows as &$r) {
-            $r['points'] = $this->rm_to_points((float)$r['amount']);
-            $r['amount_rm'] = (float)$r['amount'];
-            $r['royalty_type'] = ($r['source'] === 'royalty_earn') ? 'earn' : 'redeem';
-        }
-        unset($r);
-
-        // Summary totals
-        $sumEarn = $this->db->select_sum('amount')
-            ->where('source', 'royalty_earn')
-            ->get('customer_wallet_transactions')->row();
-        $sumRedeem = $this->db->select_sum('amount')
-            ->where('source', 'order_payment')
-            ->like('description', 'Royalty', 'both')
-            ->get('customer_wallet_transactions')->row();
-
-        return [
-            'rows'  => $rows,
-            'total' => $total,
-            'summary' => [
-                'earned_rm'    => round((float)($sumEarn->amount ?? 0), 2),
-                'earned_pts'   => $this->rm_to_points((float)($sumEarn->amount ?? 0)),
-                'redeemed_rm'  => round((float)($sumRedeem->amount ?? 0), 2),
-                'redeemed_pts' => $this->rm_to_points((float)($sumRedeem->amount ?? 0)),
-            ],
+            // Nested for checkout convenience — balance is royalty ledger, not wallet cash
+            'royalty'           => $CI->Sk_Royalty_model->get_info($userId),
         ];
     }
 

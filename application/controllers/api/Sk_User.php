@@ -166,7 +166,28 @@ class Sk_User extends Sk_Base_Api {
     public function wallet() {
         $this->auth_required();
         $this->load->model('Sk_Customer_wallet_model');
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
         $this->success($this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']));
+    }
+
+    public function royalty() {
+        $this->auth_required();
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
+        $this->load->model('Sk_Royalty_model');
+        $this->success($this->Sk_Royalty_model->get_info($this->user['user_id']));
+    }
+
+    public function royalty_transactions() {
+        $this->auth_required();
+        $this->load->helper('sk_royalty');
+        sk_royalty_ensure_schema();
+        $this->load->model('Sk_Royalty_model');
+        $limit  = min(50, max(1, (int)($this->input->get('limit') ?: 20)));
+        $offset = max(0, (int)($this->input->get('offset') ?: 0));
+        $result = $this->Sk_Royalty_model->get_transactions($this->user['user_id'], $limit, $offset);
+        $this->success(['rows' => $result['rows'], 'transactions' => $result['rows'], 'total' => $result['total']]);
     }
 
     public function wallet_transactions() {

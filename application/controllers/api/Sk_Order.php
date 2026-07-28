@@ -143,7 +143,7 @@ class Sk_Order extends Sk_Base_Api {
         $royalty_used_points = 0;
         $royalty_used_rm     = 0.0;
 
-        $this->load->model('Sk_Customer_wallet_model');
+        $this->load->model(['Sk_Customer_wallet_model', 'Sk_Royalty_model']);
         $this->load->helper('sk_royalty');
         sk_royalty_ensure_schema();
         $wallet_enabled = $this->Sk_Customer_wallet_model->is_enabled();
@@ -151,10 +151,9 @@ class Sk_Order extends Sk_Base_Api {
         $royalty_enabled = sk_royalty_enabled($settingsAll);
         $minRoyaltyPts = sk_royalty_min_redeem_points($settingsAll);
 
-        // Royalty redeem acts like coupon → pays via wallet RM
+        // Royalty redeem is a coupon-style discount from royalty ledger (not wallet cash)
         if ($use_royalty && $royalty_enabled) {
-            $wInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
-            $availPts = (int)($wInfo['points'] ?? 0);
+            $availPts = $this->Sk_Royalty_model->get_points($user_id);
             if ($availPts < $minRoyaltyPts) {
                 return $this->error('Need at least ' . $minRoyaltyPts . ' royalty points to redeem. You have ' . $availPts . '.');
             }
@@ -163,13 +162,11 @@ class Sk_Order extends Sk_Base_Api {
                 return $this->error('Minimum redeem is ' . $minRoyaltyPts . ' royalty points.');
             }
             $royalty_used_points = $ptsToUse;
-            $royalty_used_rm = $this->Sk_Customer_wallet_model->points_to_rm($ptsToUse);
-            $use_wallet = true;
+            $royalty_used_rm = $this->Sk_Royalty_model->points_to_rm($ptsToUse);
         }
 
-        $uses_wallet    = ($payment_method === 'wallet')
-            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled)
-            || ($use_royalty && $royalty_enabled);
+        $uses_wallet = ($payment_method === 'wallet')
+            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled);
 
         if ($payment_method === 'wallet' && !$wallet_enabled) {
             return $this->error('Wallet payments are not enabled.');
@@ -185,6 +182,19 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
+        // Apply royalty as discount before tax (separate from wallet)
+        if ($royalty_used_rm > 0) {
+            $maxRoyaltyRm = round(max(0, $subtotal - $discount), 2);
+            $royalty_used_rm = round(min($royalty_used_rm, $maxRoyaltyRm), 2);
+            $royalty_used_points = $this->Sk_Royalty_model->rm_to_points($royalty_used_rm);
+            if ($royalty_used_points < $minRoyaltyPts || $royalty_used_rm <= 0) {
+                $royalty_used_points = 0;
+                $royalty_used_rm = 0.0;
+            } else {
+                $discount = round($discount + $royalty_used_rm, 2);
+            }
+        }
+
         $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
         $taxable_amount = max(0, $subtotal - $discount);
         $tax      = round($taxable_amount * ($settings['tax_rate'] ?? 18) / 100, 2);
@@ -192,13 +202,7 @@ class Sk_Order extends Sk_Base_Api {
 
         if ($uses_wallet && $wallet_enabled && $total > 0) {
             $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
-            if ($royalty_used_rm > 0) {
-                $wallet_amount = round(min($royalty_used_rm, (float)($walletInfo['balance'] ?? 0), $total), 2);
-                $royalty_used_rm = $wallet_amount;
-                $royalty_used_points = $this->Sk_Customer_wallet_model->rm_to_points($wallet_amount);
-            } else {
-                $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
-            }
+            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
         }
 
         if ($payment_method === 'wallet') {
@@ -276,11 +280,9 @@ class Sk_Order extends Sk_Base_Api {
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
         if ($wallet_amount > 0) {
-            $payDesc = $royalty_used_points > 0
-                ? ('Royalty ' . $royalty_used_points . ' pts for order #' . $order_id)
-                : ($gateway_amount > 0
-                    ? ('Partial wallet payment for order #' . $order_id)
-                    : ('Order #' . $order_id));
+            $payDesc = $gateway_amount > 0
+                ? ('Partial wallet payment for order #' . $order_id)
+                : ('Order #' . $order_id);
             if (!$this->Sk_Customer_wallet_model->apply_wallet_payment(
                 $user_id,
                 $wallet_amount,
@@ -290,6 +292,24 @@ class Sk_Order extends Sk_Base_Api {
                 $this->db->where('id', $order_id)->delete('orders');
                 $this->db->where('order_id', $order_id)->delete('order_items');
                 return $this->error('Insufficient wallet balance for this order.');
+            }
+        }
+
+        if ($royalty_used_points > 0 && $royalty_used_rm > 0) {
+            if (!$this->Sk_Royalty_model->debit(
+                $user_id,
+                $royalty_used_points,
+                $royalty_used_rm,
+                'ORD-' . $order_id . '-ROYALTY-REDEEM',
+                'Royalty redeem ' . $royalty_used_points . ' pts (RM ' . number_format($royalty_used_rm, 2) . ') for order #' . $order_id,
+                $order_id
+            )) {
+                if ($wallet_amount > 0) {
+                    $this->Sk_Customer_wallet_model->refund_order_payment($user_id, $order_id, $wallet_amount);
+                }
+                $this->db->where('id', $order_id)->delete('orders');
+                $this->db->where('order_id', $order_id)->delete('order_items');
+                return $this->error('Insufficient royalty points for this order.');
             }
         }
 

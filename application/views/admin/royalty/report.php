@@ -2,7 +2,7 @@
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div>
     <h5 class="sk-page-title mb-0"><i class="bi bi-stars text-warning me-2"></i>Royalty Points Report</h5>
-    <div class="small text-muted mt-1">Earn after every order · RM 500 purchase = 500 pts (RM 100) · Redeem from 100+ pts on cart</div>
+    <div class="small text-muted mt-1">Separate from wallet · Earn after every order · RM 500 purchase = 500 pts (RM 100) · Redeem from 100+ pts on cart</div>
   </div>
   <span class="badge bg-warning-subtle text-dark border">500 pts = RM 100 · <?= (float)$points_per_rm ?> pts / RM · Min redeem <?= (int)$min_redeem ?> pts</span>
 </div>
@@ -31,6 +31,7 @@
       <div class="card-body small">
         <strong>How it works</strong>
         <ul class="mb-0 mt-1 ps-3">
+          <li>Royalty is separate from wallet cash (top-ups / wallet pay).</li>
           <li>Points generate only after order (paid / COD).</li>
           <li>1 point per RM 1 purchase → RM 500 = 500 pts = RM 100 credit.</li>
           <li>On cart, when balance ≥ <?= (int)$min_redeem ?> pts, customer can apply like a coupon (<code>use_royalty</code>).</li>
@@ -82,7 +83,7 @@
           <th>Points</th>
           <th>Reference</th>
           <th>Description</th>
-          <th>Balance After</th>
+          <th>Points Balance</th>
         </tr>
       </thead>
       <tbody>
@@ -106,7 +107,10 @@
           <td><?= (int)$r['points'] ?> pts</td>
           <td class="small font-monospace"><?= htmlspecialchars($r['reference'] ?? '') ?></td>
           <td class="small"><?= htmlspecialchars($r['description'] ?? '') ?></td>
-          <td>RM <?= number_format((float)$r['balance_after'], 2) ?></td>
+          <td>
+            <div class="fw-semibold"><?= (int)($r['balance_after_points'] ?? 0) ?> pts</div>
+            <div class="small text-muted">≈ RM <?= number_format((float)$r['balance_after'], 2) ?></div>
+          </td>
         </tr>
         <?php endforeach; endif; ?>
       </tbody>
