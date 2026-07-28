@@ -225,6 +225,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       </li>
 
       <li class="nav-item">
+        <a href="<?= site_url('shopkart/api-explorer') ?>"
+           class="nav-link sk-nav-link <?= $uri==='api-explorer'?'active':'' ?>">
+          <i class="bi bi-braces-asterisk me-2"></i> Mobile API Explorer
+        </a>
+      </li>
+
+      <li class="nav-item">
         <a href="<?= site_url('shopkart/seo') ?>"
            class="nav-link sk-nav-link <?= sk_active($uri,'seo') ?>">
           <i class="bi bi-search me-2"></i> SEO Manager

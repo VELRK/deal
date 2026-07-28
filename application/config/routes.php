@@ -452,6 +452,8 @@ $route['shopkart/coupon-report'] = 'admin/CouponReport/index';
 $route['shopkart/settings'] = 'admin/Settings/index';
 $route['shopkart/settings/update'] = 'admin/Settings/update';
 $route['shopkart/settings/test_smtp'] = 'admin/Settings/test_smtp';
+// Mobile API Explorer (Postman-style customer API docs + live tester)
+$route['shopkart/api-explorer'] = 'admin/Api_explorer/index';
 // Reviews (admin)
 $route['shopkart/wishlists'] = 'admin/Wishlists/index';
 $route['shopkart/wishlists/delete/(:num)'] = 'admin/Wishlists/delete/$1';
@@ -521,6 +523,10 @@ $route['shopkart-api/orders']['GET'] = 'api/Sk_Order/index';
 $route['shopkart-api/order/(:num)']['GET']          = 'api/Sk_Order/show/$1';
 $route['shopkart-api/order/(:num)/cancel']['POST']   = 'api/Sk_Order/cancel/$1';
 $route['shopkart-api/shipping/track']['POST'] = 'api/Sk_Shipping/track';
+$route['shopkart-api/shipping/jt-webhook']['POST'] = 'api/Sk_Shipping/jt_webhook';
+$route['shopkart-api/shipping/jt-webhook']['GET']  = 'api/Sk_Shipping/jt_webhook';
+$route['shopkart-api/shipping/jt_webhook']['POST'] = 'api/Sk_Shipping/jt_webhook';
+$route['shopkart-api/shipping/jt_webhook']['GET']  = 'api/Sk_Shipping/jt_webhook';
 // Promo
 $route['shopkart-api/apply-coupon']['POST'] = 'api/Sk_Promo/apply';
 // Payment
