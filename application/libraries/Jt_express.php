@@ -39,7 +39,8 @@ class Jt_express {
         $jtCfg = sk_jt_express_config();
 
         $this->enabled = !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0';
-        $this->sandbox = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
+        // Do not use empty() — PHP empty('0') === true would force sandbox forever.
+        $this->sandbox = sk_jt_express_is_sandbox($settings);
         $this->default_weight = trim($settings['jt_express_default_weight'] ?? '1') ?: '1';
 
         // Safety: DB still holding demo API account while sandbox is OFF → force production.

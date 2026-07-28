@@ -314,7 +314,7 @@ class Orders extends Sk_Base {
         }
 
         $identity = $this->jt_express->debug_identity();
-        $sandboxOn = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
+        $sandboxOn = sk_jt_express_is_sandbox($settings);
 
         // Sandbox uses editable Settings sender; production uses config sender.
         if ($sandboxOn) {

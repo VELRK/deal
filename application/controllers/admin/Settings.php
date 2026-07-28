@@ -79,6 +79,11 @@ class Settings extends Sk_Base {
 
         $this->Sk_Admin_model->save_settings($data);
         $this->session->set_flashdata('success', 'Settings saved successfully.');
+        $tab = trim((string)$this->input->post('settings_tab'));
+        if ($tab !== '' && preg_match('/^[a-z0-9_-]+$/i', $tab)) {
+            redirect('admin/settings?tab=' . rawurlencode($tab));
+            return;
+        }
         redirect('admin/settings');
     }
 

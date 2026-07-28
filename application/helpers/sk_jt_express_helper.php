@@ -2,6 +2,14 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
+ * Whether JT Express sandbox mode is active.
+ * IMPORTANT: do not use empty() — PHP empty('0') is true, which breaks Sandbox OFF.
+ */
+function sk_jt_express_is_sandbox(array $settings) {
+    return (string)($settings['jt_express_sandbox'] ?? '1') !== '0';
+}
+
+/**
  * Load JT Express config (sandbox + production credentials).
  * Falls back to direct include if CI config->load fails (common on some deploys).
  *

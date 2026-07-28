@@ -3,6 +3,7 @@
 </div>
 
 <form action="<?= site_url('admin/settings/update') ?>" method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="settings_tab" id="settingsTabInput" value="general">
 
   <!-- Nav Tabs -->
   <ul class="nav nav-tabs mb-3" id="settingsTabs">
@@ -231,7 +232,7 @@
             $jtProd = is_array($jtCfg['production'] ?? null) ? $jtCfg['production'] : [];
             $jtSb = is_array($jtCfg['sandbox'] ?? null) ? $jtCfg['sandbox'] : [];
             $jtUrls = is_array($jtCfg['api_urls'] ?? null) ? $jtCfg['api_urls'] : [];
-            $isSandbox = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
+            $isSandbox = sk_jt_express_is_sandbox($settings);
           ?>
           <div class="alert alert-info small">
             <i class="bi bi-truck me-1"></i>
@@ -257,6 +258,7 @@
                   <?= $isSandbox ? 'checked' : '' ?>>
                 <label class="form-check-label" for="jtSandbox">Sandbox (demo API)</label>
               </div>
+              <div class="form-text">Uncheck for live production orders.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">Default parcel weight (kg)</label>
@@ -572,12 +574,22 @@
 
 <script>
 (function () {
+  var tabInput = document.getElementById('settingsTabInput');
   var params = new URLSearchParams(window.location.search);
   var tab = params.get('tab');
-  if (!tab) return;
-  var btn = document.querySelector('[data-bs-target="#tab-' + tab + '"]');
-  if (btn && window.bootstrap) {
-    bootstrap.Tab.getOrCreateInstance(btn).show();
+  if (tab) {
+    var btn = document.querySelector('[data-bs-target="#tab-' + tab + '"]');
+    if (btn && window.bootstrap) {
+      bootstrap.Tab.getOrCreateInstance(btn).show();
+    }
+    if (tabInput) tabInput.value = tab;
   }
+  document.querySelectorAll('#settingsTabs [data-bs-toggle="tab"]').forEach(function (el) {
+    el.addEventListener('shown.bs.tab', function (e) {
+      if (!tabInput) return;
+      var target = e.target.getAttribute('data-bs-target') || '';
+      tabInput.value = target.replace('#tab-', '');
+    });
+  });
 })();
 </script>

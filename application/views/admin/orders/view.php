@@ -174,7 +174,7 @@
     <div class="card sk-table-card shadow-sm mb-3 border-warning">
       <div class="card-header bg-white border-0 py-3 fw-semibold">
         <i class="bi bi-truck me-2 text-warning"></i>JT Express
-        <?php if (!empty($settings['jt_express_sandbox']) && $settings['jt_express_sandbox'] !== '0'): ?>
+        <?php if (sk_jt_express_is_sandbox($settings)): ?>
           <span class="badge bg-secondary ms-1">Sandbox</span>
         <?php endif; ?>
       </div>
