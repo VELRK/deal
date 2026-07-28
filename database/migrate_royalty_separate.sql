@@ -220,8 +220,15 @@ SELECT 'royalty_enabled', '1' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'royalty_enabled');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'royalty_min_redeem_points', '100' FROM DUAL
+SELECT 'royalty_min_redeem_points', '500' FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'royalty_min_redeem_points');
+
+UPDATE `settings` SET `value` = '500'
+WHERE `key` = 'royalty_min_redeem_points' AND `value` = '100';
+
+INSERT INTO `settings` (`key`, `value`)
+SELECT 'royalty_min_redeem_rm', '100' FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'royalty_min_redeem_rm');
 
 INSERT INTO `settings` (`key`, `value`)
 SELECT 'royalty_earn_points_per_rm', '1' FROM DUAL

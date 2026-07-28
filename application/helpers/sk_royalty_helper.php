@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Royalty points — separate from wallet cash.
- * Earn after paid/COD orders; redeem like a coupon (min 100 pts).
+ * Earn after paid/COD orders; redeem like a coupon when balance ≥ RM 100 (500 pts).
  * Rate: 1 point per RM 1 spent → RM 500 = 500 pts = RM 100 credit
  * (redeem value uses wallet_points_per_rm, default 5 pts / RM).
  */
@@ -64,7 +64,9 @@ function sk_royalty_ensure_schema() {
 
     $defaults = [
         'royalty_enabled'           => '1',
-        'royalty_min_redeem_points' => '100',
+        // 500 pts = RM 100 redeem value (5 pts / RM)
+        'royalty_min_redeem_points' => '500',
+        'royalty_min_redeem_rm'     => '100',
         'royalty_earn_points_per_rm'=> '1',
     ];
     $hasGroup = $CI->db->field_exists('group', 'settings');
@@ -79,7 +81,22 @@ function sk_royalty_ensure_schema() {
         $CI->db->insert('settings', $row);
     }
 
+    // Legacy min was 100 pts (RM 20) — raise to 500 pts (RM 100) once
+    $minPts = $CI->db->where('key', 'royalty_min_redeem_points')->get('settings')->row_array();
+    if ($minPts && (int)($minPts['value'] ?? 0) === 100) {
+        $CI->db->where('key', 'royalty_min_redeem_points')->update('settings', ['value' => '500']);
+    }
+    if ((int)$CI->db->where('key', 'royalty_min_redeem_rm')->count_all_results('settings') < 1) {
+        $row = ['key' => 'royalty_min_redeem_rm', 'value' => '100'];
+        if ($hasGroup) {
+            $row['group'] = 'wallet';
+        }
+        $CI->db->insert('settings', $row);
+    }
+
     sk_royalty_migrate_wallet_credits();
+    sk_royalty_backfill_from_orders();
+    sk_royalty_backfill_paid_orders();
 }
 
 /**
@@ -187,14 +204,26 @@ function sk_royalty_enabled(array $settings = null): bool {
     return ($settings['royalty_enabled'] ?? '1') !== '0';
 }
 
+/** Minimum royalty value (RM) required to show/redeem on cart. Default RM 100. */
+function sk_royalty_min_redeem_rm(array $settings = null): float {
+    if ($settings === null) {
+        $CI =& get_instance();
+        $CI->load->model('Sk_Admin_model');
+        $settings = $CI->Sk_Admin_model->get_settings();
+    }
+    $n = (float)($settings['royalty_min_redeem_rm'] ?? 100);
+    return $n > 0 ? $n : 100.0;
+}
+
+/** Minimum royalty points to redeem. Default 500 (= RM 100 at 5 pts/RM). */
 function sk_royalty_min_redeem_points(array $settings = null): int {
     if ($settings === null) {
         $CI =& get_instance();
         $CI->load->model('Sk_Admin_model');
         $settings = $CI->Sk_Admin_model->get_settings();
     }
-    $n = (int)($settings['royalty_min_redeem_points'] ?? 100);
-    return $n > 0 ? $n : 100;
+    $n = (int)($settings['royalty_min_redeem_points'] ?? 500);
+    return $n > 0 ? $n : 500;
 }
 
 /** Points earned for a purchase amount (RM). Default 1 pt per RM. */
@@ -209,6 +238,101 @@ function sk_royalty_earn_points_for_amount(float $purchaseRm, array $settings = 
         $rate = 1;
     }
     return (int)floor(max(0, $purchaseRm) * $rate);
+}
+
+/**
+ * Sync order.royalty_earned_* into royalty ledger when ledger row is missing.
+ */
+function sk_royalty_backfill_from_orders(): void {
+    $CI =& get_instance();
+    $flag = $CI->db->where('key', 'royalty_orders_backfilled')->get('settings')->row_array();
+    if (($flag['value'] ?? '') === '1') {
+        return;
+    }
+    if (!$CI->db->table_exists('customer_royalty_transactions')
+        || !$CI->db->field_exists('royalty_earned_points', 'orders')) {
+        return;
+    }
+
+    $CI->load->model('Sk_Royalty_model');
+    $orders = $CI->db->select('id, user_id, royalty_earned_points, royalty_earned_rm, created_at')
+        ->where('royalty_earned_points >', 0)
+        ->get('orders')
+        ->result_array();
+
+    foreach ($orders as $o) {
+        $userId = (int)$o['user_id'];
+        $orderId = (int)$o['id'];
+        $points = (int)$o['royalty_earned_points'];
+        $rm = round((float)$o['royalty_earned_rm'], 2);
+        if ($userId < 1 || $points < 1) {
+            continue;
+        }
+        if ($rm <= 0) {
+            $rm = $CI->Sk_Royalty_model->points_to_rm($points);
+        }
+        $ref = 'ORD-' . $orderId . '-ROYALTY';
+        $CI->Sk_Royalty_model->credit(
+            $userId,
+            $points,
+            $rm,
+            $ref,
+            'Royalty earn ' . $points . ' pts (RM ' . number_format($rm, 2) . ') for order #' . $orderId,
+            $orderId
+        );
+    }
+
+    $hasGroup = $CI->db->field_exists('group', 'settings');
+    if ($flag) {
+        $CI->db->where('key', 'royalty_orders_backfilled')->update('settings', ['value' => '1']);
+    } else {
+        $ins = ['key' => 'royalty_orders_backfilled', 'value' => '1'];
+        if ($hasGroup) {
+            $ins['group'] = 'wallet';
+        }
+        $CI->db->insert('settings', $ins);
+    }
+}
+
+/**
+ * One-time: credit royalty for paid/COD orders that never got ledger rows
+ * (e.g. orders placed while earn path was broken or before separation).
+ */
+function sk_royalty_backfill_paid_orders(): void {
+    $CI =& get_instance();
+    $flag = $CI->db->where('key', 'royalty_paid_orders_backfilled')->get('settings')->row_array();
+    if (($flag['value'] ?? '') === '1') {
+        return;
+    }
+    if (!$CI->db->table_exists('customer_royalty_transactions')
+        || !$CI->db->table_exists('orders')) {
+        return;
+    }
+
+    $orders = $CI->db->select('*')
+        ->group_start()
+            ->where('payment_status', 'paid')
+            ->or_where('payment_method', 'cod')
+            ->or_where('payment_method', 'COD')
+        ->group_end()
+        ->order_by('id', 'ASC')
+        ->get('orders')
+        ->result_array();
+
+    foreach ($orders as $order) {
+        sk_royalty_credit_for_order($order);
+    }
+
+    $hasGroup = $CI->db->field_exists('group', 'settings');
+    if ($flag) {
+        $CI->db->where('key', 'royalty_paid_orders_backfilled')->update('settings', ['value' => '1']);
+    } else {
+        $ins = ['key' => 'royalty_paid_orders_backfilled', 'value' => '1'];
+        if ($hasGroup) {
+            $ins['group'] = 'wallet';
+        }
+        $CI->db->insert('settings', $ins);
+    }
 }
 
 /**
@@ -240,7 +364,7 @@ function sk_royalty_credit_for_order(array $order): array {
         ->where('reference', $ref)
         ->where('type', 'earn')
         ->count_all_results('customer_royalty_transactions');
-    if ($exists > 0 || (int)($order['royalty_earned_points'] ?? 0) > 0) {
+    if ($exists > 0) {
         return [
             'success' => true,
             'points'  => (int)($order['royalty_earned_points'] ?? 0),
@@ -249,7 +373,39 @@ function sk_royalty_credit_for_order(array $order): array {
         ];
     }
 
-    $purchaseRm = round((float)($order['total'] ?? 0), 2);
+    // Order flagged as earned but ledger missing (pre-separation) → sync into ledger
+    $flaggedPts = (int)($order['royalty_earned_points'] ?? 0);
+    if ($flaggedPts > 0) {
+        $flaggedRm = round((float)($order['royalty_earned_rm'] ?? 0), 2);
+        if ($flaggedRm <= 0) {
+            $flaggedRm = $CI->Sk_Royalty_model->points_to_rm($flaggedPts);
+        }
+        $ok = $CI->Sk_Royalty_model->credit(
+            $userId,
+            $flaggedPts,
+            $flaggedRm,
+            $ref,
+            'Royalty earn ' . $flaggedPts . ' pts (RM ' . number_format($flaggedRm, 2) . ') for order #' . $orderId,
+            $orderId
+        );
+        return [
+            'success' => (bool)$ok,
+            'points'  => $flaggedPts,
+            'rm'      => $flaggedRm,
+            'message' => $ok ? 'Royalty synced to ledger.' : 'Sync failed.',
+        ];
+    }
+
+    // Earn on purchase amount: order total + any royalty already applied on this order
+    // (so redeeming royalty does not reduce points earned for the purchase)
+    $purchaseRm = round(
+        (float)($order['total'] ?? 0) + (float)($order['royalty_used_rm'] ?? 0),
+        2
+    );
+    if ($purchaseRm <= 0 && isset($order['subtotal'])) {
+        $purchaseRm = round((float)$order['subtotal'], 2);
+    }
+
     $points = sk_royalty_earn_points_for_amount($purchaseRm, $settings);
     if ($points < 1) {
         return ['success' => true, 'points' => 0, 'rm' => 0.0, 'message' => 'No points for this amount.'];

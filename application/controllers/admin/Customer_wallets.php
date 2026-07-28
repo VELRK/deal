@@ -97,6 +97,7 @@ class Customer_wallets extends Sk_Base {
                 'wallet_points_per_rm'             => $this->input->post('wallet_points_per_rm') ?: '5',
                 'royalty_enabled'                  => $this->input->post('royalty_enabled') ? '1' : '0',
                 'royalty_min_redeem_points'        => (string)max(1, (int)$this->input->post('royalty_min_redeem_points')),
+                'royalty_min_redeem_rm'            => (string)max(1, (float)$this->input->post('royalty_min_redeem_rm')),
                 'royalty_earn_points_per_rm'       => (string)max(0.01, (float)$this->input->post('royalty_earn_points_per_rm')),
                 'currency_symbol'                  => $this->input->post('currency_symbol') ?: 'RM',
                 'currency_code'                    => $this->input->post('currency_code') ?: 'MYR',

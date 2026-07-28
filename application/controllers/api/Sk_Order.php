@@ -154,12 +154,18 @@ class Sk_Order extends Sk_Base_Api {
         // Royalty redeem is a coupon-style discount from royalty ledger (not wallet cash)
         if ($use_royalty && $royalty_enabled) {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
-            if ($availPts < $minRoyaltyPts) {
-                return $this->error('Need at least ' . $minRoyaltyPts . ' royalty points to redeem. You have ' . $availPts . '.');
+            $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
+            $minRoyaltyRm = sk_royalty_min_redeem_rm($settingsAll);
+            if ($availPts < $minRoyaltyPts || $availRm < $minRoyaltyRm) {
+                return $this->error(
+                    'Need at least RM ' . number_format($minRoyaltyRm, 0)
+                    . ' (' . $minRoyaltyPts . ' pts) royalty to redeem. You have '
+                    . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').'
+                );
             }
             $ptsToUse = $royalty_points_req > 0 ? min($royalty_points_req, $availPts) : $availPts;
             if ($ptsToUse < $minRoyaltyPts) {
-                return $this->error('Minimum redeem is ' . $minRoyaltyPts . ' royalty points.');
+                return $this->error('Minimum redeem is ' . $minRoyaltyPts . ' royalty points (RM ' . number_format($minRoyaltyRm, 0) . ').');
             }
             $royalty_used_points = $ptsToUse;
             $royalty_used_rm = $this->Sk_Royalty_model->points_to_rm($ptsToUse);

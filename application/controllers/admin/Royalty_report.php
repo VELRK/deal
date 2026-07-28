@@ -33,6 +33,7 @@ class Royalty_report extends Sk_Base {
         $data['filters']       = $filters;
         $data['points_per_rm'] = $this->Sk_Royalty_model->points_per_rm();
         $data['min_redeem']    = sk_royalty_min_redeem_points();
+        $data['min_redeem_rm'] = sk_royalty_min_redeem_rm();
         $data['is_vendor']     = (bool)$this->current_vendor_id();
         $this->render('royalty/report', $data);
     }

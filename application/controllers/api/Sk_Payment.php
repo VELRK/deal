@@ -141,6 +141,9 @@ class Sk_Payment extends Sk_Base_Api {
         if ($order_id > 0) {
             $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
             if ($existing && ($existing['payment_status'] ?? '') === 'paid') {
+                $this->load->helper('sk_royalty');
+                sk_royalty_credit_for_order($existing);
+                $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
                 return $this->success(['order' => $existing], 'Payment successful! Your order is confirmed.');
             }
         }

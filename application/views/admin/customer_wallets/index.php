@@ -69,7 +69,11 @@
       </div>
       <div class="col-md-2">
         <label class="form-label small">Min redeem pts (cart)</label>
-        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '100') ?>">
+        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '500') ?>" title="500 pts = RM 100">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Min redeem RM (cart)</label>
+        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Show on cart only when ≥ this RM">
       </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>

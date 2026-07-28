@@ -48,21 +48,27 @@ class Sk_Royalty_model extends CI_Model {
         $settings = $CI->Sk_Admin_model->get_settings();
         $points = $this->get_points($userId);
         $balanceRm = $this->points_to_rm($points);
-        $minRedeem = sk_royalty_min_redeem_points($settings);
+        $minRedeemRm = sk_royalty_min_redeem_rm($settings);
+        $minRedeemPts = sk_royalty_min_redeem_points($settings);
         $enabled = sk_royalty_enabled($settings);
+        $canRedeem = $enabled && $balanceRm >= $minRedeemRm && $points >= $minRedeemPts;
         return [
             'enabled'           => $enabled,
             'points'            => $points,
             'balance_rm'        => $balanceRm,
-            'min_redeem_points' => $minRedeem,
-            'can_redeem'        => $enabled && $points >= $minRedeem,
-            'show_on_cart'      => $enabled && $points >= $minRedeem,
+            'min_redeem_points' => $minRedeemPts,
+            'min_redeem_rm'     => $minRedeemRm,
+            'can_redeem'        => $canRedeem,
+            // Cart/checkout: only when royalty value ≥ RM 100
+            'show_on_cart'      => $canRedeem,
             'points_per_rm'     => $this->points_per_rm(),
             'conversion_label'  => '500 points = RM 100',
             'earn_label'        => 'RM 500 purchase = 500 pts (RM 100)',
-            'hint'              => $enabled && $points >= $minRedeem
+            'hint'              => $canRedeem
                 ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2) . '). Apply at checkout like a coupon.')
-                : ('Earn royalty on every paid order. Need ' . $minRedeem . '+ points to redeem on cart.'),
+                : ('Earn royalty on every paid order. Need RM ' . number_format($minRedeemRm, 0)
+                    . '+ (' . $minRedeemPts . ' pts) to redeem on cart. You have '
+                    . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),
         ];
     }
 
