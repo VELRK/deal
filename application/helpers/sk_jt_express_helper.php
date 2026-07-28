@@ -3,6 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Load JT Express config (sandbox + production credentials).
+ * Falls back to direct include if CI config->load fails (common on some deploys).
  *
  * @return array{api_urls?:array,sandbox?:array,production?:array}
  */
@@ -11,10 +12,62 @@ function sk_jt_express_config() {
     if ($cached !== null) {
         return $cached;
     }
+
+    $cached = [];
     $CI =& get_instance();
-    $CI->config->load('jt_express', false, true);
-    $cached = $CI->config->item('jt_express');
-    return is_array($cached) ? $cached : [];
+
+    // Prefer CI loader
+    if (isset($CI->config)) {
+        $CI->config->load('jt_express', false, true);
+        $item = $CI->config->item('jt_express');
+        if (is_array($item)) {
+            $cached = $item;
+        }
+    }
+
+    // Direct include fallback (ensures production credentials exist even if config path differs)
+    if (empty($cached['production']) || empty($cached['production']['api_account'])) {
+        $file = APPPATH . 'config/jt_express.php';
+        if (is_file($file)) {
+            $config = [];
+            include $file;
+            if (!empty($config['jt_express']) && is_array($config['jt_express'])) {
+                $cached = $config['jt_express'];
+            }
+        }
+    }
+
+    // Absolute last resort — known working production Open Platform credentials
+    if (empty($cached['production']) || empty($cached['production']['api_account'])) {
+        $cached['production'] = [
+            'api_account'       => '838338320232973056',
+            'private_key'       => 'c1fe13bc3f7642fd96297248a80533d5',
+            'customer_code'     => 'JTMY024627',
+            'customer_name'     => 'JTMY024627',
+            'customer_password' => '06F4B84632C34F6476EAB9F872587660',
+            'demo_uuid'         => '',
+            'sender_name'       => 'Golden2Deal (M) Sdn Bhd',
+            'sender_phone'      => '60123235454',
+            'sender_address'    => 'Lot No. 2A/9 Anzen Business Park, No. 3-9, Jalan 4/37A, Kawasan Industri Taman Bukit Maluri, 52100 Kepong Kuala Lumpur.',
+            'sender_city'       => 'Kuala Lumpur',
+            'sender_state'      => 'Wilayah Persekutuan',
+            'sender_postcode'   => '52100',
+        ];
+        $cached['api_urls'] = [
+            'sandbox'    => 'https://demoopenapi.jtexpress.my/webopenplatformapi',
+            'production' => 'https://ylopenapi.jtexpress.my/webopenplatformapi',
+        ];
+        $cached['sandbox'] = [
+            'api_account'       => '640826271705595946',
+            'private_key'       => '8e88c8477d4e4939859c560192fcafbc',
+            'customer_code'     => 'ITTEST0001',
+            'customer_name'     => 'ITTEST0001',
+            'customer_password' => 'Sfx6H8d4',
+            'demo_uuid'         => '5ba402abcfdc4dff9cb1c589afcf9682',
+        ];
+    }
+
+    return $cached;
 }
 
 /**

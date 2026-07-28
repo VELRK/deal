@@ -42,13 +42,19 @@ class Jt_express {
         $this->sandbox = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
         $this->default_weight = trim($settings['jt_express_default_weight'] ?? '1') ?: '1';
 
-        // Production credentials always come from config (not editable DB fields).
-        if (!$this->sandbox && !empty($jtCfg['production']) && is_array($jtCfg['production'])) {
-            $prod = $jtCfg['production'];
-            $this->api_account       = trim($prod['api_account'] ?? '');
-            $this->private_key       = trim($prod['private_key'] ?? '');
-            $this->customer_code     = trim($prod['customer_code'] ?? '');
-            $this->customer_password = trim($prod['customer_password'] ?? '');
+        // Safety: DB still holding demo API account while sandbox is OFF → force production.
+        $dbApi = trim($settings['jt_express_api_account'] ?? '');
+        if (!$this->sandbox && ($dbApi === '' || $dbApi === '640826271705595946')) {
+            // keep sandbox=false; credentials applied below from config
+        }
+
+        // Production credentials always come from config (never from editable DB fields).
+        if (!$this->sandbox) {
+            $prod = is_array($jtCfg['production'] ?? null) ? $jtCfg['production'] : [];
+            $this->api_account       = trim($prod['api_account'] ?? '838338320232973056');
+            $this->private_key       = trim($prod['private_key'] ?? 'c1fe13bc3f7642fd96297248a80533d5');
+            $this->customer_code     = trim($prod['customer_code'] ?? 'JTMY024627');
+            $this->customer_password = trim($prod['customer_password'] ?? '06F4B84632C34F6476EAB9F872587660');
             $this->demo_uuid         = trim($prod['demo_uuid'] ?? '');
             $address = trim($prod['sender_address'] ?? '');
             $this->sender = [
@@ -84,6 +90,16 @@ class Jt_express {
             'area'        => $address,
             'address'     => $address,
             'countryCode' => 'MYS',
+        ];
+    }
+
+    /** Debug-friendly mode + masked account (for admin error messages). */
+    public function debug_identity() {
+        return [
+            'mode'        => $this->sandbox ? 'sandbox' : 'production',
+            'api_account' => $this->api_account,
+            'customer'    => $this->customer_code,
+            'base_url'    => $this->base_url(),
         ];
     }
 

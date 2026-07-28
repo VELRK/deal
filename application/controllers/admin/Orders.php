@@ -305,25 +305,33 @@ class Orders extends Sk_Base {
         }
 
         $settings = $this->Sk_Admin_model->get_settings();
-        $this->load->library('Jt_express', $settings);
+        $this->load->helper('sk_jt_express');
+        // Always construct fresh (CI will not re-run constructor if library already loaded).
+        require_once APPPATH . 'libraries/Jt_express.php';
+        $this->jt_express = new Jt_express($settings);
         if (!$this->jt_express->is_enabled()) {
             return ['success' => false, 'message' => 'Enable JT Express in Settings → JT Express tab.'];
         }
 
-        // Validate sender config before calling JT (common cause of "order not create")
-        $missing = [];
-        foreach (['jt_express_sender_phone' => 'Sender phone', 'jt_express_sender_address' => 'Sender address',
-                  'jt_express_sender_city' => 'Sender city', 'jt_express_sender_state' => 'Sender state',
-                  'jt_express_sender_postcode' => 'Sender postcode'] as $key => $label) {
-            if (trim((string)($settings[$key] ?? '')) === '') {
-                $missing[] = $label;
+        $identity = $this->jt_express->debug_identity();
+        $sandboxOn = empty($settings['jt_express_sandbox']) || $settings['jt_express_sandbox'] !== '0';
+
+        // Sandbox uses editable Settings sender; production uses config sender.
+        if ($sandboxOn) {
+            $missing = [];
+            foreach (['jt_express_sender_phone' => 'Sender phone', 'jt_express_sender_address' => 'Sender address',
+                      'jt_express_sender_city' => 'Sender city', 'jt_express_sender_state' => 'Sender state',
+                      'jt_express_sender_postcode' => 'Sender postcode'] as $key => $label) {
+                if (trim((string)($settings[$key] ?? '')) === '') {
+                    $missing[] = $label;
+                }
             }
-        }
-        if ($missing) {
-            return [
-                'success' => false,
-                'message' => 'Cannot create JT order. Fill in Settings → JT Express: ' . implode(', ', $missing) . '.',
-            ];
+            if ($missing) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot create JT order. Fill in Settings → JT Express: ' . implode(', ', $missing) . '.',
+                ];
+            }
         }
         if (trim((string)($order['shipping_phone'] ?? '')) === '' || trim((string)($order['shipping_pincode'] ?? '')) === '') {
             return [
@@ -335,10 +343,16 @@ class Orders extends Sk_Base {
         $result = $this->jt_express->add_order($order);
         if (!$result['success']) {
             log_message('error', 'JT addOrder failed for order ' . $order['order_number'] . ': ' . json_encode($result['raw'] ?? $result['message']));
+            $msg = $result['message'] ?? 'Failed to create JT shipment.';
+            if (stripos($msg, 'API account does not exist') !== false) {
+                $msg .= ' [mode=' . $identity['mode'] . ', apiAccount=' . $identity['api_account']
+                    . ', url=' . $identity['base_url'] . '] Turn Sandbox OFF and deploy latest code including application/config/jt_express.php.';
+            }
             return [
                 'success' => false,
-                'message' => $result['message'] ?? 'Failed to create JT shipment.',
+                'message' => $msg,
                 'raw'     => $result['raw'] ?? null,
+                'debug'   => $identity,
             ];
         }
 
