@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:live": "node ./build-live.cjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "browser": "open http://localhost:3000/deal/frontend/"
