@@ -23,7 +23,7 @@ class Invoice extends CI_Controller {
         $filename = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $invoice['order_number'] ?? (string)$orderId) . '.pdf';
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($pdf));
         header('Cache-Control: private, max-age=0, must-revalidate');
         echo $pdf;
