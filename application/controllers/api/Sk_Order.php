@@ -150,26 +150,7 @@ class Sk_Order extends Sk_Base_Api {
         $settingsAll = $settings;
         $royalty_enabled = sk_royalty_enabled($settingsAll);
         $minRoyaltyPts = sk_royalty_min_redeem_points($settingsAll);
-
-        // Royalty redeem is a coupon-style discount from royalty ledger (not wallet cash)
-        if ($use_royalty && $royalty_enabled) {
-            $availPts = $this->Sk_Royalty_model->get_points($user_id);
-            $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
-            $minRoyaltyRm = sk_royalty_min_redeem_rm($settingsAll);
-            if ($availPts < $minRoyaltyPts || $availRm < $minRoyaltyRm) {
-                return $this->error(
-                    'Need at least RM ' . number_format($minRoyaltyRm, 0)
-                    . ' (' . $minRoyaltyPts . ' pts) royalty to redeem. You have '
-                    . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').'
-                );
-            }
-            $ptsToUse = $royalty_points_req > 0 ? min($royalty_points_req, $availPts) : $availPts;
-            if ($ptsToUse < $minRoyaltyPts) {
-                return $this->error('Minimum redeem is ' . $minRoyaltyPts . ' royalty points (RM ' . number_format($minRoyaltyRm, 0) . ').');
-            }
-            $royalty_used_points = $ptsToUse;
-            $royalty_used_rm = $this->Sk_Royalty_model->points_to_rm($ptsToUse);
-        }
+        $minRoyaltyRm = sk_royalty_min_redeem_rm($settingsAll);
 
         $uses_wallet = ($payment_method === 'wallet')
             || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled);
@@ -188,40 +169,60 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        // Apply royalty as discount before tax (separate from wallet)
-        if ($royalty_used_rm > 0) {
-            $maxRoyaltyRm = round(max(0, $subtotal - $discount), 2);
-            $royalty_used_rm = round(min($royalty_used_rm, $maxRoyaltyRm), 2);
-            $royalty_used_points = $this->Sk_Royalty_model->rm_to_points($royalty_used_rm);
-            if ($royalty_used_points < $minRoyaltyPts || $royalty_used_rm <= 0) {
-                $royalty_used_points = 0;
-                $royalty_used_rm = 0.0;
-            } else {
-                $discount = round($discount + $royalty_used_rm, 2);
-            }
-        }
-
         $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
         $taxable_amount = max(0, $subtotal - $discount);
         // Storefront does not charge/show GST
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        if ($uses_wallet && $wallet_enabled && $total > 0) {
+        // Royalty pays toward the bill (like wallet), min RM 100. Remainder → COD / online / wallet.
+        if ($use_royalty && $royalty_enabled) {
+            $availPts = $this->Sk_Royalty_model->get_points($user_id);
+            $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
+            if ($availPts < $minRoyaltyPts || $availRm < $minRoyaltyRm) {
+                return $this->error(
+                    'Need at least RM ' . number_format($minRoyaltyRm, 0)
+                    . ' (' . $minRoyaltyPts . ' pts) royalty to pay with points. You have '
+                    . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').'
+                );
+            }
+            if ($total < $minRoyaltyRm) {
+                return $this->error(
+                    'Royalty points can only be used when the bill is RM '
+                    . number_format($minRoyaltyRm, 0) . ' or more.'
+                );
+            }
+            $ptsToUse = $royalty_points_req > 0 ? min($royalty_points_req, $availPts) : $availPts;
+            $wantRm = $this->Sk_Royalty_model->points_to_rm($ptsToUse);
+            $royalty_used_rm = round(min($wantRm, $total), 2);
+            $royalty_used_points = $this->Sk_Royalty_model->rm_to_points($royalty_used_rm);
+            if ($royalty_used_rm < $minRoyaltyRm || $royalty_used_points < $minRoyaltyPts) {
+                return $this->error(
+                    'Minimum royalty payment is RM ' . number_format($minRoyaltyRm, 0)
+                    . ' (' . $minRoyaltyPts . ' pts).'
+                );
+            }
+        }
+
+        $dueAfterRoyalty = round(max(0, $total - $royalty_used_rm), 2);
+
+        if ($uses_wallet && $wallet_enabled && $dueAfterRoyalty > 0) {
             $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
-            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $total), 2);
+            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $dueAfterRoyalty), 2);
         }
 
         if ($payment_method === 'wallet') {
-            if ($wallet_amount < $total) {
+            if (round($wallet_amount + $royalty_used_rm, 2) < $total) {
                 return $this->error('Insufficient wallet balance for this order.');
             }
-        } elseif ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled && $wallet_amount >= $total && $total > 0) {
+        } elseif ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled
+            && $dueAfterRoyalty > 0 && $wallet_amount >= $dueAfterRoyalty) {
             $payment_method = 'wallet';
         }
 
-        $gateway_amount = round(max(0, $total - $wallet_amount), 2);
-        $is_paid_now    = ($payment_method === 'wallet');
+        $gateway_amount = round(max(0, $total - $royalty_used_rm - $wallet_amount), 2);
+        // Fully covered by royalty and/or wallet → paid now (no COD/online remainder)
+        $is_paid_now    = ($gateway_amount <= 0.009);
 
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
@@ -347,7 +348,7 @@ class Sk_Order extends Sk_Base_Api {
         $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
         sk_invoice_ensure_vendor_schema();
         $settings = $this->get_settings();
-        if (in_array($payment_method, ['cod', 'wallet'], true)) {
+        if (in_array($payment_method, ['cod', 'wallet'], true) || $is_paid_now) {
             sk_mail_order_invoice($order, $settings);
         }
         // WhatsApp: placed / paid status

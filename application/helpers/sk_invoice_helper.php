@@ -358,21 +358,22 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 
     $walletPayHtml = '';
     $walletPaid = (float)($invoice['wallet_amount'] ?? 0);
-    if ($walletPaid > 0) {
-        $walletPayHtml = "<div><strong>Wallet:</strong> {$cur}" . number_format($walletPaid, 2) . '</div>';
-        $onlinePaid = max(0, (float)$invoice['total'] - $walletPaid);
-        if ($onlinePaid > 0.009) {
-            $walletPayHtml .= "<div><strong>Online:</strong> {$cur}" . number_format($onlinePaid, 2) . '</div>';
-        }
-    }
     $royaltyUsedPts = (int)($invoice['royalty_used_points'] ?? 0);
     $royaltyUsedRm  = (float)($invoice['royalty_used_rm'] ?? 0);
+    if ($walletPaid > 0) {
+        $walletPayHtml = "<div><strong>Wallet:</strong> {$cur}" . number_format($walletPaid, 2) . '</div>';
+    }
+    if ($royaltyUsedPts > 0 || $royaltyUsedRm > 0) {
+        $walletPayHtml .= "<div><strong>Royalty points:</strong> {$royaltyUsedPts} pts ({$cur}"
+            . number_format($royaltyUsedRm, 2) . ')</div>';
+    }
+    $onlinePaid = max(0, (float)$invoice['total'] - $walletPaid - $royaltyUsedRm);
+    if ($onlinePaid > 0.009 && ($walletPaid > 0 || $royaltyUsedRm > 0)) {
+        $methodLabel = strtolower((string)($invoice['payment_method'] ?? '')) === 'cod' ? 'COD' : 'Online';
+        $walletPayHtml .= "<div><strong>{$methodLabel} due:</strong> {$cur}" . number_format($onlinePaid, 2) . '</div>';
+    }
     $royaltyEarnPts = (int)($invoice['royalty_earned_points'] ?? 0);
     $royaltyEarnRm  = (float)($invoice['royalty_earned_rm'] ?? 0);
-    if ($royaltyUsedPts > 0 || $royaltyUsedRm > 0) {
-        $walletPayHtml .= "<div><strong>Royalty redeemed:</strong> {$royaltyUsedPts} pts ({$cur}"
-            . number_format($royaltyUsedRm > 0 ? $royaltyUsedRm : $walletPaid, 2) . ')</div>';
-    }
     if ($royaltyEarnPts > 0 || $royaltyEarnRm > 0) {
         $walletPayHtml .= "<div><strong>Royalty earned:</strong> {$royaltyEarnPts} pts ({$cur}"
             . number_format($royaltyEarnRm, 2) . ')</div>';

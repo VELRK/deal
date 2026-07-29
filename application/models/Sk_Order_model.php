@@ -314,11 +314,14 @@ class Sk_Order_model extends CI_Model {
             $walletRefund = (float)$order['total'];
         }
 
+        $royaltyRefundPts = (int)($order['royalty_used_points'] ?? 0);
+        $royaltyRefundRm  = round((float)($order['royalty_used_rm'] ?? 0), 2);
+
         $onlineRefund = 0.0;
         $payment = $order['payment'] ?? $this->get_payment($orderId);
         $wasPaid = ($order['payment_status'] ?? '') === 'paid';
         if ($wasPaid && ($order['payment_method'] ?? '') === 'razorpay') {
-            $onlineRefund = round(max(0, (float)$order['total'] - $walletRefund), 2);
+            $onlineRefund = round(max(0, (float)$order['total'] - $walletRefund - $royaltyRefundRm), 2);
         }
 
         if ($onlineRefund > 0) {
@@ -337,6 +340,18 @@ class Sk_Order_model extends CI_Model {
             if (!$this->Sk_Customer_wallet_model->refund_order_payment((int)$order['user_id'], $orderId, $walletRefund)) {
                 return ['ok' => false, 'message' => 'Could not refund wallet balance. Please contact support.'];
             }
+        }
+
+        if ($royaltyRefundPts > 0 && $royaltyRefundRm > 0) {
+            $this->load->model('Sk_Royalty_model');
+            $this->Sk_Royalty_model->credit(
+                (int)$order['user_id'],
+                $royaltyRefundPts,
+                $royaltyRefundRm,
+                'ORD-' . $orderId . '-ROYALTY-REFUND',
+                'Royalty refund ' . $royaltyRefundPts . ' pts (RM ' . number_format($royaltyRefundRm, 2) . ') for cancelled order #' . $orderId,
+                $orderId
+            );
         }
 
         $this->restore_stock_for_order($orderId);

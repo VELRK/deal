@@ -65,9 +65,11 @@ class Sk_Royalty_model extends CI_Model {
             'conversion_label'  => '500 points = RM 100',
             'earn_label'        => 'RM 5000 purchase = 500 pts',
             'hint'              => $canRedeem
-                ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2) . '). Apply at checkout like a coupon.')
+                ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2)
+                    . '). Apply on checkout to pay the bill; remaining amount uses COD or online payment. Min RM '
+                    . number_format($minRedeemRm, 0) . '.')
                 : ('Earn royalty on every paid order (RM 5000 → 500 pts). Need RM ' . number_format($minRedeemRm, 0)
-                    . '+ (' . $minRedeemPts . ' pts) to redeem on cart. You have '
+                    . '+ (' . $minRedeemPts . ' pts) to pay with points. You have '
                     . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),
         ];
     }

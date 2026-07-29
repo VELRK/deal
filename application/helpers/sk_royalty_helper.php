@@ -3,9 +3,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Royalty points — separate from wallet cash.
- * Earn after paid/COD orders; redeem like a coupon when balance ≥ RM 100 (500 pts).
- * Rate: 1 point per RM 1 spent → RM 500 = 500 pts = RM 100 credit
+ * Earn after paid/COD orders; pay with points when balance ≥ RM 100 (500 pts).
  * Earn: RM 5000 purchase → 500 pts (0.1 pts / RM). Redeem: 500 pts → RM 100 (5 pts / RM).
+ * Royalty pays toward the bill; any remainder uses COD / online / wallet.
  */
 function sk_royalty_ensure_schema() {
     static $done = false;
@@ -412,12 +412,8 @@ function sk_royalty_credit_for_order(array $order): array {
         ];
     }
 
-    // Earn on purchase amount: order total + any royalty already applied on this order
-    // (so redeeming royalty does not reduce points earned for the purchase)
-    $purchaseRm = round(
-        (float)($order['total'] ?? 0) + (float)($order['royalty_used_rm'] ?? 0),
-        2
-    );
+    // Earn on order total (royalty is a payment toward the bill, not a discount)
+    $purchaseRm = round((float)($order['total'] ?? 0), 2);
     if ($purchaseRm <= 0 && isset($order['subtotal'])) {
         $purchaseRm = round((float)$order['subtotal'], 2);
     }

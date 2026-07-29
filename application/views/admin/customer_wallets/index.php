@@ -68,12 +68,12 @@
         <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '0.1') ?>" title="RM 5000 → 500 pts (0.1 pts / RM)">
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Min redeem pts (cart)</label>
-        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '500') ?>" title="500 pts = RM 100">
+        <label class="form-label small">Min pay pts (≥ RM 100)</label>
+        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '500') ?>" title="500 pts = RM 100 min payment">
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Min redeem RM (cart)</label>
-        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Show on cart only when ≥ this RM">
+        <label class="form-label small">Min pay RM on bill</label>
+        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Bill &amp; balance must be ≥ this RM to pay with points">
       </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>

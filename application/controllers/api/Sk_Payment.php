@@ -19,8 +19,9 @@ class Sk_Payment extends Sk_Base_Api {
         if (!$order) return $this->error('Order not found.', 404);
         if ($order['payment_status'] === 'paid') return $this->error('Order already paid.');
 
-        $walletPaid = round((float)($order['wallet_amount'] ?? 0), 2);
-        $payAmount  = round(max(0, (float)$order['total'] - $walletPaid), 2);
+        $walletPaid  = round((float)($order['wallet_amount'] ?? 0), 2);
+        $royaltyPaid = round((float)($order['royalty_used_rm'] ?? 0), 2);
+        $payAmount   = round(max(0, (float)$order['total'] - $walletPaid - $royaltyPaid), 2);
         if ($payAmount <= 0) {
             return $this->error('Nothing left to pay online for this order.');
         }
@@ -112,6 +113,7 @@ class Sk_Payment extends Sk_Base_Api {
             'amount'            => $amount_paise,
             'pay_amount'        => $payAmount,
             'wallet_amount'     => $walletPaid,
+            'royalty_used_rm'   => $royaltyPaid,
             'order_total'       => (float)$order['total'],
             'currency'          => $currency,
             'key_id'            => $key_id,
