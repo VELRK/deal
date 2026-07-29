@@ -43,13 +43,28 @@ class Sk_Admin_model extends CI_Model {
     }
 
     public function save_settings($data) {
+        $hasGroup = $this->db->field_exists('group', 'settings');
         foreach ($data as $key => $value) {
-            $exists = $this->db->where('key', $key)->count_all_results('settings');
-            if ($exists) {
+            $key = (string) $key;
+            $value = is_scalar($value) || $value === null ? (string) $value : json_encode($value);
+            $existing = $this->db->get_where('settings', ['key' => $key], 1)->row_array();
+            if ($existing) {
                 $this->db->where('key', $key)->update('settings', ['value' => $value]);
-            } else {
-                $this->db->insert('settings', ['key' => $key, 'value' => $value, 'group' => 'general']);
+                continue;
             }
+            $row = ['key' => $key, 'value' => $value];
+            if ($hasGroup) {
+                if (strpos($key, 'askeva_') === 0) {
+                    $row['group'] = 'whatsapp';
+                } elseif (strpos($key, 'jt_express_') === 0) {
+                    $row['group'] = 'shipping';
+                } elseif (strpos($key, 'isms_') === 0) {
+                    $row['group'] = 'sms';
+                } else {
+                    $row['group'] = 'general';
+                }
+            }
+            $this->db->insert('settings', $row);
         }
     }
 

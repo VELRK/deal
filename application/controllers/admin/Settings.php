@@ -18,7 +18,8 @@ class Settings extends Sk_Base {
     }
 
     public function update() {
-        $this->load->helper('sk_isms');
+        $this->load->helper(['sk_isms', 'sk_whatsapp']);
+        sk_whatsapp_ensure_settings();
         $fields = [
             'site_name', 'site_email', 'site_phone', 'site_address',
             'currency', 'currency_symbol', 'tax_rate', 'shipping_charge',
@@ -74,6 +75,18 @@ class Settings extends Sk_Base {
         $data['jt_express_sandbox'] = $this->input->post('jt_express_sandbox') ? '1' : '0';
         $data['isms_enabled'] = $this->input->post('isms_enabled') ? '1' : '0';
 
+        // Always persist Askeva text fields when present (including empty template).
+        foreach (['askeva_api_url', 'askeva_order_template', 'askeva_template_lang'] as $askevaField) {
+            $posted = $this->input->post($askevaField, TRUE);
+            if ($posted !== null) {
+                $data[$askevaField] = trim((string) $posted);
+            }
+        }
+        $tokenPosted = $this->input->post('askeva_api_token', FALSE);
+        if ($tokenPosted !== null && trim((string) $tokenPosted) !== '') {
+            $data['askeva_api_token'] = trim((string) $tokenPosted);
+        }
+
         // logo upload
         $logo = $this->upload_file('site_logo', 'settings');
         if ($logo) $data['site_logo'] = $logo;
@@ -85,10 +98,10 @@ class Settings extends Sk_Base {
         $this->session->set_flashdata('success', 'Settings saved successfully.');
         $tab = trim((string)$this->input->post('settings_tab'));
         if ($tab !== '' && preg_match('/^[a-z0-9_-]+$/i', $tab)) {
-            redirect('admin/settings?tab=' . rawurlencode($tab));
+            redirect('shopkart/settings?tab=' . rawurlencode($tab));
             return;
         }
-        redirect('admin/settings');
+        redirect('shopkart/settings');
     }
 
     public function test_isms() {

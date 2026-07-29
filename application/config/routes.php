@@ -463,6 +463,15 @@ $route['shopkart/coupon-report'] = 'admin/CouponReport/index';
 $route['shopkart/settings'] = 'admin/Settings/index';
 $route['shopkart/settings/update'] = 'admin/Settings/update';
 $route['shopkart/settings/test_smtp'] = 'admin/Settings/test_smtp';
+$route['admin/settings'] = 'admin/Settings/index';
+$route['admin/settings/update'] = 'admin/Settings/update';
+$route['admin/settings/test_smtp'] = 'admin/Settings/test_smtp';
+$route['admin/settings/test_isms'] = 'admin/Settings/test_isms';
+$route['admin/settings/save_isms'] = 'admin/Settings/save_isms';
+$route['admin/settings/save_test_otp'] = 'admin/Settings/save_test_otp';
+$route['shopkart/settings/test_isms'] = 'admin/Settings/test_isms';
+$route['shopkart/settings/save_isms'] = 'admin/Settings/save_isms';
+$route['shopkart/settings/save_test_otp'] = 'admin/Settings/save_test_otp';
 // Mobile API Explorer (Postman-style customer API docs + live tester)
 $route['shopkart/api-explorer'] = 'admin/Api_explorer/index';
 // Reviews (admin)

@@ -16,20 +16,24 @@ function sk_whatsapp_ensure_settings(): void {
     if (!isset($CI->db)) {
         $CI->load->database();
     }
+    $CI->config->load('whatsapp', true);
+    $fileCfg = $CI->config->item('whatsapp') ?: [];
     $defaults = [
         'askeva_whatsapp_enabled' => '1',
-        'askeva_api_url'          => 'https://backend.askeva.io/v1/message/send-message',
-        'askeva_api_token'        => '5c9fbbe16cbd3ec293504d7d4d758e1adf160554f488609ef64df040d05f2176e44afba64867f635ae34fa48c296203707809db18d5b13e2609176cf18642f10',
+        'askeva_api_url'          => trim((string)($fileCfg['api_url'] ?? 'https://backend.askeva.io/v1/message/send-message'))
+            ?: 'https://backend.askeva.io/v1/message/send-message',
+        'askeva_api_token'        => trim((string)($fileCfg['api_key'] ?? '')),
         // Optional Meta-approved UTILITY template name (2 body params: order no, status). Leave empty to text-only.
         'askeva_order_template'   => '',
         'askeva_template_lang'    => 'en',
     ];
     $hasGroup = $CI->db->field_exists('group', 'settings');
     foreach ($defaults as $key => $value) {
-        if ((int)$CI->db->where('key', $key)->count_all_results('settings') > 0) {
+        $exists = $CI->db->get_where('settings', ['key' => $key], 1)->row_array();
+        if ($exists) {
             continue;
         }
-        $row = ['key' => $key, 'value' => $value];
+        $row = ['key' => $key, 'value' => (string) $value];
         if ($hasGroup) {
             $row['group'] = 'whatsapp';
         }

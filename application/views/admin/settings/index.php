@@ -2,7 +2,7 @@
   <h5 class="sk-page-title"><i class="bi bi-gear me-2 text-warning"></i>Settings</h5>
 </div>
 
-<form action="<?= site_url('admin/settings/update') ?>" method="POST" enctype="multipart/form-data">
+<form action="<?= site_url('shopkart/settings/update') ?>" method="POST" enctype="multipart/form-data">
   <input type="hidden" name="settings_tab" id="settingsTabInput" value="general">
 
   <!-- Nav Tabs -->
@@ -139,8 +139,15 @@
             </div>
             <div class="col-12">
               <label class="form-label">API Token</label>
-              <input type="password" name="askeva_api_token" class="form-control"
+              <input type="text" name="askeva_api_token" class="form-control font-monospace" autocomplete="off"
                 value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Askeva token' ?>">
+              <?php if (!empty($settings['askeva_api_token'])): ?>
+                <div class="form-text text-success">
+                  Saved in DB (<?= strlen((string)$settings['askeva_api_token']) ?> chars, ends …<?= htmlspecialchars(substr((string)$settings['askeva_api_token'], -6)) ?>).
+                </div>
+              <?php else: ?>
+                <div class="form-text text-warning">No token in database yet — paste and Save Settings.</div>
+              <?php endif; ?>
             </div>
             <div class="col-12">
               <label class="form-label">Optional utility template name</label>
