@@ -244,6 +244,45 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
         ]);
     }
 
+    /**
+     * POST /shopkart-api/affiliate/logout
+     * Blacklists current affiliate JWT.
+     */
+    public function logout() {
+        $aff = $this->_auth_affiliate();
+        $token = $this->sk_jwt->get_token_from_request();
+        if ($token) {
+            $this->sk_jwt->blacklist($token, (int)$aff['id']);
+        }
+        $this->success([], 'Logged out successfully.');
+    }
+
+    /**
+     * GET /shopkart-api/affiliate/ledger?page=&limit=
+     */
+    public function ledger() {
+        $aff = $this->_auth_affiliate();
+        $page = max(1, (int)($this->input->get('page') ?? 1));
+        $limit = min(50, max(1, (int)($this->input->get('limit') ?? 20)));
+        $result = $this->Sk_Affiliate_model->get_ledger((int)$aff['id'], $limit, ($page - 1) * $limit);
+        $this->success([
+            'ledger' => $result['rows'],
+            'total'  => $result['total'],
+            'page'   => $page,
+            'limit'  => $limit,
+        ]);
+    }
+
+    /**
+     * GET /shopkart-api/affiliate/banks
+     * Public bank list for profile/payout dropdowns.
+     */
+    public function banks() {
+        $this->load->model('Sk_Bank_model');
+        $rows = $this->Sk_Bank_model->get_all(true);
+        $this->success(['banks' => $rows]);
+    }
+
     private function _auth_affiliate(): array {
         $payload = $this->sk_jwt->get_user_from_request();
         if (!$payload || empty($payload['affiliate_id'])) {

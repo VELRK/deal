@@ -614,9 +614,12 @@ $route['shopkart-api/blog/(:any)']['GET']    = 'api/Sk_Blog/show/$1';
 // Affiliate app API
 $route['shopkart-api/affiliate/login']['POST'] = 'api/Sk_Affiliate_auth/login';
 $route['shopkart-api/affiliate/register']['POST'] = 'api/Sk_Affiliate_auth/register';
+$route['shopkart-api/affiliate/logout']['POST'] = 'api/Sk_Affiliate_auth/logout';
 $route['shopkart-api/affiliate/profile']['GET'] = 'api/Sk_Affiliate_auth/profile';
 $route['shopkart-api/affiliate/dashboard']['GET'] = 'api/Sk_Affiliate_auth/dashboard';
 $route['shopkart-api/affiliate/commissions']['GET'] = 'api/Sk_Affiliate_auth/commissions';
+$route['shopkart-api/affiliate/ledger']['GET'] = 'api/Sk_Affiliate_auth/ledger';
+$route['shopkart-api/affiliate/banks']['GET'] = 'api/Sk_Affiliate_auth/banks';
 $route['shopkart-api/affiliate/payouts']['GET'] = 'api/Sk_Affiliate_auth/payouts';
 $route['shopkart-api/affiliate/payouts/request']['POST'] = 'api/Sk_Affiliate_auth/request_payout';
 $route['shopkart-api/affiliate/check-promo']['GET'] = 'api/Sk_Affiliate_auth/check_promo';
