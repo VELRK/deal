@@ -162,6 +162,48 @@ class Sk_Order_model extends CI_Model {
         return $this->db->count_all_results();
     }
 
+    /**
+     * Orders for JT Express module: shipments created, or ready to create.
+     * @return array{rows:array,total:int}
+     */
+    public function get_jt_shipments(array $filters = [], int $limit = 20, int $offset = 0): array {
+        $this->db->from('orders o');
+        $this->_jt_shipments_where($filters);
+        $total = (int)$this->db->count_all_results();
+
+        $this->db->select('o.*, u.name as customer_name, u.email as customer_email, u.phone as customer_phone')
+            ->from('orders o')
+            ->join('users u', 'u.id = o.user_id', 'left');
+        $this->_jt_shipments_where($filters);
+        $this->db->order_by('o.id', 'DESC')->limit($limit, $offset);
+        $rows = $this->db->get()->result_array();
+        return ['rows' => $rows, 'total' => $total];
+    }
+
+    private function _jt_shipments_where(array $filters): void {
+        $this->db->where_not_in('o.status', ['cancelled', 'returned']);
+        $scope = $filters['scope'] ?? 'all';
+        if ($scope === 'created') {
+            $this->db->where("o.jt_bill_code IS NOT NULL AND o.jt_bill_code != ''", null, false);
+        } elseif ($scope === 'pending') {
+            $this->db->group_start()
+                ->where('o.jt_bill_code IS NULL', null, false)
+                ->or_where('o.jt_bill_code', '')
+                ->group_end();
+            $this->db->where_in('o.status', ['confirmed', 'processing', 'shipped', 'pending']);
+        }
+        if (!empty($filters['search'])) {
+            $q = $filters['search'];
+            $this->db->group_start()
+                ->like('o.order_number', $q)
+                ->or_like('o.jt_bill_code', $q)
+                ->or_like('o.tracking_number', $q)
+                ->or_like('o.shipping_name', $q)
+                ->or_like('o.shipping_phone', $q)
+                ->group_end();
+        }
+    }
+
     // Stats
     public function total_orders()   { return $this->db->count_all('orders'); }
     public function pending_orders() { return $this->db->where('status', 'pending')->count_all_results('orders'); }

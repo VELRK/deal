@@ -196,63 +196,27 @@
     </div>
 
     <?php if (!empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0'): ?>
-    <!-- JT Express -->
+    <!-- JT Express — summary only; full create/track in JT Express module -->
     <div class="card sk-table-card shadow-sm mb-3 border-warning">
-      <div class="card-header bg-white border-0 py-3 fw-semibold">
-        <i class="bi bi-truck me-2 text-warning"></i>JT Express
+      <div class="card-header bg-white border-0 py-3 fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-truck me-2 text-warning"></i>JT Express</span>
         <?php if (sk_jt_express_is_sandbox($settings)): ?>
-          <span class="badge bg-secondary ms-1">Sandbox</span>
+          <span class="badge bg-secondary">Sandbox</span>
         <?php endif; ?>
       </div>
       <div class="card-body">
-        <?php $jtTracks = sk_jt_tracks_from_order($order); ?>
         <div class="small mb-3">
-          <div><span class="text-muted">AWB:</span> <strong id="jtAwb"><?= htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—') ?></strong></div>
-          <div><span class="text-muted">Courier status:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
-          <div><span class="text-muted">Ready to pick up:</span> <?= sk_jt_format_datetime($order['processing_at'] ?? $order['jt_shipment_created_at'] ?? null) ?></div>
-          <?php if (!empty($order['confirmed_at'])): ?>
-          <div><span class="text-muted">Confirmed:</span> <?= sk_jt_format_datetime($order['confirmed_at']) ?></div>
-          <?php endif; ?>
+          <div><span class="text-muted">AWB:</span> <strong><?= htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—') ?></strong></div>
+          <div><span class="text-muted">Courier:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
           <?php if (!empty($order['jt_shipment_created_at'])): ?>
-          <div><span class="text-muted">JT shipment created:</span> <?= sk_jt_format_datetime($order['jt_shipment_created_at']) ?></div>
-          <?php endif; ?>
-          <?php if (!empty($order['shipped_at'])): ?>
-          <div><span class="text-muted">Shipped:</span> <?= sk_jt_format_datetime($order['shipped_at']) ?></div>
-          <?php endif; ?>
-          <?php if (!empty($order['delivered_at'])): ?>
-          <div><span class="text-muted">Delivered:</span> <?= sk_jt_format_datetime($order['delivered_at']) ?></div>
-          <?php endif; ?>
-          <?php if (!empty($order['status_updated_at'])): ?>
-          <div><span class="text-muted">Last status change:</span> <?= sk_jt_format_datetime($order['status_updated_at']) ?></div>
+          <div><span class="text-muted">Created:</span> <?= sk_jt_format_datetime($order['jt_shipment_created_at']) ?></div>
           <?php endif; ?>
         </div>
-        <div class="d-grid gap-2">
-          <?php if (empty($order['jt_bill_code'])): ?>
-          <button type="button" class="btn btn-warning btn-sm fw-semibold" onclick="jtAction('create', <?= (int)$order['id'] ?>)">
-            <i class="bi bi-box-seam me-1"></i> Create JT Shipment
-          </button>
-          <?php else: ?>
-          <a href="<?= site_url('admin/orders/jt_print/'.$order['id']) ?>" target="_blank" class="btn btn-outline-dark btn-sm">
-            <i class="bi bi-printer me-1"></i> Print Label
-          </a>
-          <button type="button" class="btn btn-outline-primary btn-sm" onclick="jtAction('track', <?= (int)$order['id'] ?>)">
-            <i class="bi bi-geo-alt me-1"></i> Track Shipment
-          </button>
-          <?php if (($order['jt_courier_status'] ?? '') !== 'cancelled'): ?>
-          <button type="button" class="btn btn-outline-danger btn-sm" onclick="jtAction('cancel', <?= (int)$order['id'] ?>)">
-            <i class="bi bi-x-circle me-1"></i> Cancel JT Shipment
-          </button>
-          <?php endif; ?>
-          <?php endif; ?>
-        </div>
-        <div id="jtTrackBox" class="mt-3 small <?= $jtTracks ? '' : 'd-none' ?>">
-          <div class="fw-semibold mb-1">JT Express tracking events</div>
-          <ul id="jtTrackList" class="list-unstyled mb-0">
-            <?php foreach ($jtTracks as $ev): ?>
-            <li class="border-bottom py-1"><?= htmlspecialchars(sk_jt_track_event_label($ev)) ?></li>
-            <?php endforeach; ?>
-          </ul>
-        </div>
+        <a href="<?= site_url('shopkart/jt-express/view/'.$order['id']) ?>" class="btn btn-warning btn-sm w-100 fw-semibold">
+          <i class="bi bi-truck me-1"></i>
+          <?= empty($order['jt_bill_code']) ? 'Create / Manage JT Shipment' : 'Detailed Tracking &amp; Manage' ?>
+        </a>
+        <a href="<?= site_url('shopkart/jt-express') ?>" class="btn btn-link btn-sm w-100 mt-1">All JT shipments</a>
       </div>
     </div>
     <?php endif; ?>
@@ -365,35 +329,5 @@ function updateStatus(orderId) {
     if (btn) { btn.disabled = false; btn.textContent = 'Update Status'; }
     alert('Network error. Please try again.');
   });
-}
-function jtAction(action, orderId) {
-  var urls = {
-    create: '<?= site_url('admin/orders/jt_create') ?>/' + orderId,
-    track:  '<?= site_url('admin/orders/jt_track') ?>/' + orderId,
-    cancel: '<?= site_url('admin/orders/jt_cancel') ?>/' + orderId
-  };
-  if (action === 'cancel' && !confirm('Cancel this JT Express shipment?')) return;
-  var payload = {};
-  if (action === 'cancel') payload.reason = 'Cancelled from admin panel';
-  $.post(urls[action], payload, function(res) {
-    if (action === 'track' && res.success && res.tracks && res.tracks.length) {
-      var box = document.getElementById('jtTrackBox');
-      var list = document.getElementById('jtTrackList');
-      list.innerHTML = '';
-      res.tracks.forEach(function(ev) {
-        var li = document.createElement('li');
-        li.className = 'border-bottom py-1';
-        var time = ev.scanTime || ev.time || ev.acceptTime || '';
-        var desc = ev.desc || ev.remark || ev.scanType || JSON.stringify(ev);
-        li.textContent = (time ? time + ' — ' : '') + desc;
-        list.appendChild(li);
-      });
-      box.classList.remove('d-none');
-      setTimeout(function() { location.reload(); }, 1500);
-      return;
-    }
-    alert(res.message || (res.success ? 'Done.' : 'Request failed.'));
-    if (res.success && action !== 'track') location.reload();
-  }, 'json').fail(function() { alert('Network error.'); });
 }
 </script>

@@ -287,7 +287,7 @@
           ?>
           <div class="alert alert-info small">
             <i class="bi bi-truck me-1"></i>
-            JT Express Malaysia Open Platform — create AWB, print label, track &amp; cancel shipments from Admin → Orders.
+            JT Express Malaysia Open Platform — create AWB, print label, track &amp; cancel from Admin → JT Express.
             Turn <strong>Sandbox</strong> OFF to use production credentials from config (<code>application/config/jt_express.php</code>).
             <br><span class="text-muted">Database setup runs automatically when you open this page (no PHP CLI needed). Or import <code>database/jt_express.sql</code> in phpMyAdmin.</span>
             <hr class="my-2">

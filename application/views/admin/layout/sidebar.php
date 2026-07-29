@@ -191,6 +191,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       </li>
 
       <li class="nav-item">
+        <a href="<?= site_url('shopkart/jt-express') ?>"
+           class="nav-link sk-nav-link <?= in_array($uri, ['jt-express','jt_express'], true) ? 'active' : '' ?>">
+          <i class="bi bi-truck me-2"></i> JT Express
+        </a>
+      </li>
+
+      <li class="nav-item">
         <a href="<?= site_url('shopkart/customers') ?>"
            class="nav-link sk-nav-link <?= sk_active($uri,'customers') ?>">
           <i class="bi bi-people me-2"></i> Customers
