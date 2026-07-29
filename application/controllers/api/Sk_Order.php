@@ -63,7 +63,7 @@ class Sk_Order extends Sk_Base_Api {
                     'product_id' => (int)$p['id'],
                     'variant_id' => $variant ? ((int)($variant['id'] ?? 0) ?: null) : null,
                     'name'       => $title,
-                    'available'  => $stock,
+                    'available'  => max(0, $stock),
                     'requested'  => $need,
                 ];
                 continue;
@@ -100,11 +100,15 @@ class Sk_Order extends Sk_Base_Api {
         if (!empty($stock_issues)) {
             $parts = [];
             foreach ($stock_issues as $s) {
-                $parts[] = "'{$s['name']}' (available {$s['available']}, requested {$s['requested']})";
+                if ((int)$s['available'] <= 0) {
+                    $parts[] = "'{$s['name']}' is out of stock";
+                } else {
+                    $parts[] = "'{$s['name']}' (available {$s['available']}, requested {$s['requested']})";
+                }
             }
             $msg = count($stock_issues) === 1
-                ? ('Not enough stock for ' . $parts[0] . '.')
-                : ('Not enough stock for these items: ' . implode('; ', $parts) . '.');
+                ? ('Cannot place order: ' . $parts[0] . '.')
+                : ('Cannot place order — stock issues: ' . implode('; ', $parts) . '.');
             return $this->error($msg, 400, ['stock_issues' => $stock_issues]);
         }
 

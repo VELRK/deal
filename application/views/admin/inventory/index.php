@@ -8,10 +8,30 @@ $pages = max(1, (int)ceil($total / $limit));
     <h5 class="sk-page-title mb-0"><i class="bi bi-boxes text-warning me-2"></i>Inventory</h5>
     <div class="small text-muted mt-1">Product stock levels and links to order history per product</div>
   </div>
-  <a href="<?= site_url('shopkart/products') ?>" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-box-seam me-1"></i> Manage products
-  </a>
+  <div class="d-flex gap-2">
+    <?php if (!empty($neg_count)): ?>
+    <a href="<?= site_url('shopkart/inventory') ?>?fix_stock=1" class="btn btn-sm btn-outline-danger"
+       onclick="return confirm('Reset all negative stock values to 0? You can then edit products to set the correct quantity.');">
+      <i class="bi bi-exclamation-triangle me-1"></i> Fix <?= (int)$neg_count ?> negative stock
+    </a>
+    <?php endif; ?>
+    <a href="<?= site_url('shopkart/products') ?>" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-box-seam me-1"></i> Manage products
+    </a>
+  </div>
 </div>
+
+<?php if ($this->session->flashdata('success')): ?>
+<div class="alert alert-success"><?= $this->session->flashdata('success') ?></div>
+<?php endif; ?>
+
+<?php if (!empty($neg_count)): ?>
+<div class="alert alert-danger">
+  <strong><?= (int)$neg_count ?> product(s)</strong> have negative stock (e.g. -47).
+  Customers cannot buy them (app may show out of stock / not available).
+  Click <strong>Fix negative stock</strong>, then set the real quantity on each product via Edit.
+</div>
+<?php endif; ?>
 
 <form class="card sk-table-card shadow-sm mb-3" method="get">
   <div class="card-body row g-2 align-items-end py-2">
@@ -66,10 +86,12 @@ $pages = max(1, (int)ceil($total / $limit));
         <?php foreach ($rows as $p): ?>
         <?php
           $alert = (int)($p['low_stock_alert'] ?? 5);
-          $isLow = (int)$p['stock'] <= $alert;
+          $stockQty = (int)$p['stock'];
+          $isOut = $stockQty <= 0;
+          $isLow = !$isOut && $stockQty <= $alert;
           $variants = $p['variants'] ?? [];
         ?>
-        <tr>
+        <tr class="<?= $isOut ? 'table-danger' : '' ?>">
           <td>
             <?php if (!empty($p['thumbnail'])): ?>
               <img src="<?= base_url($p['thumbnail']) ?>" class="rounded" width="48" height="48" style="object-fit:cover;">
@@ -95,10 +117,12 @@ $pages = max(1, (int)ceil($total / $limit));
           <?php endif; ?>
           <td><?= htmlspecialchars($p['category_name'] ?? '—') ?></td>
           <td>
-            <?php if ($isLow): ?>
-              <span class="badge bg-danger"><?= number_format((int)$p['stock']) ?> Low</span>
+            <?php if ($isOut): ?>
+              <span class="badge bg-dark"><?= number_format($stockQty) ?> Out of stock</span>
+            <?php elseif ($isLow): ?>
+              <span class="badge bg-danger"><?= number_format($stockQty) ?> Low</span>
             <?php else: ?>
-              <span class="fw-semibold"><?= number_format((int)$p['stock']) ?></span>
+              <span class="fw-semibold"><?= number_format($stockQty) ?></span>
             <?php endif; ?>
           </td>
           <td class="small text-muted"><?= $alert ?></td>

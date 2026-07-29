@@ -53,13 +53,17 @@ class Sk_Cart extends Sk_Base_Api {
 
     private function _stock_error(array $product, $variant, int $need, int $available) {
         $title = $this->_stock_label($product, $variant);
-        $msg = "Not enough stock for '{$title}'. Available: {$available}, requested: {$need}.";
+        if ($available <= 0) {
+            $msg = "'{$title}' is out of stock. Please remove it from your cart.";
+        } else {
+            $msg = "Not enough stock for '{$title}'. Available: {$available}, requested: {$need}.";
+        }
         return $this->error($msg, 400, [
             'stock_issues' => [[
                 'product_id' => (int)($product['id'] ?? 0),
                 'variant_id' => is_array($variant) ? (int)($variant['id'] ?? 0) ?: null : null,
                 'name'       => $title,
-                'available'  => $available,
+                'available'  => max(0, $available),
                 'requested'  => $need,
             ]],
         ]);

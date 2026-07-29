@@ -194,29 +194,91 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function reduce_stock($product_id, $qty, $variant_id = null) {
+        $qty = (int)$qty;
+        if ($qty <= 0 || !(int)$product_id) {
+            return;
+        }
         if ($variant_id && $this->variant_model()->schema_ready()) {
-            $this->db->set('stock', 'stock - ' . (int)$qty, FALSE)
+            $this->db->set('stock', 'GREATEST(stock - ' . $qty . ', 0)', FALSE)
                      ->where('id', (int)$variant_id)
                      ->where('product_id', (int)$product_id)
                      ->update('product_variants');
         }
-        $this->db->set('stock', 'stock - ' . (int)$qty, FALSE)
-                 ->set('total_sold', 'total_sold + ' . (int)$qty, FALSE)
-                 ->where('id', $product_id)
+        $this->db->set('stock', 'GREATEST(stock - ' . $qty . ', 0)', FALSE)
+                 ->set('total_sold', 'total_sold + ' . $qty, FALSE)
+                 ->where('id', (int)$product_id)
                  ->update('products');
+
+        // Keep product stock aligned with variants when packs exist
+        $this->sync_product_stock_from_variants((int)$product_id);
     }
 
     public function restore_stock($product_id, $qty, $variant_id = null) {
+        $qty = (int)$qty;
+        if ($qty <= 0 || !(int)$product_id) {
+            return;
+        }
         if ($variant_id && $this->variant_model()->schema_ready()) {
-            $this->db->set('stock', 'stock + ' . (int)$qty, FALSE)
+            $this->db->set('stock', 'stock + ' . $qty, FALSE)
                      ->where('id', (int)$variant_id)
                      ->where('product_id', (int)$product_id)
                      ->update('product_variants');
         }
-        $this->db->set('stock', 'stock + ' . (int)$qty, FALSE)
-                 ->set('total_sold', 'GREATEST(total_sold - ' . (int)$qty . ', 0)', FALSE)
-                 ->where('id', $product_id)
+        $this->db->set('stock', 'stock + ' . $qty, FALSE)
+                 ->set('total_sold', 'GREATEST(total_sold - ' . $qty . ', 0)', FALSE)
+                 ->where('id', (int)$product_id)
                  ->update('products');
+
+        $this->sync_product_stock_from_variants((int)$product_id);
+    }
+
+    /**
+     * If product has variants, set products.stock = sum of variant stocks.
+     * Also clamps any leftover negatives to 0.
+     */
+    public function sync_product_stock_from_variants(int $product_id): void {
+        if ($product_id <= 0 || !$this->variant_model()->schema_ready()) {
+            return;
+        }
+        if (!$this->db->table_exists('product_variants')) {
+            return;
+        }
+        $sum = $this->db->select_sum('stock')
+            ->where('product_id', $product_id)
+            ->get('product_variants')
+            ->row();
+        if ($sum === null) {
+            return;
+        }
+        // Only sync when at least one variant row exists
+        $count = (int)$this->db->where('product_id', $product_id)->count_all_results('product_variants');
+        if ($count < 1) {
+            // Still clamp product-level negatives
+            $this->db->set('stock', 'GREATEST(stock, 0)', FALSE)
+                     ->where('id', $product_id)
+                     ->where('stock <', 0)
+                     ->update('products');
+            return;
+        }
+        $total = max(0, (int)($sum->stock ?? 0));
+        $this->db->where('id', $product_id)->update('products', ['stock' => $total]);
+    }
+
+    /** Clamp all negative product/variant stocks to 0 (repair bad data). @return int rows touched */
+    public function clamp_negative_stocks(): int {
+        $n = 0;
+        $this->db->set('stock', 0)->where('stock <', 0)->update('products');
+        $n += (int)$this->db->affected_rows();
+        if ($this->variant_model()->schema_ready() && $this->db->table_exists('product_variants')) {
+            $this->db->set('stock', 0)->where('stock <', 0)->update('product_variants');
+            $n += (int)$this->db->affected_rows();
+            // Re-sync products that have variants
+            $ids = $this->db->select('product_id')->group_by('product_id')->get('product_variants')->result_array();
+            foreach ($ids as $row) {
+                $this->sync_product_stock_from_variants((int)$row['product_id']);
+            }
+        }
+        return $n;
     }
 
     public function attach_variants(&$product) {

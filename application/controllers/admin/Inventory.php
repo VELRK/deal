@@ -6,6 +6,17 @@ require_once APPPATH . 'controllers/admin/Sk_Base.php';
 class Inventory extends Sk_Base {
 
     public function index() {
+        // Repair bad negative stock so products are not stuck unpurchasable at -N
+        if ($this->input->get('fix_stock') === '1') {
+            $fixed = $this->Sk_Product_model->clamp_negative_stocks();
+            $this->session->set_flashdata('success',
+                $fixed > 0
+                    ? "Fixed {$fixed} negative stock value(s). Set real quantities via Edit product if items should be sellable."
+                    : 'No negative stock values found.');
+            redirect('shopkart/inventory');
+            return;
+        }
+
         $page   = max(1, (int)$this->input->get('page'));
         $limit  = 20;
         $offset = ($page - 1) * $limit;
@@ -18,6 +29,7 @@ class Inventory extends Sk_Base {
         ];
 
         $result = $this->Sk_Product_model->get_inventory_list($filters, $limit, $offset);
+        $negCount = (int)$this->db->where('stock <', 0)->count_all_results('products');
 
         $data['title']    = 'Inventory';
         $data['rows']     = $result['rows'];
@@ -26,6 +38,7 @@ class Inventory extends Sk_Base {
         $data['limit']    = $limit;
         $data['filters']  = $filters;
         $data['vendor_id']= $vendor_id;
+        $data['neg_count']= $negCount;
         if ($this->is_super_admin()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 200, 0)['rows'];
         }
