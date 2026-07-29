@@ -16,6 +16,21 @@ class Reviews extends Sk_Base {
             ->where('r.status', $status)
             ->order_by('r.created_at', 'DESC')
             ->get()->result_array();
+
+        // Attach media if table exists
+        if (!empty($data['reviews']) && $this->db->table_exists('review_media')) {
+            $ids = array_column($data['reviews'], 'id');
+            $mediaRows = $this->db->where_in('review_id', $ids)->order_by('sort_order', 'ASC')->get('review_media')->result_array();
+            $map = [];
+            foreach ($mediaRows as $m) {
+                $map[(int)$m['review_id']][] = $m;
+            }
+            foreach ($data['reviews'] as &$rev) {
+                $rev['media'] = $map[(int)$rev['id']] ?? [];
+            }
+            unset($rev);
+        }
+
         $data['counts'] = [];
         foreach (['pending','approved','rejected'] as $s) {
             $data['counts'][$s] = $this->db->where('status', $s)->count_all_results('reviews');
@@ -32,8 +47,22 @@ class Reviews extends Sk_Base {
     }
 
     public function delete($id) {
-        $this->db->where('id', $id)->delete('reviews');
-        $this->_recalc_rating($id);
+        $review = $this->db->where('id', (int)$id)->get('reviews')->row_array();
+        if (!$review) return $this->json(['success' => false], 404);
+        $productId = (int)$review['product_id'];
+        // Remove media files
+        if ($this->db->table_exists('review_media')) {
+            $media = $this->db->where('review_id', (int)$id)->get('review_media')->result_array();
+            foreach ($media as $m) {
+                $full = FCPATH . $m['file_path'];
+                if (!empty($m['file_path']) && is_file($full)) {
+                    @unlink($full);
+                }
+            }
+            $this->db->where('review_id', (int)$id)->delete('review_media');
+        }
+        $this->db->where('id', (int)$id)->delete('reviews');
+        $this->_recalc_rating_by_product($productId);
         $this->json(['success' => true]);
     }
 

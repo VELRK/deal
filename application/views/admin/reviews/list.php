@@ -52,6 +52,19 @@
             <span title="<?= htmlspecialchars($r['body'] ?? '') ?>">
               <?= htmlspecialchars(mb_substr($r['body'] ?? '', 0, 100)) ?><?= mb_strlen($r['body'] ?? '') > 100 ? '…' : '' ?>
             </span>
+            <?php if (!empty($r['media'])): ?>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+              <?php foreach ($r['media'] as $m): ?>
+                <?php if (($m['media_type'] ?? '') === 'image'): ?>
+                  <a href="<?= base_url($m['file_path']) ?>" target="_blank" rel="noopener">
+                    <img src="<?= base_url($m['file_path']) ?>" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #ddd;">
+                  </a>
+                <?php else: ?>
+                  <a href="<?= base_url($m['file_path']) ?>" target="_blank" rel="noopener" class="badge bg-dark text-decoration-none">Video</a>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
           </td>
           <td class="small text-muted"><?= date('d M Y', strtotime($r['created_at'])) ?></td>
           <td class="text-end">
