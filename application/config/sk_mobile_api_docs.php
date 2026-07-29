@@ -678,6 +678,46 @@ $config['catalog'] = [
         'body' => new stdClass(),
         'sample_response' => ['success' => true, 'message' => 'Cart cleared.', 'data' => []],
     ],
+    [
+        'id' => 'cart-suggestions',
+        'group' => 'cart',
+        'name' => 'Cart Suggestions',
+        'method' => 'GET',
+        'path' => 'cart/suggestions',
+        'auth' => 'optional',
+        'verified' => true,
+        'how' => 'Based on current cart lines, returns other active products in the same category that share a matching pack variant (unit_id + unit_value or same label). Excludes products already in cart. Falls back to same-category products. Matching pack is preferred as default_variant for display. Empty cart returns empty products.',
+        'query' => ['limit' => '12'],
+        'headers' => ['X-Session-ID' => 'mobile-guest-session-1'],
+        'body' => null,
+        'sample_response' => [
+            'success' => true,
+            'message' => 'Success',
+            'data' => [
+                'products' => [
+                    [
+                        'id' => 31,
+                        'name' => 'Related Pack Product',
+                        'category_id' => 3,
+                        'unit_label' => '500 g',
+                        'default_variant_id' => 8,
+                        'suggestion_reason' => 'same_variant',
+                        'matched_variant_id' => 8,
+                    ],
+                ],
+                'based_on' => [
+                    [
+                        'product_id' => 30,
+                        'product_name' => 'Sample Product',
+                        'category_id' => 3,
+                        'variant_label' => '500 g',
+                        'unit_id' => 2,
+                        'unit_value' => 500,
+                    ],
+                ],
+            ],
+        ],
+    ],
 
     /* ========== WISHLIST ========== */
     [

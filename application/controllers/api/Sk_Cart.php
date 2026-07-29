@@ -75,6 +75,54 @@ class Sk_Cart extends Sk_Base_Api {
         $this->success(['items' => $items, 'summary' => $this->_summary($items)]);
     }
 
+    /**
+     * GET /shopkart-api/cart/suggestions
+     * Suggest other products in the same category that share the cart line's pack size.
+     */
+    public function suggestions() {
+        $key   = $this->_cart_key();
+        $items = $this->_get_cart_items($key);
+        $limit = min(24, max(1, (int)($this->input->get('limit') ?? 12)));
+
+        if (empty($items)) {
+            return $this->success(['products' => [], 'based_on' => []]);
+        }
+
+        $exclude = [];
+        $seeds = [];
+        $based_on = [];
+        foreach ($items as $item) {
+            $pid = (int)($item['product_id'] ?? 0);
+            if ($pid > 0) {
+                $exclude[] = $pid;
+            }
+            $seed = [
+                'category_id'   => (int)($item['category_id'] ?? 0),
+                'product_id'    => $pid,
+                'unit_id'       => isset($item['unit_id']) ? (int)$item['unit_id'] : 0,
+                'unit_value'    => $item['unit_value'] ?? null,
+                'variant_label' => $item['variant_label'] ?? ($item['unit_label'] ?? null),
+            ];
+            $seeds[] = $seed;
+            $based_on[] = [
+                'product_id'    => $pid,
+                'product_name'  => $item['product_name'] ?? $item['name'] ?? null,
+                'category_id'   => $seed['category_id'] ?: null,
+                'category_name' => $item['category_name'] ?? null,
+                'variant_id'    => $item['variant_id'] ?? null,
+                'variant_label' => $seed['variant_label'],
+                'unit_id'       => $seed['unit_id'] ?: null,
+                'unit_value'    => $seed['unit_value'],
+            ];
+        }
+
+        $products = $this->Sk_Product_model->get_cart_suggestions($seeds, $exclude, $limit);
+        $this->success([
+            'products' => $products,
+            'based_on' => $based_on,
+        ]);
+    }
+
     public function add() {
         $data        = $this->body();
         $product_id  = (int)($data['product_id'] ?? 0);
@@ -214,6 +262,7 @@ class Sk_Cart extends Sk_Base_Api {
                 'variant_id'      => isset($variant['id']) ? (int)$variant['id'] : null,
                 'variant_label'   => $label,
                 'unit_label'      => $label,
+                'unit_id'         => isset($variant['unit_id']) ? (int)$variant['unit_id'] : null,
                 'unit_name'       => $variant['unit_name'] ?? null,
                 'unit_symbol'     => $variant['unit_symbol'] ?? null,
                 'unit_value'      => isset($variant['unit_value']) ? (float)$variant['unit_value'] : null,

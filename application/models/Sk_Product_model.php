@@ -319,6 +319,165 @@ class Sk_Product_model extends CI_Model {
         return $rows;
     }
 
+    /**
+     * Cart page suggestions: other products in the same category that share a
+     * matching pack variant (unit_id + unit_value, or same label). Falls back
+     * to same-category products when no variant match is found.
+     *
+     * @param array $seeds Each: category_id, product_id, unit_id?, unit_value?, label?
+     * @param int[] $exclude_ids Product IDs already in cart
+     */
+    public function get_cart_suggestions(array $seeds, array $exclude_ids = [], $limit = 12) {
+        $limit = max(1, min(24, (int)$limit));
+        $exclude_ids = array_values(array_unique(array_filter(array_map('intval', $exclude_ids))));
+        $category_ids = [];
+        $variant_keys = [];
+
+        foreach ($seeds as $s) {
+            $cid = (int)($s['category_id'] ?? 0);
+            if ($cid > 0) {
+                $category_ids[$cid] = $cid;
+            }
+            $uid = (int)($s['unit_id'] ?? 0);
+            $uval = array_key_exists('unit_value', $s) && $s['unit_value'] !== null && $s['unit_value'] !== ''
+                ? (float)$s['unit_value']
+                : null;
+            $label = trim((string)($s['label'] ?? $s['variant_label'] ?? $s['unit_label'] ?? ''));
+            if ($uid > 0 && $uval !== null) {
+                $variant_keys['uv:' . $uid . ':' . $uval] = ['unit_id' => $uid, 'unit_value' => $uval];
+            }
+            if ($label !== '') {
+                $variant_keys['lb:' . mb_strtolower($label)] = ['label' => $label];
+            }
+        }
+
+        $category_ids = array_values($category_ids);
+        if (empty($category_ids)) {
+            return [];
+        }
+
+        $matched = [];
+        $prefer = array_values($variant_keys);
+
+        if ($this->variant_model()->schema_ready() && !empty($prefer)) {
+            $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, b.name as brand_name, MIN(pv.id) as match_variant_id')
+                     ->from('products p')
+                     ->join('categories c', 'c.id = p.category_id', 'left')
+                     ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
+                     ->join('brands b', 'b.id = p.brand_id', 'left')
+                     ->join('product_variants pv', 'pv.product_id = p.id AND pv.status = 1', 'inner')
+                     ->where('p.status', 'active')
+                     ->where_in('p.category_id', $category_ids);
+
+            if (!empty($exclude_ids)) {
+                $this->db->where_not_in('p.id', $exclude_ids);
+            }
+
+            $this->db->group_start();
+            foreach ($prefer as $i => $key) {
+                if ($i === 0) {
+                    $this->db->group_start();
+                } else {
+                    $this->db->or_group_start();
+                }
+                if (isset($key['unit_id'])) {
+                    $this->db->where('pv.unit_id', (int)$key['unit_id'])
+                             ->where('pv.unit_value', (float)$key['unit_value']);
+                } else {
+                    $this->db->where('pv.label', $key['label']);
+                }
+                $this->db->group_end();
+            }
+            $this->db->group_end();
+
+            $matched = $this->db->group_by('p.id')
+                                ->order_by('p.total_sold', 'DESC')
+                                ->order_by('p.created_at', 'DESC')
+                                ->limit($limit)
+                                ->get()->result_array();
+        }
+
+        $found_ids = array_map(static function ($r) { return (int)$r['id']; }, $matched);
+        $need = $limit - count($matched);
+
+        if ($need > 0) {
+            $exclude_fill = array_values(array_unique(array_merge($exclude_ids, $found_ids)));
+            $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, b.name as brand_name')
+                     ->from('products p')
+                     ->join('categories c', 'c.id = p.category_id', 'left')
+                     ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
+                     ->join('brands b', 'b.id = p.brand_id', 'left')
+                     ->where('p.status', 'active')
+                     ->where_in('p.category_id', $category_ids);
+            if (!empty($exclude_fill)) {
+                $this->db->where_not_in('p.id', $exclude_fill);
+            }
+            $fill = $this->db->order_by('p.total_sold', 'DESC')
+                             ->order_by('p.created_at', 'DESC')
+                             ->limit($need)
+                             ->get()->result_array();
+            $matched = array_merge($matched, $fill);
+        }
+
+        foreach ($matched as &$row) {
+            $match_vid = isset($row['match_variant_id']) ? (int)$row['match_variant_id'] : 0;
+            unset($row['match_variant_id']);
+            $row['images'] = $this->get_images($row['id']);
+            $this->_decode_json_fields($row);
+            $this->attach_variants($row);
+
+            $preferred = false;
+            if ($match_vid > 0 && !empty($row['variants'])) {
+                $this->_prefer_variant($row, $match_vid);
+                $preferred = true;
+            } elseif (!empty($prefer) && !empty($row['variants'])) {
+                foreach ($row['variants'] as $v) {
+                    foreach ($prefer as $key) {
+                        $ok = isset($key['unit_id'])
+                            ? ((int)($v['unit_id'] ?? 0) === (int)$key['unit_id']
+                                && (float)($v['unit_value'] ?? 0) === (float)$key['unit_value'])
+                            : (mb_strtolower(trim((string)($v['label'] ?? ''))) === mb_strtolower(trim($key['label'])));
+                        if ($ok) {
+                            $this->_prefer_variant($row, (int)$v['id']);
+                            $preferred = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $this->apply_sale_timing($row);
+            $row['suggestion_reason'] = $preferred ? 'same_variant' : 'same_category';
+        }
+        unset($row);
+
+        return $matched;
+    }
+
+    /** Make a specific variant the product default for list/card display. */
+    private function _prefer_variant(array &$product, $variant_id) {
+        $variant_id = (int)$variant_id;
+        if ($variant_id < 1 || empty($product['variants'])) return;
+        $chosen = null;
+        foreach ($product['variants'] as &$v) {
+            $v['is_default'] = ((int)$v['id'] === $variant_id) ? 1 : 0;
+            if ((int)$v['id'] === $variant_id) $chosen = $v;
+        }
+        unset($v);
+        if (!$chosen) return;
+        $product['default_variant_id'] = $variant_id;
+        $product['unit_label'] = $chosen['label'] ?? ($product['unit_label'] ?? null);
+        $product['unit_name'] = $chosen['unit_name'] ?? '';
+        $product['unit_symbol'] = $chosen['unit_symbol'] ?? '';
+        $product['unit_value'] = $chosen['unit_value'] ?? 1;
+        $product['price'] = (float)$chosen['price'];
+        $product['sale_price'] = $chosen['sale_price'] ?? null;
+        $product['stock'] = (int)$chosen['stock'];
+        if (!empty($chosen['sku'])) $product['sku'] = $chosen['sku'];
+        if (!empty($chosen['image'])) $product['thumbnail'] = $chosen['image'];
+        $product['matched_variant_id'] = $variant_id;
+    }
+
     private function apply_sale_timing(&$product) {
         $now        = date('Y-m-d H:i:s');
         $sale_price = isset($product['sale_price']) ? (float)$product['sale_price'] : null;

@@ -560,6 +560,7 @@ $route['shopkart-api/collection-banners']['GET']  = 'api/Sk_Banner/collection';
 $route['shopkart-api/search']['GET'] = 'api/Sk_Product/search';
 // Cart
 $route['shopkart-api/cart']['GET'] = 'api/Sk_Cart/index';
+$route['shopkart-api/cart/suggestions']['GET'] = 'api/Sk_Cart/suggestions';
 $route['shopkart-api/cart/add']['POST'] = 'api/Sk_Cart/add';
 $route['shopkart-api/cart/update']['POST'] = 'api/Sk_Cart/update';
 $route['shopkart-api/cart/remove']['POST'] = 'api/Sk_Cart/remove';
