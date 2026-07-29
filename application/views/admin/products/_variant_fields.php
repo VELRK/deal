@@ -34,7 +34,7 @@ $rows = !empty($product_variants)
       </div>
       <div class="col-md-3">
         <label class="form-label">Quick-fill Qty</label>
-        <input type="number" id="default_unit_value" class="form-control" step="0.001" min="0.001" value="<?= htmlspecialchars((string)$default_unit_value) ?>" placeholder="e.g. 1, 500">
+        <input type="text" inputmode="decimal" id="default_unit_value" class="form-control" value="<?= htmlspecialchars((string)$default_unit_value) ?>" placeholder="e.g. 1, 500">
       </div>
       <div class="col-md-5 d-flex align-items-end gap-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" id="apply-default-unit">
@@ -72,7 +72,7 @@ $rows = !empty($product_variants)
           </div>
           <div class="col-md-1">
             <label class="form-label small">Qty</label>
-            <input type="number" name="product_variants[<?= $vi ?>][unit_value]" class="form-control form-control-sm" step="0.001" min="0.001" value="<?= htmlspecialchars($vr['unit_value'] ?? '1') ?>">
+            <input type="text" inputmode="decimal" name="product_variants[<?= $vi ?>][unit_value]" class="form-control form-control-sm" value="<?= htmlspecialchars($vr['unit_value'] ?? '1') ?>">
           </div>
           <div class="col-md-2">
             <label class="form-label small">Label</label>
@@ -80,15 +80,15 @@ $rows = !empty($product_variants)
           </div>
           <div class="col-md-1">
             <label class="form-label small">Price ₹</label>
-            <input type="number" name="product_variants[<?= $vi ?>][price]" class="form-control form-control-sm variant-price" step="0.01" min="0" value="<?= htmlspecialchars($vr['price'] ?? '') ?>" placeholder="Main">
+            <input type="text" inputmode="decimal" name="product_variants[<?= $vi ?>][price]" class="form-control form-control-sm variant-price" value="<?= htmlspecialchars($vr['price'] ?? '') ?>" placeholder="Main">
           </div>
           <div class="col-md-1">
             <label class="form-label small">Sale ₹</label>
-            <input type="number" name="product_variants[<?= $vi ?>][sale_price]" class="form-control form-control-sm" step="0.01" min="0" value="<?= htmlspecialchars($vr['sale_price'] ?? '') ?>">
+            <input type="text" inputmode="decimal" name="product_variants[<?= $vi ?>][sale_price]" class="form-control form-control-sm" value="<?= htmlspecialchars($vr['sale_price'] ?? '') ?>">
           </div>
           <div class="col-md-1">
             <label class="form-label small">Stock</label>
-            <input type="number" name="product_variants[<?= $vi ?>][stock]" class="form-control form-control-sm variant-stock" min="0" value="<?= htmlspecialchars($vr['stock'] ?? '') ?>" placeholder="Main">
+            <input type="text" inputmode="numeric" name="product_variants[<?= $vi ?>][stock]" class="form-control form-control-sm variant-stock" value="<?= htmlspecialchars($vr['stock'] ?? '') ?>" placeholder="Main">
           </div>
           <div class="col-md-1">
             <label class="form-label small">SKU</label>
@@ -171,11 +171,11 @@ $rows = !empty($product_variants)
       <div class="row g-2 align-items-end">
         <div class="col-md-2"><label class="form-label small">Image</label><div class="mb-1 variant-img-preview-wrap d-none"><img src="" alt="" class="rounded border variant-img-preview" style="width:64px;height:64px;object-fit:cover;"><input type="hidden" name="product_variants[${idx}][existing_image]" class="variant-existing-image" value=""></div><input type="file" name="variant_images[${idx}]" class="form-control form-control-sm variant-image-input" accept="image/*"></div>
         <div class="col-md-2"><label class="form-label small">Unit *</label>${unitSelectHtml(idx, defaultUnit)}</div>
-        <div class="col-md-1"><label class="form-label small">Qty</label><input type="number" name="product_variants[${idx}][unit_value]" class="form-control form-control-sm" step="0.001" min="0.001" value="${defaultQty}"></div>
+        <div class="col-md-1"><label class="form-label small">Qty</label><input type="text" inputmode="decimal" name="product_variants[${idx}][unit_value]" class="form-control form-control-sm" value="${defaultQty}"></div>
         <div class="col-md-2"><label class="form-label small">Label</label><input type="text" name="product_variants[${idx}][label]" class="form-control form-control-sm" placeholder="Auto"></div>
-        <div class="col-md-1"><label class="form-label small">Price ₹</label><input type="number" name="product_variants[${idx}][price]" class="form-control form-control-sm variant-price" step="0.01" min="0" placeholder="Main"></div>
-        <div class="col-md-1"><label class="form-label small">Sale ₹</label><input type="number" name="product_variants[${idx}][sale_price]" class="form-control form-control-sm" step="0.01" min="0"></div>
-        <div class="col-md-1"><label class="form-label small">Stock</label><input type="number" name="product_variants[${idx}][stock]" class="form-control form-control-sm variant-stock" min="0" placeholder="Main"></div>
+        <div class="col-md-1"><label class="form-label small">Price ₹</label><input type="text" inputmode="decimal" name="product_variants[${idx}][price]" class="form-control form-control-sm variant-price" placeholder="Main"></div>
+        <div class="col-md-1"><label class="form-label small">Sale ₹</label><input type="text" inputmode="decimal" name="product_variants[${idx}][sale_price]" class="form-control form-control-sm"></div>
+        <div class="col-md-1"><label class="form-label small">Stock</label><input type="text" inputmode="numeric" name="product_variants[${idx}][stock]" class="form-control form-control-sm variant-stock" placeholder="Main"></div>
         <div class="col-md-1"><label class="form-label small">SKU</label><input type="text" name="product_variants[${idx}][sku]" class="form-control form-control-sm"></div>
         <div class="col-md-1"><div class="form-check mt-4"><input class="form-check-input variant-default" type="radio" name="variant_default" value="${idx}"><label class="form-check-label small">Def</label></div><input type="hidden" name="product_variants[${idx}][is_default]" class="variant-is-default" value="0"></div>
         <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-variant-row"><i class="bi bi-x-lg"></i></button></div>
