@@ -115,6 +115,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       </li>
 
       <li class="nav-item">
+        <a href="<?= site_url('shopkart/inventory') ?>"
+           class="nav-link sk-nav-link <?= sk_active($uri,'inventory') ?>">
+          <i class="bi bi-boxes me-2"></i> Inventory
+        </a>
+      </li>
+
+      <li class="nav-item">
         <a href="<?= site_url('shopkart/categories') ?>"
            class="nav-link sk-nav-link <?= sk_active($uri,'categories') ?>">
           <i class="bi bi-diagram-3 me-2"></i> Categories

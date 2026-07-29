@@ -248,6 +248,27 @@ class Sk_Order_model extends CI_Model {
                         ->limit($limit)
                         ->get()->result_array();
     }
+
+    /**
+     * Orders that include a product (for inventory detail).
+     * @return array{rows:array,total:int}
+     */
+    public function get_orders_for_product(int $productId, int $limit = 20, int $offset = 0): array {
+        $productId = (int)$productId;
+        $total = (int)$this->db->where('product_id', $productId)->count_all_results('order_items');
+
+        $rows = $this->db->select('o.id, o.order_number, o.status, o.created_at, o.payment_status,
+                oi.quantity, oi.variant_id, oi.variant_label, oi.price, oi.subtotal')
+            ->from('order_items oi')
+            ->join('orders o', 'o.id = oi.order_id')
+            ->where('oi.product_id', $productId)
+            ->order_by('o.created_at', 'DESC')
+            ->limit($limit, $offset)
+            ->get()->result_array();
+
+        return ['rows' => $rows, 'total' => $total];
+    }
+
     public function recent_orders($limit = 5) {
         return $this->db->select('o.*, u.name as customer_name')
                         ->from('orders o')

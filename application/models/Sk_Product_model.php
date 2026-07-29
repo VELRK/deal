@@ -302,6 +302,46 @@ class Sk_Product_model extends CI_Model {
         return $this->db->get()->result_array();
     }
 
+    /**
+     * Inventory list with stock-focused filters.
+     * @return array{rows:array,total:int}
+     */
+    public function get_inventory_list(array $filters = [], int $limit = 20, int $offset = 0): array {
+        $this->db->from('products p');
+        $this->_inventory_where($filters);
+        $total = (int)$this->db->count_all_results();
+
+        $this->db->select('p.*, c.name as category_name, v.business_name as vendor_name')
+            ->from('products p')
+            ->join('categories c', 'c.id = p.category_id', 'left')
+            ->join('vendors v', 'v.id = p.vendor_id', 'left');
+        $this->_inventory_where($filters);
+        $this->db->order_by('p.stock', 'ASC')->order_by('p.name', 'ASC')->limit($limit, $offset);
+        $rows = $this->db->get()->result_array();
+        foreach ($rows as &$row) {
+            $this->attach_variants($row);
+        }
+        unset($row);
+        return ['rows' => $rows, 'total' => $total];
+    }
+
+    private function _inventory_where(array $filters): void {
+        $vendor_id = $filters['vendor_id'] ?? null;
+        if ($vendor_id) {
+            $this->db->where('p.vendor_id', (int)$vendor_id);
+        }
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $this->db->group_start()
+                ->like('p.name', $search)
+                ->or_like('p.sku', $search)
+                ->group_end();
+        }
+        if (!empty($filters['low_only'])) {
+            $this->db->where('p.stock <= p.low_stock_alert', null, false);
+        }
+    }
+
     private function make_unique_slug($name, $table, $exclude_id = null) {
         $slug = url_title(strtolower($name), '-', TRUE);
         $base = $slug;
