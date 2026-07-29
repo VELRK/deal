@@ -197,7 +197,8 @@ class Sk_Cart extends Sk_Base_Api {
         $subtotal = array_sum(array_column($items, 'subtotal'));
         $settings = $this->get_settings();
         $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
-        $tax      = round($subtotal * ($settings['tax_rate'] ?? 18) / 100, 2);
+        // Storefront does not charge/show GST
+        $tax      = 0;
         $summary = [
             'subtotal'     => round($subtotal, 2),
             'shipping'     => (float)$shipping,

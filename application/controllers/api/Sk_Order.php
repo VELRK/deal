@@ -203,7 +203,8 @@ class Sk_Order extends Sk_Base_Api {
 
         $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
         $taxable_amount = max(0, $subtotal - $discount);
-        $tax      = round($taxable_amount * ($settings['tax_rate'] ?? 18) / 100, 2);
+        // Storefront does not charge/show GST
+        $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
         if ($uses_wallet && $wallet_enabled && $total > 0) {
