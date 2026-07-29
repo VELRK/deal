@@ -68,13 +68,56 @@ function sk_whatsapp_config(array $settings = null): array {
         $url = trim((string)($fileCfg['api_url'] ?? 'https://backend.askeva.io/v1/message/send-message'));
     }
 
+    $statusTemplates = $fileCfg['status_templates'] ?? [];
+    if (!is_array($statusTemplates)) {
+        $statusTemplates = [];
+    }
+    $fallbackTpl = trim((string)($fileCfg['fallback_template'] ?? ''));
+    // Admin setting overrides fallback only (per-status names live in whatsapp.php).
+    $settingsTpl = trim((string)($settings['askeva_order_template'] ?? ''));
+    if ($settingsTpl !== '') {
+        $fallbackTpl = $settingsTpl;
+    }
+    $lang = trim((string)($settings['askeva_template_lang'] ?? ''));
+    if ($lang === '') {
+        $lang = trim((string)($fileCfg['template_lang'] ?? 'en')) ?: 'en';
+    }
+
     return [
-        'enabled'  => ($settings['askeva_whatsapp_enabled'] ?? '1') !== '0',
-        'url'      => $url ?: 'https://backend.askeva.io/v1/message/send-message',
-        'token'    => $token,
-        'template' => trim((string)($settings['askeva_order_template'] ?? '')),
-        'lang'     => trim((string)($settings['askeva_template_lang'] ?? 'en')) ?: 'en',
+        'enabled'           => ($settings['askeva_whatsapp_enabled'] ?? '1') !== '0',
+        'url'               => $url ?: 'https://backend.askeva.io/v1/message/send-message',
+        'token'             => $token,
+        'template'          => $fallbackTpl,
+        'status_templates'  => $statusTemplates,
+        'lang'              => $lang,
     ];
+}
+
+/**
+ * Resolve template name + body params for a status.
+ * Per-status templates: {{1}}=name, {{2}}=order no
+ * Fallback template: {{1}}=order no, {{2}}=status label
+ * @return array{name:string,params:string[]}|null
+ */
+function sk_whatsapp_template_for_status(string $status, array $order, array $cfg): ?array {
+    $orderNo = (string)($order['order_number'] ?? ($order['id'] ?? ''));
+    $name = trim((string)($order['customer_name'] ?? $order['shipping_name'] ?? 'Customer'));
+    if ($name === '') {
+        $name = 'Customer';
+    }
+    $map = $cfg['status_templates'] ?? [];
+    $tplName = '';
+    if (is_array($map) && !empty($map[$status])) {
+        $tplName = trim((string)$map[$status]);
+    }
+    if ($tplName !== '') {
+        return ['name' => $tplName, 'params' => [$name, $orderNo]];
+    }
+    $fallback = trim((string)($cfg['template'] ?? ''));
+    if ($fallback !== '') {
+        return ['name' => $fallback, 'params' => [$orderNo, sk_whatsapp_status_label($status)]];
+    }
+    return null;
 }
 
 /** Normalize to digits with country code (MY default 60). */
@@ -245,19 +288,18 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
     $textFailReason = (string)($result['message'] ?? 'text send failed');
 
     if ($needTemplate) {
-        if ($cfg['template'] !== '') {
-            $label = sk_whatsapp_status_label($status);
-            $tplResult = sk_whatsapp_send_template($phone, $cfg['template'], [$orderNo ?: (string)$orderId, $label], $settings);
-            $tplResult['via'] = 'template';
-            // Keep text failure context if template also fails
+        $tpl = sk_whatsapp_template_for_status($status, $order, $cfg);
+        if ($tpl !== null) {
+            $tplResult = sk_whatsapp_send_template($phone, $tpl['name'], $tpl['params'], $settings);
+            $tplResult['via'] = 'template:' . $tpl['name'];
             if (empty($tplResult['success'])) {
-                $tplResult['message'] = 'Text failed (' . $textFailReason . '); template failed: ' . ($tplResult['message'] ?? 'unknown');
+                $tplResult['message'] = 'Text failed (' . $textFailReason . '); template "' . $tpl['name'] . '" failed: ' . ($tplResult['message'] ?? 'unknown');
             } else {
-                $tplResult['message'] = 'Sent via template after text failed: ' . $textFailReason;
+                $tplResult['message'] = 'Sent via template "' . $tpl['name'] . '" after text failed: ' . $textFailReason;
             }
             $result = $tplResult;
         } else {
-            $result['message'] = $textFailReason . ' — set an approved utility template in Settings → Order WhatsApp (session not open).';
+            $result['message'] = $textFailReason . ' — no WhatsApp utility template configured for status "' . $status . '" (see database/whatsapp_order_templates.txt).';
             $result['via'] = 'text';
         }
     }

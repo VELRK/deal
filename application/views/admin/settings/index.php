@@ -150,11 +150,15 @@
               <?php endif; ?>
             </div>
             <div class="col-12">
-              <label class="form-label">Optional utility template name</label>
+              <label class="form-label">Fallback utility template name (optional)</label>
               <input type="text" name="askeva_order_template" class="form-control"
                 value="<?= htmlspecialchars($settings['askeva_order_template'] ?? '') ?>"
-                placeholder="Leave empty = free text; use if session closed">
-              <div class="form-text">If WhatsApp returns “session not opened”, set an approved utility template with 2 body variables (order no, status).</div>
+                placeholder="order_status_update">
+              <div class="form-text">
+                Per-status templates are configured in code (<code>application/config/whatsapp.php</code>).
+                Create them from <code>database/whatsapp_order_templates.txt</code>
+                ({{1}}=name, {{2}}=order no). This field is only an optional fallback.
+              </div>
             </div>
           </div>
         </div>
