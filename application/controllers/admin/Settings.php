@@ -26,6 +26,7 @@ class Settings extends Sk_Base {
             'smtp_from_name', 'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics', 'top_bar_text',
             'whatsapp_number',
+            'askeva_api_url', 'askeva_api_token', 'askeva_order_template', 'askeva_template_lang',
             'company_legal_name', 'gstin', 'pan_no', 'state_code', 'invoice_prefix', 'invoice_footer',
             'jt_express_api_account', 'jt_express_private_key', 'jt_express_customer_code',
             'jt_express_customer_name', 'jt_express_customer_password', 'jt_express_demo_uuid',
@@ -38,6 +39,7 @@ class Settings extends Sk_Base {
         $raw_fields = [
             'isms_password', 'isms_api_key', 'smtp_pass', 'razorpay_key_secret',
             'jt_express_private_key', 'jt_express_customer_password',
+            'askeva_api_token',
         ];
         $preserve_if_empty = $raw_fields;
 
@@ -66,6 +68,7 @@ class Settings extends Sk_Base {
         $data['newsletter_popup_enabled'] = $this->input->post('newsletter_popup_enabled') ? '1' : '0';
         $data['top_bar_enabled'] = $this->input->post('top_bar_enabled') ? '1' : '0';
         $data['whatsapp_enabled'] = $this->input->post('whatsapp_enabled') ? '1' : '0';
+        $data['askeva_whatsapp_enabled'] = $this->input->post('askeva_whatsapp_enabled') ? '1' : '0';
         $data['jt_express_enabled'] = $this->input->post('jt_express_enabled') ? '1' : '0';
         $data['jt_express_sandbox'] = $this->input->post('jt_express_sandbox') ? '1' : '0';
         $data['isms_enabled'] = $this->input->post('isms_enabled') ? '1' : '0';

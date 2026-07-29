@@ -290,6 +290,17 @@ function sk_jt_sync_order_tracking(int $orderId, array $trackResult): array {
 
     $CI->Sk_Order_model->update_jt_shipment($orderId, $update);
 
+    if ($newStatus) {
+        $fresh = $CI->Sk_Order_model->get_by_id($orderId);
+        if ($fresh) {
+            $CI->load->helper(['sk_mailer', 'sk_whatsapp']);
+            $CI->load->model('Sk_Admin_model');
+            $settings = $CI->Sk_Admin_model->get_settings();
+            sk_mail_order_status($fresh, $newStatus, $settings);
+            sk_whatsapp_notify_order_status($fresh, $newStatus, $settings);
+        }
+    }
+
     return [
         'updated'        => true,
         'status'         => $newStatus ?: $order['status'],

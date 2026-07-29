@@ -343,12 +343,15 @@ class Sk_Order extends Sk_Base_Api {
         }
 
         // Email tax invoice (COD/wallet immediately; Razorpay after payment verify)
-        $this->load->helper(['sk_mailer', 'sk_invoice']);
+        $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
         sk_invoice_ensure_vendor_schema();
         $settings = $this->get_settings();
         if (in_array($payment_method, ['cod', 'wallet'], true)) {
             sk_mail_order_invoice($order, $settings);
         }
+        // WhatsApp: placed / paid status
+        $waStatus = ($order['status'] ?? '') ?: (($order['payment_status'] ?? '') === 'paid' ? 'confirmed' : 'pending');
+        sk_whatsapp_notify_order_status($order, $waStatus, $settings);
 
         $this->success(['order' => $order], 'Order placed successfully.', 201);
     }
@@ -398,6 +401,14 @@ class Sk_Order extends Sk_Base_Api {
         );
         if (!$result['ok']) {
             return $this->error($result['message'], 400);
+        }
+
+        $fresh = $this->Sk_Order_model->get_by_id((int)$id, $this->user['user_id']);
+        if ($fresh) {
+            $this->load->helper(['sk_mailer', 'sk_whatsapp']);
+            $settings = $this->get_settings();
+            sk_mail_order_status($fresh, 'cancelled', $settings);
+            sk_whatsapp_notify_order_status($fresh, 'cancelled', $settings);
         }
 
         $this->success([], $result['message']);

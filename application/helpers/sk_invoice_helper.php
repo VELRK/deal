@@ -384,7 +384,14 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
       <button onclick='window.close()' style='background:#64748b;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;margin-left:8px;'>Close</button>
     </div>";
 
-    $invoiceUrl = site_url('admin/orders/invoice/' . $invoice['order_id']);
+    $CI =& get_instance();
+    $CI->load->helper('sk_invoice_pdf');
+    $invoiceOrder = [
+        'id'           => (int)$invoice['order_id'],
+        'order_number' => (string)$invoice['order_number'],
+    ];
+    $invoiceUrl = sk_invoice_public_url($invoiceOrder);
+    $invoiceViewUrl = site_url('invoice/view/' . (int)$invoice['order_id'] . '/' . sk_invoice_public_token((int)$invoice['order_id'], (string)$invoice['order_number']));
 
     return "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>Tax Invoice – {$invoice['invoice_no']}</title>
@@ -466,7 +473,12 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 
     <div style='margin-top:28px;padding-top:16px;border-top:1px dashed #cbd5e1;text-align:center;font-size:12px;color:#64748b;line-height:1.6;'>
       " . htmlspecialchars($s['invoice_footer'] ?? '') . "
-      " . ($forEmail ? "<p style='margin-top:12px;'><a href='{$invoiceUrl}' style='color:#3b82f6;'>View &amp; print invoice online</a></p>" : '') . "
+      " . ($forEmail
+        ? "<p style='margin-top:16px;'>"
+            . "<a href='{$invoiceUrl}' style='display:inline-block;background:#f59e0b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;'>Download Invoice PDF</a>"
+            . "</p>"
+            . "<p style='margin-top:10px;font-size:12px;'><a href='{$invoiceViewUrl}' style='color:#3b82f6;'>View invoice online</a></p>"
+        : '') . "
       <p style='margin:8px 0 0;font-size:11px;color:#94a3b8;'>This is a computer-generated tax invoice.</p>
     </div>
   </div>
@@ -474,7 +486,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 </body></html>";
 }
 
-/** Send tax invoice email to customer for an order. */
+/** Send tax invoice email to customer for an order (HTML + PDF attachment + download link). */
 function sk_mail_order_invoice(array $order, array $settings = []): bool {
     if (empty($settings)) {
         $CI =& get_instance();
@@ -486,13 +498,23 @@ function sk_mail_order_invoice(array $order, array $settings = []): bool {
     $to_name  = $order['customer_name'] ?? ($order['shipping_name'] ?? 'Customer');
     if (empty($to_email)) return false;
 
+    $CI =& get_instance();
+    $CI->load->helper(['sk_mailer', 'sk_invoice_pdf']);
+
     $invoice = sk_invoice_build($order, $settings);
     $subject = 'Tax Invoice ' . $invoice['invoice_no'] . ' – Order ' . $invoice['order_number'];
     $body    = sk_invoice_render_html($invoice, true);
+    $pdf     = sk_invoice_build_pdf($invoice);
+    $pdfName = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $invoice['order_number'] ?? 'order') . '.pdf';
 
-    $CI =& get_instance();
-    $CI->load->helper('sk_mailer');
-    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    $tmp = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $pdfName;
+    @file_put_contents($tmp, $pdf);
+    $attachments = is_file($tmp) ? [$tmp] : [];
+
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body, $attachments);
+    if (is_file($tmp)) {
+        @unlink($tmp);
+    }
 
     if ($sent && !empty($order['id'])) {
         $CI->db->where('id', (int)$order['id'])->update('orders', [

@@ -109,6 +109,46 @@
                 </div>
               </div>
             </div>
+
+            <div class="col-12">
+              <label class="form-label fw-medium">Order WhatsApp (Askeva)</label>
+              <div class="card bg-light border-0 shadow-none">
+                <div class="card-body">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" name="askeva_whatsapp_enabled" id="askevaToggle" value="1"
+                      <?= (!isset($settings['askeva_whatsapp_enabled']) || $settings['askeva_whatsapp_enabled'] == '1') ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="askevaToggle">Send WhatsApp on every order status change</label>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small mb-1">API URL</label>
+                    <input type="text" name="askeva_api_url" class="form-control form-control-sm"
+                      value="<?= htmlspecialchars($settings['askeva_api_url'] ?? 'https://backend.askeva.io/v1/message/send-message') ?>">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small mb-1">API Token</label>
+                    <input type="password" name="askeva_api_token" class="form-control form-control-sm"
+                      value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Askeva token' ?>">
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-md-8">
+                      <label class="form-label small mb-1">Optional utility template name</label>
+                      <input type="text" name="askeva_order_template" class="form-control form-control-sm"
+                        value="<?= htmlspecialchars($settings['askeva_order_template'] ?? '') ?>"
+                        placeholder="Leave empty = free text; use if session closed">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small mb-1">Template language</label>
+                      <input type="text" name="askeva_template_lang" class="form-control form-control-sm"
+                        value="<?= htmlspecialchars($settings['askeva_template_lang'] ?? 'en') ?>">
+                    </div>
+                  </div>
+                  <div class="form-text small text-muted mt-2">
+                    Sends utility text to the customer phone on pending/confirmed/processing/shipped/delivered/cancelled.
+                    If WhatsApp returns “session not opened”, set an approved utility template with 2 body variables (order no, status).
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

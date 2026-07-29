@@ -85,12 +85,13 @@ class Orders extends Sk_Base {
             }
             $order = $this->Sk_Order_model->get_by_id($id);
             if ($order) {
-                $this->load->helper('sk_mailer');
+                $this->load->helper(['sk_mailer', 'sk_whatsapp']);
                 $settings = $this->Sk_Admin_model->get_settings();
                 if ($tracking) {
                     $order['tracking_number'] = $tracking;
                 }
                 sk_mail_order_status($order, $status, $settings);
+                sk_whatsapp_notify_order_status($order, $status, $settings);
             }
             return $this->json(['success' => true, 'message' => 'Order cancelled.']);
         }
@@ -102,10 +103,11 @@ class Orders extends Sk_Base {
         $jtNotes = $this->_jt_handle_status_change((int)$id, $status, $orderBefore);
         $order = $this->Sk_Order_model->get_by_id($id);
         if ($order) {
-            $this->load->helper('sk_mailer');
+            $this->load->helper(['sk_mailer', 'sk_whatsapp']);
             $settings = $this->Sk_Admin_model->get_settings();
             if ($tracking) $order['tracking_number'] = $tracking;
             sk_mail_order_status($order, $status, $settings);
+            sk_whatsapp_notify_order_status($order, $status, $settings);
         }
         $message = 'Order status updated.';
         if ($jtNotes) {

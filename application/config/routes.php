@@ -438,6 +438,9 @@ $route['shopkart/orders/view/(:num)'] = 'admin/Orders/view/$1';
 $route['shopkart/orders/update_status/(:num)'] = 'admin/Orders/update_status/$1';
 $route['shopkart/orders/invoice/(:num)'] = 'admin/Orders/invoice/$1';
 $route['shopkart/orders/send_invoice/(:num)'] = 'admin/Orders/send_invoice/$1';
+// Public signed invoice (email download → PDF)
+$route['invoice/download/(:num)/(:any)'] = 'Invoice/download/$1/$2';
+$route['invoice/view/(:num)/(:any)'] = 'Invoice/view/$1/$2';
 $route['shopkart/orders/jt_create/(:num)'] = 'admin/Orders/jt_create/$1';
 $route['shopkart/orders/jt_print/(:num)'] = 'admin/Orders/jt_print/$1';
 $route['shopkart/orders/jt_track/(:num)'] = 'admin/Orders/jt_track/$1';

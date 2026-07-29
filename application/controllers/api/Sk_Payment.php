@@ -175,11 +175,12 @@ class Sk_Payment extends Sk_Base_Api {
         sk_royalty_credit_for_order($order);
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
 
-        $this->load->helper(['sk_mailer', 'sk_invoice']);
+        $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
         sk_invoice_ensure_vendor_schema();
         if (empty($order['invoice_emailed_at'])) {
             sk_mail_order_invoice($order, $settings);
         }
+        sk_whatsapp_notify_order_status($order, $order['status'] ?? 'confirmed', $settings);
 
         $this->success(['order' => $order], 'Payment successful! Your order is confirmed.');
     }

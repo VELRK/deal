@@ -124,7 +124,7 @@ function sk_mailer_set_last_error(string $message): void {
     $CI->sk_mailer_last_error = $message;
 }
 
-function sk_send_mail($to_email, $to_name, $subject, $html_body) {
+function sk_send_mail($to_email, $to_name, $subject, $html_body, array $attachments = []) {
     if (empty($to_email) || strpos($to_email, '@shopkart.app') !== false) {
         sk_mailer_set_last_error('Invalid recipient email.');
         return false;
@@ -169,6 +169,11 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body) {
     $CI->email->to($to_email, $to_name);
     $CI->email->subject($subject);
     $CI->email->message($html_body);
+    foreach ($attachments as $path) {
+        if (is_string($path) && is_file($path)) {
+            $CI->email->attach($path);
+        }
+    }
 
     $result = $CI->email->send(false);
     if (!$result) {

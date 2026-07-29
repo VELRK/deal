@@ -13,58 +13,119 @@ class Sk_Shipping extends Sk_Base_Api {
 
     /**
      * POST /shopkart-api/shipping/track
-     * Body: { tracking_number } or { order_number }
+     * Body: { tracking_number } and/or { order_number }
+     * Public — customers can track with AWB / tracking ID even without login.
      */
     public function track() {
         $data = $this->body();
-        $tracking = trim((string)($data['tracking_number'] ?? $data['bill_code'] ?? ''));
+        $tracking = trim((string)($data['tracking_number'] ?? $data['bill_code'] ?? $data['awb'] ?? ''));
         $orderNo  = trim((string)($data['order_number'] ?? ''));
+
+        if ($tracking === '' && $orderNo === '') {
+            return $this->error('Enter a tracking number (AWB) or order number.');
+        }
 
         $order = null;
         if ($tracking !== '') {
             $order = $this->Sk_Order_model->get_by_tracking($tracking);
-        } elseif ($orderNo !== '') {
+        }
+        if (!$order && $orderNo !== '') {
             $order = $this->db->where('order_number', $orderNo)->get('orders')->row_array();
             if ($order) {
                 $order['items'] = $this->Sk_Order_model->get_items($order['id']);
             }
         }
 
+        $billCode = '';
+        if ($order) {
+            $billCode = trim((string)($order['jt_bill_code'] ?? $order['tracking_number'] ?? ''));
+        }
+        if ($billCode === '' && $tracking !== '') {
+            $billCode = $tracking;
+        }
+
+        if ($billCode === '' && !$order) {
+            return $this->error('Shipment not found. Check your tracking ID or order number.', 404);
+        }
+
+        $settings = $this->get_settings();
+        $jtOn = !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0';
+
+        // Live JT track when we have an AWB
+        if ($jtOn && $billCode !== '') {
+            $this->load->library('Jt_express', $settings);
+            $result = $this->jt_express->track($billCode);
+            $tracks = !empty($result['success']) ? sk_jt_normalize_tracks($result) : [];
+
+            if ($order && !empty($result['success'])) {
+                sk_jt_sync_order_tracking((int)$order['id'], $result);
+                $order = $this->Sk_Order_model->get_by_id((int)$order['id']);
+            }
+            // Fall back to last saved scans when live JT call fails
+            if (!$tracks && $order) {
+                $tracks = sk_jt_tracks_from_order($order);
+            }
+
+            // AWB-only lookup (no local order row) still returns JT events
+            if (!$order && empty($result['success']) && !$tracks) {
+                return $this->error(
+                    $result['message'] ?? 'Tracking not found for this ID. Try again later.',
+                    404
+                );
+            }
+
+            $labels = [];
+            foreach ($tracks as $ev) {
+                $labels[] = [
+                    'time'  => trim((string)($ev['scanTime'] ?? $ev['time'] ?? $ev['acceptTime'] ?? $ev['date'] ?? '')),
+                    'desc'  => trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? '')),
+                    'label' => sk_jt_track_event_label($ev),
+                    'raw'   => $ev,
+                ];
+            }
+
+            return $this->success([
+                'order_number'           => $order['order_number'] ?? null,
+                'tracking_number'        => $billCode,
+                'order_status'           => $order['status'] ?? null,
+                'courier'                => 'jt_express',
+                'courier_status'         => $order['jt_courier_status'] ?? ($labels[0]['desc'] ?? null),
+                'processing_at'          => $order['processing_at'] ?? null,
+                'jt_shipment_created_at' => $order['jt_shipment_created_at'] ?? null,
+                'shipped_at'             => $order['shipped_at'] ?? null,
+                'delivered_at'           => $order['delivered_at'] ?? null,
+                'tracks'                 => $tracks,
+                'events'                 => $labels,
+                'has_tracking'           => true,
+            ], !empty($result['success']) ? ($result['message'] ?? 'Tracking fetched.') : 'Showing saved tracking.');
+        }
+
         if (!$order) {
             return $this->error('Shipment not found.', 404);
         }
 
-        $billCode = $order['jt_bill_code'] ?? $order['tracking_number'] ?? '';
-        $settings = $this->get_settings();
-
-        if (!empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0' && $billCode !== '') {
-            $this->load->library('Jt_express', $settings);
-            $result = $this->jt_express->track($billCode);
-            if ($result['success']) {
-                sk_jt_sync_order_tracking((int)$order['id'], $result);
-                $order = $this->Sk_Order_model->get_by_id((int)$order['id']);
-            }
-            return $this->success([
-                'order_number'       => $order['order_number'],
-                'tracking_number'    => $billCode,
-                'order_status'       => $order['status'],
-                'courier'            => 'jt_express',
-                'courier_status'     => $order['jt_courier_status'] ?? null,
-                'processing_at'      => $order['processing_at'] ?? null,
-                'jt_shipment_created_at' => $order['jt_shipment_created_at'] ?? null,
-                'shipped_at'         => $order['shipped_at'] ?? null,
-                'delivered_at'       => $order['delivered_at'] ?? null,
-                'tracks'             => sk_jt_normalize_tracks($result),
-                'raw'                => $result['raw'] ?? null,
-            ], $result['message'] ?? 'Tracking fetched.');
+        $stored = sk_jt_tracks_from_order($order);
+        $labels = [];
+        foreach ($stored as $ev) {
+            $labels[] = [
+                'time'  => trim((string)($ev['scanTime'] ?? $ev['time'] ?? $ev['acceptTime'] ?? $ev['date'] ?? '')),
+                'desc'  => trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? '')),
+                'label' => sk_jt_track_event_label($ev),
+                'raw'   => $ev,
+            ];
         }
 
         return $this->success([
             'order_number'    => $order['order_number'],
-            'tracking_number' => $billCode,
+            'tracking_number' => $billCode ?: null,
             'order_status'    => $order['status'],
-            'tracks'          => sk_jt_tracks_from_order($order),
-            'message'         => 'Courier tracking not available for this order.',
+            'courier_status'  => $order['jt_courier_status'] ?? null,
+            'tracks'          => $stored,
+            'events'          => $labels,
+            'has_tracking'    => $billCode !== '',
+            'message'         => $billCode === ''
+                ? 'No tracking ID yet for this order. It will appear once the shipment is created.'
+                : 'Courier live tracking is currently unavailable; showing last known status.',
         ]);
     }
 
