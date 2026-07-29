@@ -89,7 +89,7 @@
           <strong class="text-danger"><?= (int)$order['royalty_used_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_used_rm'], 2) ?>)</strong>
         </div>
         <?php endif; ?>
-        <div class="text-muted" style="font-size:11px;">RM 500 purchase = 500 pts (RM 100). Shown on invoice for admin.</div>
+        <div class="text-muted" style="font-size:11px;">Earn: RM 5000 purchase = 500 pts (RM 100 credit). Royalty pays the bill (not a coupon). Shown on invoice for admin.</div>
       </div>
     </div>
     <?php endif; ?>

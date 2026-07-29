@@ -242,7 +242,7 @@ function sk_royalty_min_redeem_points(array $settings = null): int {
     return $n > 0 ? $n : 500;
 }
 
-/** Points earned for a purchase amount (RM). Default 1 pt per RM. */
+/** Points earned for a purchase amount (RM). Default 0.1 pts per RM (RM 5000 → 500 pts). */
 function sk_royalty_earn_points_for_amount(float $purchaseRm, array $settings = null): int {
     if ($settings === null) {
         $CI =& get_instance();

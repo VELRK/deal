@@ -31,9 +31,14 @@ class Royalty_report extends Sk_Base {
         $data['summary']       = $result['summary'];
         $data['page']          = $page;
         $data['filters']       = $filters;
+        $settings = $this->Sk_Admin_model->get_settings();
         $data['points_per_rm'] = $this->Sk_Royalty_model->points_per_rm();
-        $data['min_redeem']    = sk_royalty_min_redeem_points();
-        $data['min_redeem_rm'] = sk_royalty_min_redeem_rm();
+        $data['earn_pts_per_rm'] = (float)($settings['royalty_earn_points_per_rm'] ?? 0.1);
+        if ($data['earn_pts_per_rm'] <= 0) {
+            $data['earn_pts_per_rm'] = 0.1;
+        }
+        $data['min_redeem']    = sk_royalty_min_redeem_points($settings);
+        $data['min_redeem_rm'] = sk_royalty_min_redeem_rm($settings);
         $data['is_vendor']     = (bool)$this->current_vendor_id();
         $this->render('royalty/report', $data);
     }

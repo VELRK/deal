@@ -2,9 +2,18 @@
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div>
     <h5 class="sk-page-title mb-0"><i class="bi bi-stars text-warning me-2"></i>Royalty Points Report</h5>
-    <div class="small text-muted mt-1">Separate from wallet · Earn after every order · RM 500 purchase = 500 pts (RM 100) · Show on cart from RM 100+</div>
+    <?php
+      $earnRate = (float)($earn_pts_per_rm ?? 0.1);
+      if ($earnRate <= 0) { $earnRate = 0.1; }
+      $redeemRate = (float)($points_per_rm ?? 5);
+      if ($redeemRate <= 0) { $redeemRate = 5; }
+      $exampleEarnPts = (int)$min_redeem;
+      $examplePurchaseRm = $earnRate > 0 ? (int)round($exampleEarnPts / $earnRate) : 5000;
+      $exampleCreditRm = (float)($min_redeem_rm ?? 100);
+    ?>
+    <div class="small text-muted mt-1">Separate from wallet · Earn after paid/COD · RM <?= number_format($examplePurchaseRm, 0) ?> purchase = <?= (int)$exampleEarnPts ?> pts (RM <?= number_format($exampleCreditRm, 0) ?>) · Pay bill from RM <?= number_format($exampleCreditRm, 0) ?>+</div>
   </div>
-  <span class="badge bg-warning-subtle text-dark border">500 pts = RM 100 · <?= (float)$points_per_rm ?> pts / RM · Min redeem RM <?= number_format((float)($min_redeem_rm ?? 100), 0) ?> (<?= (int)$min_redeem ?> pts)</span>
+  <span class="badge bg-warning-subtle text-dark border">Earn <?= rtrim(rtrim(number_format($earnRate, 2, '.', ''), '0'), '.') ?> pts / RM · Redeem <?= (float)$redeemRate ?> pts / RM · Min pay RM <?= number_format($exampleCreditRm, 0) ?> (<?= (int)$min_redeem ?> pts)</span>
 </div>
 
 <div class="row g-3 mb-3">
@@ -32,9 +41,9 @@
         <strong>How it works</strong>
         <ul class="mb-0 mt-1 ps-3">
           <li>Royalty is separate from wallet cash (top-ups / wallet pay).</li>
-          <li>Points generate only after order (paid / COD): 1 pt per RM 1 purchase.</li>
-          <li>RM 500 purchase = 500 pts = RM 100 credit.</li>
-          <li>On cart, only when balance ≥ RM <?= number_format((float)($min_redeem_rm ?? 100), 0) ?> (<?= (int)$min_redeem ?> pts) can customer apply like a coupon.</li>
+          <li>Points generate only after order (paid / COD): <?= rtrim(rtrim(number_format($earnRate, 2, '.', ''), '0'), '.') ?> pts per RM 1 purchase.</li>
+          <li>RM <?= number_format($examplePurchaseRm, 0) ?> purchase = <?= (int)$exampleEarnPts ?> pts = RM <?= number_format($exampleCreditRm, 0) ?> credit.</li>
+          <li>On cart/checkout, only when balance ≥ RM <?= number_format($exampleCreditRm, 0) ?> (<?= (int)$min_redeem ?> pts) can customer apply royalty as bill payment (goods + shipping). Remainder via COD / online / wallet — not a coupon discount.</li>
           <li>Order page &amp; invoice show earned / redeemed royalty for admin.</li>
         </ul>
       </div>
