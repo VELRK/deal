@@ -486,7 +486,129 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 </body></html>";
 }
 
-/** Send tax invoice email to customer for an order (HTML + PDF attachment + download link). */
+/** Friendly post-order email body (no full bill — PDF attached + download button). */
+function sk_invoice_email_body(array $invoice, array $order, array $settings = []): string {
+    $CI =& get_instance();
+    $CI->load->helper('sk_invoice_pdf');
+
+    $site = htmlspecialchars($settings['site_name'] ?? 'ShopKart');
+    $name = htmlspecialchars($order['customer_name'] ?? ($order['shipping_name'] ?? 'Customer'));
+    $orderNo = htmlspecialchars($invoice['order_number'] ?? ($order['order_number'] ?? ''));
+    $invoiceNo = htmlspecialchars($invoice['invoice_no'] ?? '');
+    $currency = htmlspecialchars($invoice['currency'] ?? ($settings['currency_symbol'] ?? 'RM'));
+    $total = $currency . number_format((float)($invoice['total'] ?? $order['total'] ?? 0), 2);
+    $date = htmlspecialchars($invoice['invoice_date'] ?? date('d M Y'));
+    $payment = htmlspecialchars($invoice['payment_method'] ?? sk_invoice_payment_method_label($order));
+    $phone = htmlspecialchars($settings['site_phone'] ?? '');
+    $email = htmlspecialchars($settings['site_email'] ?? '');
+
+    $pdfUrl = sk_invoice_public_url([
+        'id'           => (int)($invoice['order_id'] ?? $order['id'] ?? 0),
+        'order_number' => (string)($invoice['order_number'] ?? $order['order_number'] ?? ''),
+    ]);
+
+    $base = rtrim(base_url(), '/');
+    $policies = [
+        ['Track your order', $base . '/track-order', 'Enter your order number or AWB anytime.'],
+        ['Return & Refund', $base . '/return-refund', 'Eligible returns within the stated window with original packaging.'],
+        ['Privacy Policy', $base . '/privacy-policy', 'How we collect and protect your personal data.'],
+        ['Terms & Conditions', $base . '/terms-and-conditions', 'Purchase terms, shipping and usage guidelines.'],
+        ['Orders FAQ', $base . '/orders-faq', 'Answers about payment, delivery and account help.'],
+    ];
+    $policyRows = '';
+    foreach ($policies as $p) {
+        $policyRows .= "<tr>
+          <td style='padding:12px 0;border-bottom:1px solid #f1f5f9;vertical-align:top;'>
+            <a href='" . htmlspecialchars($p[1]) . "' style='color:#0f172a;font-weight:700;text-decoration:none;font-size:14px;'>" . htmlspecialchars($p[0]) . "</a>
+            <div style='color:#64748b;font-size:12px;margin-top:4px;line-height:1.5;'>" . htmlspecialchars($p[2]) . "</div>
+          </td>
+        </tr>";
+    }
+
+    $contactBits = array_filter([
+        $phone ? "Phone: {$phone}" : '',
+        $email ? "Email: <a href='mailto:{$email}' style='color:#3b82f6;text-decoration:none;'>{$email}</a>" : '',
+    ]);
+    $contactHtml = $contactBits ? implode(' &nbsp;·&nbsp; ', $contactBits) : '';
+
+    return "<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;'>
+<div style='max-width:600px;margin:28px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(15,23,42,.08);'>
+  <div style='background:#0f172a;padding:34px 36px;text-align:center;'>
+    <div style='color:#f8fafc;font-size:22px;font-weight:700;letter-spacing:.4px;'>{$site}</div>
+    <div style='color:#94a3b8;margin-top:8px;font-size:14px;'>Thank you for your order</div>
+  </div>
+
+  <div style='padding:36px;'>
+    <p style='margin:0 0 12px;color:#334155;font-size:16px;'>Hi <strong>{$name}</strong>,</p>
+    <p style='margin:0 0 18px;color:#475569;font-size:15px;line-height:1.65;'>
+      We’re excited to confirm your order. Your items are being prepared with care, and we’ll notify you when they ship.
+    </p>
+
+    <div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin:22px 0;'>
+      <table width='100%' style='border-collapse:collapse;'>
+        <tr>
+          <td style='padding:6px 0;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.4px;'>Order</td>
+          <td style='padding:6px 0;text-align:right;font-weight:700;color:#0f172a;font-size:16px;'>#{$orderNo}</td>
+        </tr>
+        <tr>
+          <td style='padding:6px 0;color:#64748b;font-size:13px;'>Date</td>
+          <td style='padding:6px 0;text-align:right;color:#334155;'>{$date}</td>
+        </tr>
+        <tr>
+          <td style='padding:6px 0;color:#64748b;font-size:13px;'>Payment</td>
+          <td style='padding:6px 0;text-align:right;color:#334155;'>{$payment}</td>
+        </tr>
+        <tr>
+          <td style='padding:10px 0 0;color:#0f172a;font-size:15px;font-weight:700;border-top:1px solid #e2e8f0;'>Total paid</td>
+          <td style='padding:10px 0 0;text-align:right;color:#0f172a;font-size:18px;font-weight:700;border-top:1px solid #e2e8f0;'>{$total}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style='text-align:center;margin:28px 0 10px;'>
+      <a href='" . htmlspecialchars($pdfUrl) . "' style='display:inline-block;background:#f59e0b;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;'>
+        Download Invoice PDF
+      </a>
+      <p style='margin:12px 0 0;color:#64748b;font-size:12px;line-height:1.5;'>
+        Your tax invoice <strong>{$invoiceNo}</strong> is also attached to this email.<br>
+        Keep it for your records — the full bill is in the PDF only.
+      </p>
+    </div>
+
+    <div style='margin-top:30px;padding:18px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;'>
+      <div style='font-weight:700;color:#92400e;margin-bottom:8px;font-size:14px;'>What happens next</div>
+      <ul style='margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.7;'>
+        <li>We confirm stock and pack your order carefully.</li>
+        <li>You’ll get a shipping update with tracking once handed to the courier.</li>
+        <li>Use Track Order anytime with your order number or AWB.</li>
+      </ul>
+    </div>
+
+    <div style='margin-top:28px;'>
+      <h3 style='margin:0 0 6px;color:#0f172a;font-size:16px;'>Policies &amp; help</h3>
+      <p style='margin:0 0 12px;color:#64748b;font-size:13px;'>Please review these before your delivery arrives:</p>
+      <table width='100%' style='border-collapse:collapse;'>{$policyRows}</table>
+    </div>
+
+    <p style='margin:28px 0 0;color:#475569;font-size:14px;line-height:1.65;'>
+      Need help? Reply to this email" . ($contactHtml ? " or reach us at {$contactHtml}" : '') . ".
+      We’re happy to assist.
+    </p>
+    <p style='margin:18px 0 0;color:#0f172a;font-size:15px;font-weight:600;'>Thank you for shopping with {$site}.</p>
+  </div>
+
+  <div style='background:#f8fafc;padding:20px 36px;text-align:center;border-top:1px solid #e2e8f0;'>
+    <p style='margin:0;color:#94a3b8;font-size:12px;'>{$site} &copy; " . date('Y') . " · This email confirms your purchase; the PDF is your official invoice.</p>
+  </div>
+</div>
+</body>
+</html>";
+}
+
+/** Send tax invoice email to customer for an order (friendly body + PDF attachment + download button). */
 function sk_mail_order_invoice(array $order, array $settings = []): bool {
     if (empty($settings)) {
         $CI =& get_instance();
@@ -502,8 +624,8 @@ function sk_mail_order_invoice(array $order, array $settings = []): bool {
     $CI->load->helper(['sk_mailer', 'sk_invoice_pdf']);
 
     $invoice = sk_invoice_build($order, $settings);
-    $subject = 'Tax Invoice ' . $invoice['invoice_no'] . ' – Order ' . $invoice['order_number'];
-    $body    = sk_invoice_render_html($invoice, true);
+    $subject = 'Order confirmed #' . ($invoice['order_number'] ?? '') . ' — your invoice is ready';
+    $body    = sk_invoice_email_body($invoice, $order, $settings);
     $pdf     = sk_invoice_build_pdf($invoice);
     $pdfName = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $invoice['order_number'] ?? 'order') . '.pdf';
 
