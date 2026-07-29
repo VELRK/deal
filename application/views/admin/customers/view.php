@@ -2,9 +2,14 @@
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-person me-2 text-warning"></i><?= htmlspecialchars($customer['name']) ?></h5>
-  <a href="<?= site_url('admin/customers') ?>" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i> Back
-  </a>
+  <div class="d-flex gap-2">
+    <a href="<?= site_url('shopkart/customers/edit/'.$customer['id']) ?>" class="btn btn-sm btn-warning">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    <a href="<?= site_url('shopkart/customers') ?>" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+  </div>
 </div>
 
 <div class="row g-3">

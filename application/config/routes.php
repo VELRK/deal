@@ -448,7 +448,14 @@ $route['shopkart/orders/jt_cancel/(:num)'] = 'admin/Orders/jt_cancel/$1';
 // Customers
 $route['shopkart/customers'] = 'admin/Customers/index';
 $route['shopkart/customers/view/(:num)'] = 'admin/Customers/view/$1';
+$route['shopkart/customers/edit/(:num)'] = 'admin/Customers/edit/$1';
+$route['shopkart/customers/update/(:num)'] = 'admin/Customers/update/$1';
 $route['shopkart/customers/toggle/(:num)'] = 'admin/Customers/toggle/$1';
+$route['admin/customers'] = 'admin/Customers/index';
+$route['admin/customers/view/(:num)'] = 'admin/Customers/view/$1';
+$route['admin/customers/edit/(:num)'] = 'admin/Customers/edit/$1';
+$route['admin/customers/update/(:num)'] = 'admin/Customers/update/$1';
+$route['admin/customers/toggle/(:num)'] = 'admin/Customers/toggle/$1';
 // Promo
 $route['shopkart/promo'] = 'admin/Promo/index';
 $route['shopkart/promo/store'] = 'admin/Promo/store';

@@ -8,7 +8,7 @@
       <input type="text" name="search" class="form-control form-control-sm" style="max-width:250px;"
              placeholder="Search by name or email..." value="<?= htmlspecialchars($search ?? '') ?>">
       <button class="btn btn-sm btn-outline-warning px-3">Search</button>
-      <a href="<?= site_url('admin/customers') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
+      <a href="<?= site_url('shopkart/customers') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
     </form>
   </div>
 </div>
@@ -38,11 +38,15 @@
             </span>
           </td>
           <td class="d-flex gap-1">
-            <a href="<?= site_url('admin/customers/view/'.$c['id']) ?>" class="btn btn-sm btn-outline-primary">
+            <a href="<?= site_url('shopkart/customers/view/'.$c['id']) ?>" class="btn btn-sm btn-outline-primary" title="View">
               <i class="bi bi-eye"></i>
             </a>
-            <button onclick="skToggleStatus('<?= site_url('admin/customers/toggle/'.$c['id']) ?>')"
-                    class="btn btn-sm <?= $c['status'] ? 'btn-outline-danger' : 'btn-outline-success' ?>">
+            <a href="<?= site_url('shopkart/customers/edit/'.$c['id']) ?>" class="btn btn-sm btn-outline-warning" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button onclick="skToggleStatus('<?= site_url('shopkart/customers/toggle/'.$c['id']) ?>')"
+                    class="btn btn-sm <?= $c['status'] ? 'btn-outline-danger' : 'btn-outline-success' ?>"
+                    title="<?= $c['status'] ? 'Block' : 'Activate' ?>">
               <i class="bi bi-<?= $c['status'] ? 'slash-circle' : 'check-circle' ?>"></i>
             </button>
           </td>
