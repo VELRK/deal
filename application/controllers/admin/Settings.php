@@ -11,7 +11,7 @@ class Settings extends Sk_Base {
         sk_jt_express_ensure_schema();
         sk_isms_ensure_schema();
         sk_whatsapp_ensure_settings();
-        $data['title']    = 'Settings - ShopKart Admin';
+        $data['title']    = 'Settings - 2DEAL Admin';
         $data['settings'] = $this->Sk_Admin_model->get_settings();
         $data['jt_config'] = sk_jt_express_config();
         $this->render('settings/index', $data);
@@ -192,7 +192,7 @@ class Settings extends Sk_Base {
         }
 
         $to = trim($settings['site_email'] ?? $this->admin['email'] ?? '');
-        $site = $settings['site_name'] ?? 'ShopKart';
+        $site = $settings['site_name'] ?? '2DEAL';
         $sent = sk_send_mail(
             $to,
             $this->admin['name'] ?? 'Admin',

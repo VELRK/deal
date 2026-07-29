@@ -147,7 +147,7 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body, array $attachme
     $smtp_pass = trim($settings['smtp_pass'] ?? '');
     $smtp_port = $status['port'];
     $from_email = $status['from'];
-    $from_name  = $settings['smtp_from_name'] ?? ($settings['site_name'] ?? 'ShopKart');
+    $from_name  = $settings['smtp_from_name'] ?? ($settings['site_name'] ?? '2DEAL');
 
     $CI->email->clear(true);
     $CI->email->initialize([
@@ -234,7 +234,7 @@ function sk_mail_order_confirmation($order, $settings = []) {
     }
 
     $payment_label = strtoupper($order['payment_method'] ?? 'COD');
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
 
     $body = "
 <!DOCTYPE html>
@@ -339,7 +339,7 @@ function sk_mail_order_status($order, $new_status, $settings = []) {
 
     $s = $status_labels[$new_status] ?? ['label' => ucfirst($new_status), 'color' => '#64748b', 'icon' => '📋'];
     $subject  = "{$s['icon']} Order #{$order['order_number']} – {$s['label']}";
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
 
     $tracking_html = '';
     if (!empty($order['tracking_number'])) {
@@ -383,7 +383,7 @@ function sk_mail_order_status($order, $new_status, $settings = []) {
 function sk_mail_password_reset_code($user, $code, $settings = [], $portalLabel = null) {
     $to_email = $user['email'] ?? '';
     $to_name  = $user['name'] ?? 'Customer';
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $portal = $portalLabel ? htmlspecialchars($portalLabel) : 'Account';
     $subject = 'Password Reset Verification Code – ' . $site_name;
 
@@ -421,7 +421,7 @@ function sk_mail_password_reset_code($user, $code, $settings = [], $portalLabel 
 function sk_mail_affiliate_password_reset(array $affiliate, string $link, array $settings = []) {
     $to_email  = $affiliate['email'] ?? '';
     $to_name   = $affiliate['name'] ?? 'Affiliate';
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $safeLink  = htmlspecialchars($link);
     $safeName  = htmlspecialchars($to_name);
     $subject   = 'Reset your Affiliate Portal password – ' . $site_name;
@@ -459,7 +459,7 @@ function sk_mail_affiliate_password_reset(array $affiliate, string $link, array 
 function sk_mail_affiliate_invite($affiliate, $link, $settings = []) {
     $to_email  = $affiliate['email'] ?? '';
     $to_name   = $affiliate['name'] ?? 'Affiliate';
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
     $safeLink  = htmlspecialchars($link);
     $safeName  = htmlspecialchars($to_name);
@@ -505,7 +505,7 @@ function sk_mail_affiliate_registration(array $affiliate, array $settings = []) 
     }
     $to_email  = $affiliate['email'] ?? '';
     $to_name   = $affiliate['name'] ?? 'Affiliate';
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
     $loginUrl  = htmlspecialchars(site_url('admin/affiliate/login'));
     $safeName  = htmlspecialchars($to_name);
@@ -547,7 +547,7 @@ function sk_mail_affiliate_registration_admin(array $affiliate, array $settings 
         return false;
     }
 
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $name  = htmlspecialchars($affiliate['name'] ?? '');
     $email = htmlspecialchars($affiliate['email'] ?? '');
     $phone = htmlspecialchars($affiliate['phone'] ?? '');
@@ -582,7 +582,7 @@ function sk_mail_affiliate_approved(array $affiliate, array $settings = []) {
     }
     $to_email  = $affiliate['email'] ?? '';
     $to_name   = $affiliate['name'] ?? 'Affiliate';
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $promo     = htmlspecialchars($affiliate['promo_code'] ?? '');
     $loginUrl  = htmlspecialchars(site_url('admin/affiliate/login'));
     $safeName  = htmlspecialchars($to_name);
@@ -627,7 +627,7 @@ function sk_mail_affiliate_payout_paid(array $affiliate, array $payout, array $s
     if ($to_email === '') {
         return false;
     }
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $currency  = $settings['currency_symbol'] ?? 'RM';
     $amount    = number_format((float)($payout['amount'] ?? 0), 2);
     $ref       = htmlspecialchars($payout['payment_reference'] ?? '');
@@ -677,7 +677,7 @@ function sk_mail_contact_enquiry(string $name, string $email, string $message, a
     if (empty($settings)) {
         $settings = sk_mailer_settings();
     }
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $safeName  = htmlspecialchars($name);
     $safeMsg   = nl2br(htmlspecialchars($message));
     $isAffiliate = stripos($message, 'Affiliate programme enquiry') !== false

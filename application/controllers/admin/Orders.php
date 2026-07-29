@@ -22,7 +22,7 @@ class Orders extends Sk_Base {
             'search'         => $this->input->get('search', TRUE),
         ];
 
-        $data['title']   = 'Orders - ShopKart Admin';
+        $data['title']   = 'Orders - 2DEAL Admin';
         $data['orders']  = $this->Sk_Order_model->get_all_admin($limit, $offset, $filters);
         $data['total']   = $this->Sk_Order_model->count_admin($filters);
         $data['page']    = $page;

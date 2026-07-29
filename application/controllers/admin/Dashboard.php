@@ -27,7 +27,7 @@ class Dashboard extends Sk_Base {
             $data['recent_orders']   = $this->Sk_Dashboard_model->vendor_recent_orders($vid, 8);
         } else {
             $stats = $this->Sk_Dashboard_model->platform_stats();
-            $data['title']           = 'Dashboard - ShopKart Admin';
+            $data['title']           = 'Dashboard - 2DEAL Admin';
             $data['is_vendor_view']  = false;
             $data['stats']           = $stats;
             $data['currency']        = $currency;

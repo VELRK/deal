@@ -202,7 +202,7 @@ function sk_invoice_resolve_seller(array $order, array $settings): array {
 
 function sk_invoice_seller_from_settings(array $settings): array {
     return [
-        'name'            => $settings['company_legal_name'] ?? $settings['site_name'] ?? 'ShopKart',
+        'name'            => $settings['company_legal_name'] ?? $settings['site_name'] ?? '2DEAL',
         'logo'            => $settings['site_logo'] ?? '',
         'gstin'           => $settings['gstin'] ?? '',
         'pan'             => $settings['pan_no'] ?? '',
@@ -492,7 +492,7 @@ function sk_invoice_email_body(array $invoice, array $order, array $settings = [
     $CI =& get_instance();
     $CI->load->helper('sk_invoice_pdf');
 
-    $site = htmlspecialchars($settings['site_name'] ?? 'ShopKart');
+    $site = htmlspecialchars($settings['site_name'] ?? '2DEAL');
     $name = htmlspecialchars($order['customer_name'] ?? ($order['shipping_name'] ?? 'Customer'));
     $orderNo = htmlspecialchars($invoice['order_number'] ?? ($order['order_number'] ?? ''));
     $invoiceNo = htmlspecialchars($invoice['invoice_no'] ?? '');

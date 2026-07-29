@@ -16,7 +16,7 @@ class Affiliate_login extends CI_Controller {
         if ($this->session->userdata('sk_affiliate_login')) {
             redirect('admin/affiliate/dashboard');
         }
-        $data['title'] = 'Affiliate Login - ShopKart';
+        $data['title'] = 'Affiliate Login - 2DEAL';
         $this->load->view('affiliate/login', $data);
     }
 
@@ -24,7 +24,7 @@ class Affiliate_login extends CI_Controller {
         if ($this->session->userdata('sk_affiliate_login')) {
             redirect('admin/affiliate/dashboard');
         }
-        $data['title'] = 'Affiliate Registration - ShopKart';
+        $data['title'] = 'Affiliate Registration - 2DEAL';
         $this->load->view('affiliate/register', $data);
     }
 

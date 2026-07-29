@@ -19,31 +19,31 @@ Sample values for Meta approval:
 1) Template name: order_received
    Status: pending → "Order Received"
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been received. We will confirm it shortly. Thank you for shopping with us.
+Hi {{1}}, your order {{2}} has been received. We will confirm it shortly. Thank you for shopping with 2DEAL.
 
 ================================================================================
 2) Template name: order_confirmed
    Status: confirmed → "Order Confirmed"
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been confirmed and is being prepared. Thank you for shopping with us.
+Hi {{1}}, your order {{2}} has been confirmed and is being prepared. Thank you for shopping with 2DEAL.
 
 ================================================================================
 3) Template name: order_ready_pickup
    Status: processing → "Ready to Pick Up"
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} is ready to pick up. Thank you for shopping with us.
+Hi {{1}}, your order {{2}} is ready to pick up. Thank you for shopping with 2DEAL.
 
 ================================================================================
 4) Template name: order_shipped
    Status: shipped → "Shipped"
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been shipped. Thank you for shopping with us.
+Hi {{1}}, your order {{2}} has been shipped. Thank you for shopping with 2DEAL.
 
 ================================================================================
 5) Template name: order_delivered
    Status: delivered → "Delivered"
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been delivered. We hope you enjoy your purchase. Thank you for shopping with us.
+Hi {{1}}, your order {{2}} has been delivered. We hope you enjoy your purchase. Thank you for shopping with 2DEAL.
 
 ================================================================================
 6) Template name: order_cancelled
@@ -64,6 +64,6 @@ Variables:
   {{1}} = Order number
   {{2}} = Status label (e.g. Shipped)
 --------------------------------------------------------------------------------
-Hello! Your order {{1}} status is now: {{2}}. Thank you for shopping with us.
+Hello! Your order {{1}} status is now: {{2}}. Thank you for shopping with 2DEAL.
 
 ================================================================================

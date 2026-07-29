@@ -398,7 +398,7 @@ function sk_whatsapp_status_label(string $status): string {
 }
 
 function sk_whatsapp_order_message(array $order, string $status, array $settings = []): string {
-    $site = $settings['site_name'] ?? 'ShopKart';
+    $site = $settings['site_name'] ?? '2DEAL';
     $orderNo = $order['order_number'] ?? ('#' . ($order['id'] ?? ''));
     $label = sk_whatsapp_status_label($status);
     $name = trim((string)($order['customer_name'] ?? $order['shipping_name'] ?? 'Customer'));
@@ -415,7 +415,7 @@ function sk_whatsapp_order_message(array $order, string $status, array $settings
     if ($total !== '') {
         $lines[] = "Amount: {$cur}{$total}";
     }
-    $lines[] = 'Thank you for shopping with us.';
+    $lines[] = 'Thank you for shopping with 2DEAL.';
     return implode("\n", $lines);
 }
 

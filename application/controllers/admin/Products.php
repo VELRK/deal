@@ -17,7 +17,7 @@ class Products extends Sk_Base {
         $limit     = 15;
         $offset    = ($page - 1) * $limit;
 
-        $data['title']    = 'Products - ShopKart Admin';
+        $data['title']    = 'Products - 2DEAL Admin';
         $data['products'] = $this->Sk_Product_model->get_all_admin($limit, $offset, $search, $vendor_id);
         $data['total']    = $this->Sk_Product_model->count_all_admin($search, $vendor_id);
         $data['page']     = $page;

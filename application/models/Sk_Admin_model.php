@@ -34,7 +34,47 @@ class Sk_Admin_model extends CI_Model {
         foreach ($rows as $row) {
             $settings[$row['key']] = $row['value'];
         }
+        $this->_ensure_brand_name($settings);
         return $settings;
+    }
+
+    /**
+     * Rename legacy ShopKart / ShopKart Sarees labels to 2DEAL in settings DB
+     * so email, WhatsApp, invoices, and storefront all use the new brand.
+     */
+    private function _ensure_brand_name(array &$settings): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+
+        $keys = ['site_name', 'smtp_from_name', 'meta_title', 'company_legal_name'];
+        foreach ($keys as $key) {
+            $val = trim((string)($settings[$key] ?? ''));
+            if ($val === '') {
+                if ($key === 'site_name' || $key === 'smtp_from_name') {
+                    $this->save_settings([$key => '2DEAL']);
+                    $settings[$key] = '2DEAL';
+                }
+                continue;
+            }
+            if (stripos($val, 'shopkart') === false) {
+                continue;
+            }
+            // Exact old brand names
+            if (preg_match('/^shopkart(\s+sarees)?$/i', $val)) {
+                $new = '2DEAL';
+            } else {
+                // Keep surrounding copy, swap brand token
+                $new = preg_replace('/shopkart\s+sarees/i', '2DEAL', $val);
+                $new = preg_replace('/shopkart/i', '2DEAL', $new);
+            }
+            if ($new !== $val) {
+                $this->save_settings([$key => $new]);
+                $settings[$key] = $new;
+            }
+        }
     }
 
     public function get_setting($key) {

@@ -26,7 +26,7 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Site Name</label>
-              <input type="text" name="site_name" class="form-control" value="<?= htmlspecialchars($settings['site_name'] ?? 'ShopKart') ?>">
+              <input type="text" name="site_name" class="form-control" value="<?= htmlspecialchars($settings['site_name'] ?? '2DEAL') ?>">
             </div>
             <div class="col-md-6">
               <label class="form-label">Site Email</label>
@@ -248,7 +248,7 @@
             </div>
             <div class="col-md-3">
               <label class="form-label">From Name</label>
-              <input type="text" name="smtp_from_name" class="form-control" value="<?= htmlspecialchars($settings['smtp_from_name'] ?? 'ShopKart') ?>">
+              <input type="text" name="smtp_from_name" class="form-control" value="<?= htmlspecialchars($settings['smtp_from_name'] ?? '2DEAL') ?>">
             </div>
             <div class="col-md-6">
               <label class="form-label">SMTP Username</label>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin Login - ShopKart</title>
+  <title>Admin Login - 2DEAL</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="<?= base_url('assets/admin/css/admin.css') ?>">
@@ -16,7 +16,7 @@
       <div class="mb-2">
         <i class="bi bi-bag-heart-fill text-warning" style="font-size:2.5rem;"></i>
       </div>
-      <h4 class="fw-bold mb-0">ShopKart Admin</h4>
+      <h4 class="fw-bold mb-0">2DEAL Admin</h4>
       <p class="text-muted small">Sign in to continue</p>
     </div>
 

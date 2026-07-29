@@ -17,7 +17,7 @@ class Vendor_login extends CI_Controller {
         if ($this->session->userdata('sk_admin_id')) {
             redirect('admin/dashboard');
         }
-        $data['title'] = 'Vendor Login - ShopKart';
+        $data['title'] = 'Vendor Login - 2DEAL';
         $this->load->view('admin/vendor_login', $data);
     }
 

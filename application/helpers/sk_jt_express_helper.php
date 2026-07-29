@@ -335,7 +335,7 @@ function sk_mail_jt_order_status_admin(array $order, string $fromStatus, string 
         return false;
     }
 
-    $site_name = $settings['site_name'] ?? 'ShopKart';
+    $site_name = $settings['site_name'] ?? '2DEAL';
     $orderNo   = htmlspecialchars($order['order_number'] ?? '');
     $awb       = htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—');
     $from      = htmlspecialchars(ucfirst($fromStatus ?: '—'));
