@@ -122,19 +122,25 @@ class Sk_Cart extends Sk_Base_Api {
         $quantity    = (int)($data['quantity'] ?? 0);
         $key         = $this->_cart_key();
 
+        $product = $this->Sk_Product_model->get_by_id($product_id);
+        if (!$product) return $this->error('Product not found.');
+        // Resolve omitted variant_id to default so we match the stored cart row
+        $variant = $this->_resolve_variant($product, $variant_id);
+        $resolvedVid = $variant ? (int)$variant['id'] : null;
+
         if ($quantity <= 0) {
-            $this->_apply_cart_filters($key, $product_id, $variant_id);
+            $this->_apply_cart_filters($key, $product_id, $resolvedVid);
             $this->db->delete('cart');
         } else {
-            $product = $this->Sk_Product_model->get_by_id($product_id);
-            if (!$product) return $this->error('Product not found.');
-            $variant = $this->_resolve_variant($product, $variant_id);
             $stock = $variant ? (int)$variant['stock'] : (int)$product['stock'];
             if ($stock < $quantity) {
                 return $this->_stock_error($product, $variant, $quantity, $stock);
             }
-            $this->_apply_cart_filters($key, $product_id, $variant_id);
-            $this->db->update('cart', ['quantity' => $quantity]);
+            $existing = $this->_find_cart_row($key, $product_id, $resolvedVid);
+            if (!$existing) {
+                return $this->error('Cart item not found.');
+            }
+            $this->db->where('id', $existing['id'])->update('cart', ['quantity' => $quantity]);
         }
 
         $items = $this->_get_cart_items($key);
@@ -146,8 +152,22 @@ class Sk_Cart extends Sk_Base_Api {
         $product_id  = (int)($data['product_id'] ?? 0);
         $variant_id  = !empty($data['variant_id']) ? (int)$data['variant_id'] : null;
         $key         = $this->_cart_key();
-        $this->_apply_cart_filters($key, $product_id, $variant_id);
-        $this->db->delete('cart');
+
+        $product = $this->Sk_Product_model->get_by_id($product_id);
+        if ($product) {
+            $variant = $this->_resolve_variant($product, $variant_id);
+            $resolvedVid = $variant ? (int)$variant['id'] : null;
+            $this->_apply_cart_filters($key, $product_id, $resolvedVid);
+            $this->db->delete('cart');
+        } else {
+            // Product removed from catalog — drop matching cart line(s)
+            $this->db->where(array_filter($key))->where('product_id', $product_id);
+            if ($this->db->field_exists('variant_id', 'cart') && $variant_id) {
+                $this->db->where('variant_id', $variant_id);
+            }
+            $this->db->delete('cart');
+        }
+
         $items = $this->_get_cart_items($key);
         $this->success(['items' => $items, 'summary' => $this->_summary($items)], 'Removed from cart.');
     }
@@ -173,23 +193,41 @@ class Sk_Cart extends Sk_Base_Api {
                 $variant = $this->_resolve_variant($p, null);
             }
 
+            // get_by_id / attach_variants overwrites product stock & thumbnail with default variant
+            $productName = (string)($p['name'] ?? '');
+            $productThumb = null;
+            $thumbRow = $this->db->select('thumbnail, stock')->where('id', (int)$p['id'])->get('products')->row_array();
+            if ($thumbRow) {
+                $productThumb = $thumbRow['thumbnail'] ?? null;
+            }
+
             $price = $variant ? (float)$variant['price'] : (float)$p['price'];
             $sale  = $variant ? ($variant['sale_price'] ?? null) : ($p['sale_price'] ?? null);
             $effective = ($sale && $sale > 0 && $sale < $price) ? (float)$sale : $price;
             $label = $variant['label'] ?? ($p['unit_label'] ?? null);
+            $thumb = (!empty($variant['image']) ? $variant['image'] : null) ?: $productThumb ?: ($p['thumbnail'] ?? null);
+            $sku   = !empty($variant['sku']) ? $variant['sku'] : ($p['sku'] ?? null);
 
             $items[] = [
                 'cart_id'         => $row['id'],
-                'product_id'      => $p['id'],
-                'variant_id'      => $variant['id'] ?? null,
+                'product_id'      => (int)$p['id'],
+                'variant_id'      => isset($variant['id']) ? (int)$variant['id'] : null,
                 'variant_label'   => $label,
-                'name'            => $p['name'] . ($label ? ' (' . $label . ')' : ''),
-                'thumbnail'       => $p['thumbnail'],
-                'slug'            => $p['slug'],
+                'unit_label'      => $label,
+                'unit_name'       => $variant['unit_name'] ?? null,
+                'unit_symbol'     => $variant['unit_symbol'] ?? null,
+                'unit_value'      => isset($variant['unit_value']) ? (float)$variant['unit_value'] : null,
+                'product_name'    => $productName,
+                'name'            => $label ? ($productName . ' (' . $label . ')') : $productName,
+                'category_id'     => isset($p['category_id']) ? (int)$p['category_id'] : null,
+                'category_name'   => $p['category_name'] ?? null,
+                'sku'             => $sku,
+                'thumbnail'       => $thumb,
+                'slug'            => $p['slug'] ?? null,
                 'price'           => $price,
                 'sale_price'      => $sale,
                 'effective_price' => $effective,
-                'stock'           => $variant ? (int)$variant['stock'] : (int)$p['stock'],
+                'stock'           => $variant ? (int)$variant['stock'] : (int)($thumbRow['stock'] ?? $p['stock'] ?? 0),
                 'quantity'        => (int)$row['quantity'],
                 'subtotal'        => round($effective * $row['quantity'], 2),
                 'created_at'      => $row['created_at'] ?? null,
