@@ -52,6 +52,14 @@ class Sk_Base_Api extends CI_Controller {
         @file_put_contents($this->_cache_file($key), json_encode($data), LOCK_EX);
     }
 
+    /** Drop a cached API payload (e.g. after review approval). */
+    protected function delete_cache(string $key): void {
+        $file = $this->_cache_file($key);
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+
     private function _cache_file(string $key): string {
         $safe = preg_replace('/[^a-z0-9_-]/', '_', strtolower($key));
         return APPPATH . 'cache/api/' . $safe . '.json';

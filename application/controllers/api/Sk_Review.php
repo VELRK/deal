@@ -174,6 +174,9 @@ class Sk_Review extends Sk_Base_Api {
 
         $uploaded = $this->_save_review_media($reviewId);
 
+        // Bust list cache so media appears once approved (and pending admin sees fresh data)
+        $this->delete_cache('reviews_v2_' . $product_id);
+
         $this->success([
             'id'    => $reviewId,
             'media' => $uploaded,
@@ -193,35 +196,23 @@ class Sk_Review extends Sk_Base_Api {
         $saved = [];
         $sort  = 0;
 
-        // images[] multiple
-        if (!empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
-            $count = count($_FILES['images']['name']);
-            $maxImages = min(5, $count);
-            for ($i = 0; $i < $maxImages; $i++) {
-                if (empty($_FILES['images']['name'][$i]) || (int)$_FILES['images']['error'][$i] !== UPLOAD_ERR_OK) {
-                    continue;
-                }
-                $path = $this->_move_upload_file([
-                    'name'     => $_FILES['images']['name'][$i],
-                    'type'     => $_FILES['images']['type'][$i],
-                    'tmp_name' => $_FILES['images']['tmp_name'][$i],
-                    'error'    => $_FILES['images']['error'][$i],
-                    'size'     => $_FILES['images']['size'][$i],
-                ], $dir, 'jpg|jpeg|png|gif|webp', 5120);
-                if (!$path) continue;
-                $this->db->insert('review_media', [
-                    'review_id'  => $reviewId,
-                    'media_type' => 'image',
-                    'file_path'  => $path,
-                    'sort_order' => $sort++,
-                ]);
-                $saved[] = ['media_type' => 'image', 'file_path' => $path, 'url' => base_url($path)];
-            }
+        // Normalize images[] / images into a list of file slots
+        $imageSlots = $this->_normalize_file_list('images');
+        $maxImages = min(5, count($imageSlots));
+        for ($i = 0; $i < $maxImages; $i++) {
+            $path = $this->_store_uploaded_file($imageSlots[$i], $dir, ['jpg', 'jpeg', 'png', 'gif', 'webp'], 5 * 1024 * 1024);
+            if (!$path) continue;
+            $this->db->insert('review_media', [
+                'review_id'  => $reviewId,
+                'media_type' => 'image',
+                'file_path'  => $path,
+                'sort_order' => $sort++,
+            ]);
+            $saved[] = ['media_type' => 'image', 'file_path' => $path, 'url' => base_url($path)];
         }
 
-        // single video
-        if (!empty($_FILES['video']['name']) && (int)$_FILES['video']['error'] === UPLOAD_ERR_OK) {
-            $path = $this->_move_upload_file($_FILES['video'], $dir, 'mp4|webm|mov|m4v', 25600);
+        if (!empty($_FILES['video']['name']) && (int)($_FILES['video']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+            $path = $this->_store_uploaded_file($_FILES['video'], $dir, ['mp4', 'webm', 'mov', 'm4v'], 25 * 1024 * 1024);
             if ($path) {
                 $this->db->insert('review_media', [
                     'review_id'  => $reviewId,
@@ -236,30 +227,55 @@ class Sk_Review extends Sk_Base_Api {
         return $saved;
     }
 
+    /** Build a list of single-file $_FILES-shaped arrays from images / images[]. */
+    private function _normalize_file_list(string $field): array {
+        if (empty($_FILES[$field])) {
+            return [];
+        }
+        $f = $_FILES[$field];
+        // Single file
+        if (!is_array($f['name'])) {
+            if (empty($f['name']) || (int)$f['error'] !== UPLOAD_ERR_OK) return [];
+            return [$f];
+        }
+        $out = [];
+        $n = count($f['name']);
+        for ($i = 0; $i < $n; $i++) {
+            if (empty($f['name'][$i]) || (int)$f['error'][$i] !== UPLOAD_ERR_OK) continue;
+            $out[] = [
+                'name'     => $f['name'][$i],
+                'type'     => $f['type'][$i],
+                'tmp_name' => $f['tmp_name'][$i],
+                'error'    => $f['error'][$i],
+                'size'     => $f['size'][$i],
+            ];
+        }
+        return $out;
+    }
+
     /**
-     * Upload one file via CI Upload library using a temporary $_FILES slot.
+     * Save one uploaded file with extension allow-list (avoids CI mime quirks for video).
      */
-    private function _move_upload_file(array $file, string $dir, string $allowed, int $maxKb): ?string {
+    private function _store_uploaded_file(array $file, string $dir, array $allowedExt, int $maxBytes): ?string {
         if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
             return null;
         }
-        $_FILES['__review_media'] = $file;
-        $config = [
-            'upload_path'   => $dir,
-            'allowed_types' => $allowed,
-            'max_size'      => $maxKb,
-            'file_name'     => uniqid('rev_', true),
-            'encrypt_name'  => false,
-        ];
-        $this->load->library('upload');
-        $this->upload->initialize($config, true);
-        if (!$this->upload->do_upload('__review_media')) {
-            log_message('error', 'Review media upload: ' . $this->upload->display_errors('', ''));
-            unset($_FILES['__review_media']);
+        if ((int)($file['size'] ?? 0) > $maxBytes || (int)($file['size'] ?? 0) < 1) {
+            log_message('error', 'Review media size rejected: ' . ($file['name'] ?? ''));
             return null;
         }
-        $name = $this->upload->data('file_name');
-        unset($_FILES['__review_media']);
+        $ext = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+        if ($ext === '' || !in_array($ext, $allowedExt, true)) {
+            log_message('error', 'Review media type rejected: ' . ($file['name'] ?? ''));
+            return null;
+        }
+        $name = 'rev_' . str_replace('.', '', uniqid('', true)) . '.' . $ext;
+        $dest = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $name;
+        if (!@move_uploaded_file($file['tmp_name'], $dest)) {
+            log_message('error', 'Review media move failed: ' . ($file['name'] ?? ''));
+            return null;
+        }
+        @chmod($dest, 0644);
         return 'assets/uploads/reviews/' . $name;
     }
 
