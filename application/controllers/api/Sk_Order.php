@@ -177,16 +177,20 @@ class Sk_Order extends Sk_Base_Api {
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        // Royalty: need ≥ RM100 balance to unlock. Then pay any bill amount (up to balance).
-        // Remainder → COD / online / wallet.
+        // Royalty pays bill (up to balance). Testing unlock: any points ≥1; else need RM100+.
         if ($use_royalty && $royalty_enabled) {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
             $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
-            if ($availPts < $minRoyaltyPts || $availRm < $minRoyaltyRm) {
+            $testUnlock = sk_royalty_test_unlock($settingsAll);
+            $needPts = $testUnlock ? 1 : $minRoyaltyPts;
+            $needRm = $testUnlock ? 0.01 : $minRoyaltyRm;
+            if ($availPts < $needPts || $availRm < $needRm) {
                 return $this->error(
-                    'Need at least RM ' . number_format($minRoyaltyRm, 0)
-                    . ' (' . $minRoyaltyPts . ' pts) royalty to pay with points. You have '
-                    . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').'
+                    $testUnlock
+                        ? ('No royalty points to apply. You have ' . $availPts . ' pts.')
+                        : ('Need at least RM ' . number_format($minRoyaltyRm, 0)
+                            . ' (' . $minRoyaltyPts . ' pts) royalty to pay with points. You have '
+                            . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').')
                 );
             }
             if ($total <= 0) {

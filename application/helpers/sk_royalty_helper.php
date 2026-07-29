@@ -220,6 +220,20 @@ function sk_royalty_enabled(array $settings = null): bool {
     return ($settings['royalty_enabled'] ?? '1') !== '0';
 }
 
+/**
+ * TESTING: hide RM100 unlock gate — show Apply in cart whenever customer has any points.
+ * Set to false (or settings royalty_test_unlock=0) before production go-live.
+ */
+function sk_royalty_test_unlock(array $settings = null): bool {
+    if ($settings === null) {
+        $CI =& get_instance();
+        $CI->load->model('Sk_Admin_model');
+        $settings = $CI->Sk_Admin_model->get_settings();
+    }
+    // Default ON for testing; set settings key royalty_test_unlock=0 to restore RM100 gate
+    return ($settings['royalty_test_unlock'] ?? '1') !== '0';
+}
+
 /** Minimum royalty value (RM) required to show/redeem on cart. Default RM 100. */
 function sk_royalty_min_redeem_rm(array $settings = null): float {
     if ($settings === null) {

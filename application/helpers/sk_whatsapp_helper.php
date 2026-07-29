@@ -95,7 +95,19 @@ function sk_whatsapp_config(array $settings = null): array {
         'template'          => $fallbackTpl,
         'status_templates'  => $statusTemplates,
         'lang'              => $lang,
+        // TESTING override — all messages go here when set
+        'test_force_phone'  => preg_replace('/\D+/', '', (string)($fileCfg['test_force_phone'] ?? '')),
     ];
+}
+
+/** Resolve destination phone (applies test_force_phone when configured). */
+function sk_whatsapp_destination_phone(string $to, array $settings = null): string {
+    $cfg = sk_whatsapp_config($settings);
+    $force = trim((string)($cfg['test_force_phone'] ?? ''));
+    if ($force !== '') {
+        return $force;
+    }
+    return sk_whatsapp_normalize_phone($to, $settings ?: []);
 }
 
 /**
@@ -268,6 +280,12 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
 
     $phoneInfo = sk_whatsapp_order_phone_info($order, $settings);
     $phone = $phoneInfo['phone'];
+    $cfgForce = trim((string)($cfg['test_force_phone'] ?? ''));
+    if ($cfgForce !== '') {
+        // TESTING: always deliver to force phone even if order has no phone
+        $phone = $cfgForce;
+        $phoneInfo['source'] = ($phoneInfo['source'] === 'none' ? 'test_force' : ($phoneInfo['source'] . '+test_force'));
+    }
     if ($phone === '') {
         $result = ['success' => false, 'message' => 'No customer phone on order (shipping/billing/registration all empty).', 'via' => 'none'];
         sk_whatsapp_log($baseLog + [
@@ -418,7 +436,7 @@ function sk_whatsapp_send_text(string $to, string $body, array $settings = null)
     if (!$cfg['enabled']) {
         return ['success' => false, 'message' => 'WhatsApp notifications disabled.'];
     }
-    $to = sk_whatsapp_normalize_phone($to, $settings ?: []);
+    $to = sk_whatsapp_destination_phone($to, $settings);
     if ($to === '') {
         return ['success' => false, 'message' => 'Invalid phone.'];
     }
@@ -435,7 +453,7 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
     if (!$cfg['enabled'] || $templateName === '') {
         return ['success' => false, 'message' => 'Template not configured.'];
     }
-    $to = sk_whatsapp_normalize_phone($to, $settings ?: []);
+    $to = sk_whatsapp_destination_phone($to, $settings);
     if ($to === '') {
         return ['success' => false, 'message' => 'Invalid phone.'];
     }

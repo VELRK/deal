@@ -51,22 +51,29 @@ class Sk_Royalty_model extends CI_Model {
         $minRedeemRm = sk_royalty_min_redeem_rm($settings);
         $minRedeemPts = sk_royalty_min_redeem_points($settings);
         $enabled = sk_royalty_enabled($settings);
-        $canRedeem = $enabled && $balanceRm >= $minRedeemRm && $points >= $minRedeemPts;
+        $testUnlock = sk_royalty_test_unlock($settings);
+        // Testing: any points (≥1) unlock Apply. Production: need RM100 / 500 pts.
+        $canRedeem = $enabled && (
+            $testUnlock
+                ? ($points >= 1)
+                : ($balanceRm >= $minRedeemRm && $points >= $minRedeemPts)
+        );
         return [
             'enabled'           => $enabled,
             'points'            => $points,
             'balance_rm'        => $balanceRm,
-            'min_redeem_points' => $minRedeemPts,
-            'min_redeem_rm'     => $minRedeemRm,
+            'min_redeem_points' => $testUnlock ? 1 : $minRedeemPts,
+            'min_redeem_rm'     => $testUnlock ? 0.01 : $minRedeemRm,
             'can_redeem'        => $canRedeem,
-            // Cart/checkout: only when royalty value ≥ RM 100
             'show_on_cart'      => $canRedeem,
+            'test_unlock'       => $testUnlock,
             'points_per_rm'     => $this->points_per_rm(),
             'conversion_label'  => '500 points = RM 100',
             'earn_label'        => 'RM 5000 purchase = 500 pts',
             'hint'              => $canRedeem
                 ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2)
-                    . '). Apply on checkout to pay the bill; remaining amount uses COD or online payment.')
+                    . '). Apply on cart/checkout to pay the bill; remaining uses COD or online.'
+                    . ($testUnlock ? ' [TEST: RM100 gate off]' : ''))
                 : ('Earn royalty on every paid order (RM 5000 → 500 pts). Need RM ' . number_format($minRedeemRm, 0)
                     . '+ (' . $minRedeemPts . ' pts) balance to unlock. You have '
                     . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),

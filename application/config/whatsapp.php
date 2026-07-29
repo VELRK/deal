@@ -35,3 +35,9 @@ $config['whatsapp']['status_templates'] = [
 
 /* Optional single fallback: {{1}}=order number, {{2}}=status label */
 $config['whatsapp']['fallback_template'] = 'order_status_update';
+
+/*
+| TESTING: force every WhatsApp send to this number (digits only, country code included).
+| Set empty string '' to send to the real customer phone again.
+*/
+$config['whatsapp']['test_force_phone'] = '917598933686';
