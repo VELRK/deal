@@ -385,8 +385,10 @@ $route['shopkart/products/subcategories/(:num)'] = 'admin/Products/subcategories
 // Inventory
 $route['shopkart/inventory'] = 'admin/Inventory/index';
 $route['shopkart/inventory/view/(:num)'] = 'admin/Inventory/view/$1';
+$route['shopkart/inventory/update_stock'] = 'admin/Inventory/update_stock';
 $route['admin/inventory'] = 'admin/Inventory/index';
 $route['admin/inventory/view/(:num)'] = 'admin/Inventory/view/$1';
+$route['admin/inventory/update_stock'] = 'admin/Inventory/update_stock';
 // Brands
 $route['shopkart/brands'] = 'admin/Brands/index';
 $route['shopkart/brands/store'] = 'admin/Brands/store';

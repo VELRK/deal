@@ -6,7 +6,7 @@ $pages = max(1, (int)ceil($total / $limit));
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
   <div>
     <h5 class="sk-page-title mb-0"><i class="bi bi-boxes text-warning me-2"></i>Inventory</h5>
-    <div class="small text-muted mt-1">Product stock levels and links to order history per product</div>
+    <div class="small text-muted mt-1">Edit stock inline per product or pack variant — no need to open full product edit</div>
   </div>
   <div class="d-flex gap-2">
     <?php if (!empty($neg_count)): ?>
@@ -29,7 +29,7 @@ $pages = max(1, (int)ceil($total / $limit));
 <div class="alert alert-danger">
   <strong><?= (int)$neg_count ?> product(s)</strong> have negative stock (e.g. -47).
   Customers cannot buy them (app may show out of stock / not available).
-  Click <strong>Fix negative stock</strong>, then set the real quantity on each product via Edit.
+  Click <strong>Fix negative stock</strong>, then set the real quantity on each pack.
 </div>
 <?php endif; ?>
 
@@ -73,10 +73,10 @@ $pages = max(1, (int)ceil($total / $limit));
       <thead class="table-light">
         <tr>
           <th style="width:56px;">Image</th>
-          <th>Product</th>
+          <th>Product / pack stock</th>
           <?php if (empty($vendor_id) && empty($impersonating)): ?><th>Vendor</th><?php endif; ?>
           <th>Category</th>
-          <th>Stock</th>
+          <th>Total</th>
           <th>Alert</th>
           <th>Status</th>
           <th></th>
@@ -90,8 +90,9 @@ $pages = max(1, (int)ceil($total / $limit));
           $isOut = $stockQty <= 0;
           $isLow = !$isOut && $stockQty <= $alert;
           $variants = $p['variants'] ?? [];
+          $hasVariants = !empty($variants);
         ?>
-        <tr class="<?= $isOut ? 'table-danger' : '' ?>">
+        <tr class="<?= $isOut ? 'table-danger' : '' ?>" data-product-id="<?= (int)$p['id'] ?>">
           <td>
             <?php if (!empty($p['thumbnail'])): ?>
               <img src="<?= base_url($p['thumbnail']) ?>" class="rounded" width="48" height="48" style="object-fit:cover;">
@@ -101,24 +102,47 @@ $pages = max(1, (int)ceil($total / $limit));
               </div>
             <?php endif; ?>
           </td>
-          <td>
+          <td style="min-width:280px;">
             <div class="fw-semibold"><?= htmlspecialchars($p['name']) ?></div>
             <small class="text-muted"><?= $p['sku'] ? 'SKU: ' . htmlspecialchars($p['sku']) : '' ?></small>
-            <?php if (!empty($variants)): ?>
-              <div class="small text-muted mt-1">
+            <?php if ($hasVariants): ?>
+              <div class="mt-2 inv-variant-stocks">
                 <?php foreach ($variants as $v): ?>
-                  <span class="d-block"><?= htmlspecialchars($v['label'] ?? 'Variant') ?>: <?= (int)$v['stock'] ?></span>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="small text-muted" style="min-width:90px;"><?= htmlspecialchars($v['label'] ?? 'Pack') ?></span>
+                  <input type="number" min="0" class="form-control form-control-sm inv-stock-input"
+                    style="width:88px;"
+                    data-product-id="<?= (int)$p['id'] ?>"
+                    data-variant-id="<?= (int)$v['id'] ?>"
+                    value="<?= (int)$v['stock'] ?>"
+                    title="Stock for this pack">
+                  <button type="button" class="btn btn-sm btn-outline-success inv-stock-save" title="Save">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                </div>
                 <?php endforeach; ?>
               </div>
+            <?php else: ?>
+              <div class="d-flex align-items-center gap-2 mt-2">
+                <input type="number" min="0" class="form-control form-control-sm inv-stock-input"
+                  style="width:88px;"
+                  data-product-id="<?= (int)$p['id'] ?>"
+                  data-variant-id="0"
+                  value="<?= $stockQty ?>">
+                <button type="button" class="btn btn-sm btn-outline-success inv-stock-save" title="Save">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </div>
             <?php endif; ?>
+            <div class="small text-success inv-stock-msg d-none mt-1"></div>
           </td>
           <?php if (empty($vendor_id) && empty($impersonating)): ?>
           <td><small><?= htmlspecialchars($p['vendor_name'] ?? '—') ?></small></td>
           <?php endif; ?>
           <td><?= htmlspecialchars($p['category_name'] ?? '—') ?></td>
-          <td>
+          <td class="inv-product-total">
             <?php if ($isOut): ?>
-              <span class="badge bg-dark"><?= number_format($stockQty) ?> Out of stock</span>
+              <span class="badge bg-dark"><?= number_format($stockQty) ?> Out</span>
             <?php elseif ($isLow): ?>
               <span class="badge bg-danger"><?= number_format($stockQty) ?> Low</span>
             <?php else: ?>
@@ -161,3 +185,62 @@ $pages = max(1, (int)ceil($total / $limit));
   </div>
   <?php endif; ?>
 </div>
+
+<script>
+(function() {
+  var url = <?= json_encode(site_url('shopkart/inventory/update_stock')) ?>;
+
+  function saveStock(input, btn) {
+    var productId = input.getAttribute('data-product-id');
+    var variantId = input.getAttribute('data-variant-id') || '0';
+    var stock = parseInt(input.value, 10);
+    if (isNaN(stock) || stock < 0) stock = 0;
+    input.value = stock;
+    if (btn) btn.disabled = true;
+    var row = input.closest('tr');
+    var msg = row ? row.querySelector('.inv-stock-msg') : null;
+    $.post(url, { product_id: productId, variant_id: variantId, stock: stock }, function(res) {
+      if (btn) btn.disabled = false;
+      if (!res || !res.success) {
+        alert((res && res.message) || 'Could not update stock.');
+        return;
+      }
+      if (msg) {
+        msg.textContent = res.message || 'Saved';
+        msg.classList.remove('d-none', 'text-danger');
+        msg.classList.add('text-success');
+        setTimeout(function() { msg.classList.add('d-none'); }, 2000);
+      }
+      if (row && typeof res.product_stock !== 'undefined') {
+        var totalCell = row.querySelector('.inv-product-total');
+        if (totalCell) {
+          var t = parseInt(res.product_stock, 10) || 0;
+          if (t <= 0) totalCell.innerHTML = '<span class="badge bg-dark">' + t + ' Out</span>';
+          else totalCell.innerHTML = '<span class="fw-semibold">' + t.toLocaleString() + '</span>';
+        }
+      }
+    }, 'json').fail(function() {
+      if (btn) btn.disabled = false;
+      alert('Network error.');
+    });
+  }
+
+  document.querySelectorAll('.inv-stock-save').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var wrap = btn.closest('div');
+      var input = wrap ? wrap.querySelector('.inv-stock-input') : null;
+      if (input) saveStock(input, btn);
+    });
+  });
+  document.querySelectorAll('.inv-stock-input').forEach(function(input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var wrap = input.closest('div');
+        var btn = wrap ? wrap.querySelector('.inv-stock-save') : null;
+        saveStock(input, btn);
+      }
+    });
+  });
+})();
+</script>
