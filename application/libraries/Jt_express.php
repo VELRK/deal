@@ -238,21 +238,33 @@ class Jt_express {
     }
 
     /**
-     * Track shipment (logistics trace).
+     * Track shipment (logistics/trace).
+     * Docs: customerCode + password required; billCode OR txlogisticId (either one).
+     * Response data[] → billCode + details[] (scanTime, desc, scanTypeCode, scanType, …).
      */
-    public function track($billCode) {
+    public function track($billCode, $txlogisticId = '') {
         if (!$this->is_enabled()) {
             return $this->fail('JT Express is not configured.');
         }
-        if ($billCode === '') {
-            return $this->fail('AWB / bill code is required.');
+        $billCode = trim((string)$billCode);
+        $txlogisticId = trim((string)$txlogisticId);
+        if ($billCode === '' && $txlogisticId === '') {
+            return $this->fail('AWB / bill code or txlogisticId is required.');
         }
 
-        // Sandbox/production both require business password on trace
-        return $this->request('/api/logistics/trace', [
+        $payload = [
             'customerCode' => $this->customer_code,
-            'billCodes'    => $billCode,
-        ], true);
+        ];
+        // Official Open Platform field is billCode (singular). Keep billCodes as alias for older gateways.
+        if ($billCode !== '') {
+            $payload['billCode']  = $billCode;
+            $payload['billCodes'] = $billCode;
+        }
+        if ($txlogisticId !== '') {
+            $payload['txlogisticId'] = $txlogisticId;
+        }
+
+        return $this->request('/api/logistics/trace', $payload, true);
     }
 
     protected function request($path, array $biz, $with_business_digest = true) {

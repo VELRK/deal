@@ -212,13 +212,14 @@ class Orders extends Sk_Base {
             return $this->json(['success' => false, 'message' => 'Order not found.']);
         }
         $billCode = $order['jt_bill_code'] ?? $order['tracking_number'] ?? '';
-        if ($billCode === '') {
+        $txId = trim((string)($order['jt_txlogistic_id'] ?? $order['order_number'] ?? ''));
+        if ($billCode === '' && $txId === '') {
             return $this->json(['success' => false, 'message' => 'No AWB to track.']);
         }
 
         $settings = $this->Sk_Admin_model->get_settings();
         $this->load->library('Jt_express', $settings);
-        $result = $this->jt_express->track($billCode);
+        $result = $this->jt_express->track($billCode, $txId);
         $tracks = sk_jt_normalize_tracks($result);
         $msg = (string)($result['message'] ?? '');
         $rawCode = (string)(($result['raw']['code'] ?? '') ?: '');

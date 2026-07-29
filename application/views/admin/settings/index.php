@@ -293,7 +293,7 @@
             <hr class="my-2">
             <strong>Status sync webhook</strong> (register in JT Open Platform so every JT status change updates our database):
             <br><code class="user-select-all"><?= site_url('shopkart-api/shipping/jt-webhook') ?></code>
-            <br><span class="text-muted">Also auto-syncs when you open an order or click Track. For sandbox, fill sender phone/address/city/state/postcode below.</span>
+            <br><span class="text-muted">JT pushes <code>bizContent</code> (AWB + scan details) to this URL after each tracking change. Also auto-syncs when you open an order or click Track. For sandbox, fill sender phone/address/city/state/postcode below.</span>
           </div>
           <div class="row g-3">
             <div class="col-md-4">

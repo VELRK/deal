@@ -215,26 +215,32 @@ function sk_jt_infer_order_status(array $tracks, string $currentStatus): ?string
     }
 
     $latest = $tracks[0];
+    $code = trim((string)($latest['scanTypeCode'] ?? $latest['scanCode'] ?? ''));
     $text = strtolower(sk_jt_track_event_label($latest));
-    $scanType = strtolower(trim((string)($latest['scanType'] ?? $latest['scanCode'] ?? $latest['status'] ?? '')));
+    $scanType = strtolower(trim((string)($latest['scanType'] ?? $latest['status'] ?? '')));
     $haystack = $text . ' ' . $scanType;
 
-    // Returned / RTO
-    if (preg_match('/\b(return|returned|rto|sent back|back to sender)\b/', $haystack)) {
+    // Official Open Platform scanTypeCode (MY docs)
+    // 100 = Parcel Signed (delivered), 172/173 = return, 94 = Delivery Scan,
+    // 10/20/30 = pickup/depart/arrive, 110/200/300-306 = problem/exception
+    if (in_array($code, ['172', '173'], true)
+        || preg_match('/\b(return|returned|rto|sent back|back to sender)\b/', $haystack)) {
         return 'returned';
     }
 
-    // Delivered (not failed)
-    if (
-        preg_match('/\b(delivered|signed|pod|success delivery|delivery success)\b/', $haystack)
-        && strpos($haystack, 'fail') === false
-        && strpos($haystack, 'undeliver') === false
+    if ($code === '100'
+        || (
+            preg_match('/\b(delivered|signed|pod|success delivery|delivery success|parcel signed)\b/', $haystack)
+            && strpos($haystack, 'fail') === false
+            && strpos($haystack, 'undeliver') === false
+        )
     ) {
         return 'delivered';
     }
 
-    // Out for delivery / in transit / picked up → shipped
-    if (preg_match('/\b(out for delivery|ofd|in transit|transit|depart|arriv|hub|warehouse|on the way|dispatch|picked|pick.?up|collection|collected|ship|sorting|scan)\b/', $haystack)) {
+    if (in_array($code, ['10', '20', '30', '94', '400', '401', '402', '403', '404', '405', '700', '701', '702', '703', '704'], true)
+        || preg_match('/\b(out for delivery|on delivery|ofd|in transit|transit|depart|arriv|hub|warehouse|on the way|dispatch|picked|pick.?up|collection|collected|ship|sorting|scan|delivery scan)\b/', $haystack)
+    ) {
         if (!in_array($currentStatus, ['delivered', 'returned'], true)) {
             return 'shipped';
         }
@@ -328,6 +334,11 @@ function sk_jt_apply_webhook_payload(array $payload): array {
         } elseif (is_array($inner)) {
             $payload = $inner;
         }
+    }
+
+    // If still a list of shipments, take the first (controller usually expands batches)
+    if (isset($payload[0]) && is_array($payload[0]) && !isset($payload['billCode']) && !isset($payload['billcode'])) {
+        $payload = $payload[0];
     }
 
     // Some pushes wrap under data
