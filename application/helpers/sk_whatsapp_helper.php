@@ -31,6 +31,12 @@ function sk_whatsapp_ensure_settings(): void {
     foreach ($defaults as $key => $value) {
         $exists = $CI->db->get_where('settings', ['key' => $key], 1)->row_array();
         if ($exists) {
+            // Backfill empty token/url from config (common after blank seed insert).
+            if (in_array($key, ['askeva_api_token', 'askeva_api_url'], true)
+                && trim((string)($exists['value'] ?? '')) === ''
+                && trim((string)$value) !== '') {
+                $CI->db->where('key', $key)->update('settings', ['value' => (string)$value]);
+            }
             continue;
         }
         $row = ['key' => $key, 'value' => (string) $value];
