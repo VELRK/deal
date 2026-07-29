@@ -19,13 +19,19 @@ class Whatsapp_library {
         
         // Load config from config file or use provided config
         $this->ci->config->load('whatsapp', TRUE);
-        $config = $this->ci->config->item('whatsapp') ?: $config;
-        
-        // Use config values if available, otherwise use defaults
-        $this->provider = 'syncr';
-        $this->api_key = '7fb0608e5260b2b542e729927a233b5a47100911028e51dfc481719a3fa5a5bba98ec5127f49547965dacfc3602c8228aa56ec758433dda3abe16ae217e2ae09';
-        $this->api_url =    'https://waadmin.syncr.in/v1/message/send-message';
-        $this->from_number =   '919790919412';
+        $fileCfg = $this->ci->config->item('whatsapp');
+        if (!is_array($fileCfg)) {
+            $fileCfg = [];
+        }
+        if (is_array($config) && !empty($config)) {
+            $fileCfg = array_merge($fileCfg, $config);
+        }
+
+        $this->provider = trim((string)($fileCfg['provider'] ?? 'syncr')) ?: 'syncr';
+        $this->api_key = trim((string)($fileCfg['api_key'] ?? ''));
+        $this->api_url = trim((string)($fileCfg['api_url'] ?? 'https://waadmin.syncr.in/v1/message/send-message'))
+            ?: 'https://waadmin.syncr.in/v1/message/send-message';
+        $this->from_number = trim((string)($fileCfg['from_number'] ?? ''));
         
         // Debug: Log what was loaded (masked) for verification
         if (!empty($this->api_key)) {

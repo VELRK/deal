@@ -3,18 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /*
 |--------------------------------------------------------------------------
-| WhatsApp / Askeva Configuration
+| WhatsApp / Syncr (waadmin) Configuration
 |--------------------------------------------------------------------------
-| Order status notifications use Askeva utility/text messages.
-| Token can also be set in Admin → Settings (askeva_api_token).
+| Order status + OTP use Syncr send-message API:
+|   POST https://waadmin.syncr.in/v1/message/send-message?token=...
 |
+| Token can also be set in Admin → Settings (askeva_api_token — same field).
 | Create templates from: database/whatsapp_order_templates.txt
-| Template names below must match Meta/Askeva exactly.
+| Template names below must match Meta/Syncr exactly.
 */
 
-$config['whatsapp']['provider'] = 'askeva';
+$config['whatsapp']['provider'] = 'syncr';
 $config['whatsapp']['api_key']  = '674e498739ed6b8f2ed24ebdc3b243272776edd10cca20161979f8c72637842b05bab827f1867cd2efb49331993e20b0dc196c48de22694331f722bd079bab53';
-$config['whatsapp']['api_url']  = 'https://backend.askeva.io/v1/message/send-message';
+$config['whatsapp']['api_url']  = 'https://waadmin.syncr.in/v1/message/send-message';
 $config['whatsapp']['from_number'] = '';
 $config['whatsapp']['development_mode'] = false;
 $config['whatsapp']['template_lang'] = 'en';

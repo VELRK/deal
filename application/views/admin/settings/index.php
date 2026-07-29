@@ -115,12 +115,12 @@
       </div>
     </div>
 
-    <!-- Order WhatsApp (Askeva) — visible to admin + vendor accounts -->
+    <!-- Order WhatsApp (Syncr) — visible to admin + vendor accounts -->
     <div class="tab-pane fade" id="tab-whatsapp">
       <div class="card sk-table-card shadow-sm">
         <div class="card-body">
-          <h6 class="mb-1"><i class="bi bi-whatsapp text-success me-1"></i>Order WhatsApp (Askeva)</h6>
-          <p class="text-muted small mb-3">Send WhatsApp messages to customers when order status changes (pending, confirmed, processing, shipped, delivered, cancelled). Uses the platform Askeva account for all vendors.</p>
+          <h6 class="mb-1"><i class="bi bi-whatsapp text-success me-1"></i>Order WhatsApp (Syncr)</h6>
+          <p class="text-muted small mb-3">Send WhatsApp messages to customers when order status changes (pending, confirmed, processing, shipped, delivered, cancelled). Uses Syncr <code>waadmin.syncr.in</code> for all vendors.</p>
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" name="askeva_whatsapp_enabled" id="askevaToggle" value="1"
               <?= (!isset($settings['askeva_whatsapp_enabled']) || $settings['askeva_whatsapp_enabled'] == '1') ? 'checked' : '' ?>>
@@ -130,7 +130,7 @@
             <div class="col-md-8">
               <label class="form-label">API URL</label>
               <input type="text" name="askeva_api_url" class="form-control"
-                value="<?= htmlspecialchars($settings['askeva_api_url'] ?? 'https://backend.askeva.io/v1/message/send-message') ?>">
+                value="<?= htmlspecialchars($settings['askeva_api_url'] ?? 'https://waadmin.syncr.in/v1/message/send-message') ?>">
             </div>
             <div class="col-md-4">
               <label class="form-label">Template language</label>
@@ -140,7 +140,7 @@
             <div class="col-12">
               <label class="form-label">API Token</label>
               <input type="text" name="askeva_api_token" class="form-control font-monospace" autocomplete="off"
-                value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Askeva token' ?>">
+                value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Syncr API token' ?>">
               <?php if (!empty($settings['askeva_api_token'])): ?>
                 <div class="form-text text-success">
                   Saved in DB (<?= strlen((string)$settings['askeva_api_token']) ?> chars, ends …<?= htmlspecialchars(substr((string)$settings['askeva_api_token'], -6)) ?>).

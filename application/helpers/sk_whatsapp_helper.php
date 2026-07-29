@@ -21,8 +21,8 @@ function sk_whatsapp_ensure_settings(): void {
     $fileCfg = $CI->config->item('whatsapp') ?: [];
     $defaults = [
         'askeva_whatsapp_enabled' => '1',
-        'askeva_api_url'          => trim((string)($fileCfg['api_url'] ?? 'https://backend.askeva.io/v1/message/send-message'))
-            ?: 'https://backend.askeva.io/v1/message/send-message',
+        'askeva_api_url'          => trim((string)($fileCfg['api_url'] ?? 'https://waadmin.syncr.in/v1/message/send-message'))
+            ?: 'https://waadmin.syncr.in/v1/message/send-message',
         'askeva_api_token'        => trim((string)($fileCfg['api_key'] ?? '')),
         // Optional Meta-approved UTILITY template name (2 body params: order no, status). Leave empty to text-only.
         'askeva_order_template'   => '',
@@ -32,15 +32,10 @@ function sk_whatsapp_ensure_settings(): void {
     foreach ($defaults as $key => $value) {
         $exists = $CI->db->get_where('settings', ['key' => $key], 1)->row_array();
         if ($exists) {
-            // Backfill empty token/url from config (common after blank seed insert).
-            // Also sync Askeva token when config file has a newer non-empty key.
-            if ($key === 'askeva_api_token'
+            // Sync token/url from config when file has a newer non-empty value.
+            if (in_array($key, ['askeva_api_token', 'askeva_api_url'], true)
                 && trim((string)$value) !== ''
                 && trim((string)($exists['value'] ?? '')) !== trim((string)$value)) {
-                $CI->db->where('key', $key)->update('settings', ['value' => (string)$value]);
-            } elseif (in_array($key, ['askeva_api_token', 'askeva_api_url'], true)
-                && trim((string)($exists['value'] ?? '')) === ''
-                && trim((string)$value) !== '') {
                 $CI->db->where('key', $key)->update('settings', ['value' => (string)$value]);
             }
             continue;
@@ -86,7 +81,7 @@ function sk_whatsapp_config(array $settings = null): array {
     }
     $url = trim((string)($settings['askeva_api_url'] ?? ''));
     if ($url === '') {
-        $url = trim((string)($fileCfg['api_url'] ?? 'https://backend.askeva.io/v1/message/send-message'));
+        $url = trim((string)($fileCfg['api_url'] ?? 'https://waadmin.syncr.in/v1/message/send-message'));
     }
 
     // Hard defaults so confirmed/shipped/etc. always map even if config is stale on server
@@ -118,7 +113,7 @@ function sk_whatsapp_config(array $settings = null): array {
 
     return [
         'enabled'           => ($settings['askeva_whatsapp_enabled'] ?? '1') !== '0',
-        'url'               => $url ?: 'https://backend.askeva.io/v1/message/send-message',
+        'url'               => $url ?: 'https://waadmin.syncr.in/v1/message/send-message',
         'token'             => $token,
         'template'          => $fallbackTpl,
         'status_templates'  => $statusTemplates,
@@ -420,12 +415,12 @@ function sk_whatsapp_order_message(array $order, string $status, array $settings
 }
 
 /**
- * Low-level POST to Askeva send-message.
+ * Low-level POST to Syncr/WAAdmin send-message (?token=...).
  * @return array{success:bool,http?:int,response?:mixed,message?:string}
  */
 function sk_whatsapp_api_send(array $payload, array $cfg): array {
     if (empty($cfg['token'])) {
-        return ['success' => false, 'message' => 'Askeva token not configured.'];
+        return ['success' => false, 'message' => 'WhatsApp API token not configured.'];
     }
     $url = rtrim($cfg['url'], '?&');
     $url .= (strpos($url, '?') === false ? '?' : '&') . 'token=' . rawurlencode($cfg['token']);
@@ -445,7 +440,7 @@ function sk_whatsapp_api_send(array $payload, array $cfg): array {
     curl_close($ch);
 
     if ($err) {
-        log_message('error', 'Askeva WA curl: ' . $err);
+        log_message('error', 'Syncr WA curl: ' . $err);
         return ['success' => false, 'http' => $code, 'message' => $err];
     }
     $json = json_decode((string)$raw, true);
@@ -454,7 +449,7 @@ function sk_whatsapp_api_send(array $payload, array $cfg): array {
         $ok = false;
     }
     if (!$ok) {
-        log_message('error', 'Askeva WA fail HTTP ' . $code . ': ' . $raw);
+        log_message('error', 'Syncr WA fail HTTP ' . $code . ': ' . $raw);
     }
     return [
         'success'  => $ok,
