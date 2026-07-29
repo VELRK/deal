@@ -3,9 +3,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Royalty points — separate from wallet cash.
- * Earn after paid/COD orders; pay with points when balance ≥ RM 100 (500 pts).
+ * Earn after paid/COD orders; unlock redeem when balance ≥ RM 100 (500 pts).
  * Earn: RM 5000 purchase → 500 pts (0.1 pts / RM). Redeem: 500 pts → RM 100 (5 pts / RM).
- * Royalty pays toward the bill; any remainder uses COD / online / wallet.
+ * Royalty pays toward any bill amount; remainder uses COD / online / wallet.
  */
 function sk_royalty_ensure_schema() {
     static $done = false;

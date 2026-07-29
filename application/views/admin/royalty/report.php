@@ -43,7 +43,7 @@
           <li>Royalty is separate from wallet cash (top-ups / wallet pay).</li>
           <li>Points generate only after order (paid / COD): <?= rtrim(rtrim(number_format($earnRate, 2, '.', ''), '0'), '.') ?> pts per RM 1 purchase.</li>
           <li>RM <?= number_format($examplePurchaseRm, 0) ?> purchase = <?= (int)$exampleEarnPts ?> pts = RM <?= number_format($exampleCreditRm, 0) ?> credit.</li>
-          <li>On cart/checkout, only when balance ≥ RM <?= number_format($exampleCreditRm, 0) ?> (<?= (int)$min_redeem ?> pts) can customer apply royalty as bill payment (goods + shipping). Remainder via COD / online / wallet — not a coupon discount.</li>
+          <li>On cart/checkout, when balance ≥ RM <?= number_format($exampleCreditRm, 0) ?> (<?= (int)$min_redeem ?> pts) customer can apply royalty as bill payment (any bill amount; goods + shipping). Remainder via COD / online / wallet — not a coupon discount.</li>
           <li>Order page &amp; invoice show earned / redeemed royalty for admin.</li>
         </ul>
       </div>

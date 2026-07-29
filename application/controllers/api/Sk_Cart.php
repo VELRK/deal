@@ -198,7 +198,10 @@ class Sk_Cart extends Sk_Base_Api {
     private function _summary($items) {
         $subtotal = array_sum(array_column($items, 'subtotal'));
         $settings = $this->get_settings();
-        $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
+        // Empty cart: no shipping charge (avoid RM50 total with Subtotal RM0)
+        $shipping = ($subtotal <= 0 || empty($items))
+            ? 0
+            : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
         // Storefront does not charge/show GST
         $tax      = 0;
         $summary = [

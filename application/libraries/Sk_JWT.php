@@ -41,7 +41,19 @@ class Sk_JWT {
     public function get_token_from_request() {
         $CI =& get_instance();
         $auth = $CI->input->get_request_header('Authorization', TRUE);
-        if (!$auth || !preg_match('/Bearer\s(\S+)/', $auth, $m)) return null;
+        // Apache CGI/FastCGI often drops Authorization; fall back to env / alt header
+        if (!$auth) {
+            $auth = $_SERVER['HTTP_AUTHORIZATION']
+                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+                ?? null;
+        }
+        if (!$auth) {
+            $alt = $CI->input->get_request_header('X-Auth-Token', TRUE);
+            if ($alt) {
+                return preg_match('/Bearer\s(\S+)/i', $alt, $m) ? $m[1] : trim($alt);
+            }
+        }
+        if (!$auth || !preg_match('/Bearer\s(\S+)/i', $auth, $m)) return null;
         return $m[1];
     }
 

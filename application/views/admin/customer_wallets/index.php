@@ -73,7 +73,7 @@
       </div>
       <div class="col-md-2">
         <label class="form-label small">Min pay RM on bill</label>
-        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Bill &amp; balance must be ≥ this RM to pay with points">
+        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Need this much royalty balance (RM) to unlock Apply">
       </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>

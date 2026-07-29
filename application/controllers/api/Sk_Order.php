@@ -169,13 +169,16 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        $shipping = $subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50);
+        $shipping = ($subtotal <= 0)
+            ? 0
+            : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
         $taxable_amount = max(0, $subtotal - $discount);
         // Storefront does not charge/show GST
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        // Royalty pays toward the bill (like wallet), min RM 100. Remainder → COD / online / wallet.
+        // Royalty: need ≥ RM100 balance to unlock. Then pay any bill amount (up to balance).
+        // Remainder → COD / online / wallet.
         if ($use_royalty && $royalty_enabled) {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
             $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
@@ -186,21 +189,15 @@ class Sk_Order extends Sk_Base_Api {
                     . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').'
                 );
             }
-            if ($total < $minRoyaltyRm) {
-                return $this->error(
-                    'Royalty points can only be used when the bill is RM '
-                    . number_format($minRoyaltyRm, 0) . ' or more.'
-                );
+            if ($total <= 0) {
+                return $this->error('Cart is empty.');
             }
             $ptsToUse = $royalty_points_req > 0 ? min($royalty_points_req, $availPts) : $availPts;
             $wantRm = $this->Sk_Royalty_model->points_to_rm($ptsToUse);
             $royalty_used_rm = round(min($wantRm, $total), 2);
             $royalty_used_points = $this->Sk_Royalty_model->rm_to_points($royalty_used_rm);
-            if ($royalty_used_rm < $minRoyaltyRm || $royalty_used_points < $minRoyaltyPts) {
-                return $this->error(
-                    'Minimum royalty payment is RM ' . number_format($minRoyaltyRm, 0)
-                    . ' (' . $minRoyaltyPts . ' pts).'
-                );
+            if ($royalty_used_rm <= 0 || $royalty_used_points < 1) {
+                return $this->error('Could not apply royalty points to this order.');
             }
         }
 
