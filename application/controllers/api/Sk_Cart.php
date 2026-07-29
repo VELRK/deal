@@ -188,6 +188,8 @@ class Sk_Cart extends Sk_Base_Api {
                 'stock'           => $variant ? (int)$variant['stock'] : (int)$p['stock'],
                 'quantity'        => (int)$row['quantity'],
                 'subtotal'        => round($effective * $row['quantity'], 2),
+                'created_at'      => $row['created_at'] ?? null,
+                'added_at'        => $row['created_at'] ?? null,
             ];
         }
         return $items;
@@ -208,10 +210,14 @@ class Sk_Cart extends Sk_Base_Api {
             'item_count'   => array_sum(array_column($items, 'quantity')),
         ];
 
-        // Royalty points (separate ledger from wallet)
+        // Royalty points (separate ledger from wallet) — show when logged in
         $this->load->helper('sk_royalty');
         sk_royalty_ensure_schema();
         $userId = (int)($this->user['user_id'] ?? 0);
+        if ($userId < 1) {
+            $jwt = $this->sk_jwt->get_user_from_request();
+            $userId = (int)($jwt['user_id'] ?? 0);
+        }
         if ($userId > 0) {
             $this->load->model('Sk_Royalty_model');
             $summary['royalty'] = $this->Sk_Royalty_model->get_info($userId);
