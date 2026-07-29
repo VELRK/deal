@@ -87,6 +87,40 @@ class Sk_User_model extends CI_Model {
         $this->db->where('id', $id)->update('users', ['last_login' => date('Y-m-d H:i:s')]);
     }
 
+    public function ensure_deleted_at_column(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if ($this->db->field_exists('deleted_at', 'users')) {
+            return;
+        }
+        $this->db->query('ALTER TABLE `users` ADD COLUMN `deleted_at` DATETIME NULL DEFAULT NULL AFTER `status`');
+    }
+
+    /** Soft-delete account so email/phone can be reused. */
+    public function soft_delete($id): bool {
+        $this->ensure_deleted_at_column();
+        $id = (int)$id;
+        $user = $this->get_by_id($id);
+        if (!$user) {
+            return false;
+        }
+        $stamp = date('YmdHis');
+        $data = [
+            'status'        => 0,
+            'deleted_at'    => date('Y-m-d H:i:s'),
+            'email'         => 'deleted_' . $id . '_' . $stamp . '@deleted.local',
+            'phone'         => 'del' . $id . $stamp,
+            'reset_token'   => null,
+            'reset_expires' => null,
+            'password'      => password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT),
+        ];
+        $this->db->where('id', $id)->update('users', $data);
+        return true;
+    }
+
     /** Generate a 6-digit email verification code (15 min expiry). */
     public function set_reset_code($email) {
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);

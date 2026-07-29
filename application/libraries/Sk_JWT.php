@@ -1,6 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * JWT helpers: encode/decode + logout blacklist.
+ */
 class Sk_JWT {
 
     private $secret;
@@ -30,15 +33,92 @@ class Sk_JWT {
         if (!hash_equals($expected, $sig)) return null;
 
         $payload = json_decode($this->base64_decode($body), true);
-        if ($payload['exp'] < time()) return null;
+        if (!$payload || empty($payload['exp']) || $payload['exp'] < time()) return null;
+        if ($this->is_blacklisted($token)) return null;
         return $payload;
     }
 
-    public function get_user_from_request() {
+    public function get_token_from_request() {
         $CI =& get_instance();
         $auth = $CI->input->get_request_header('Authorization', TRUE);
         if (!$auth || !preg_match('/Bearer\s(\S+)/', $auth, $m)) return null;
-        return $this->decode($m[1]);
+        return $m[1];
+    }
+
+    public function get_user_from_request() {
+        $token = $this->get_token_from_request();
+        if (!$token) return null;
+        return $this->decode($token);
+    }
+
+    /** Store token hash until exp so logout invalidates it. */
+    public function blacklist($token, $userId = null): bool {
+        $payload = $this->decode_ignore_blacklist($token);
+        if (!$payload || empty($payload['exp'])) {
+            return false;
+        }
+        $this->ensure_blacklist_schema();
+        $CI =& get_instance();
+        $hash = hash('sha256', $token);
+        $exists = $CI->db->where('token_hash', $hash)->count_all_results('jwt_blacklist') > 0;
+        if ($exists) {
+            return true;
+        }
+        $CI->db->insert('jwt_blacklist', [
+            'token_hash' => $hash,
+            'user_id'    => $userId ? (int)$userId : (!empty($payload['user_id']) ? (int)$payload['user_id'] : null),
+            'expires_at' => (int)$payload['exp'],
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        // Opportunistic cleanup of expired rows
+        if (random_int(1, 20) === 1) {
+            $CI->db->where('expires_at <', time())->delete('jwt_blacklist');
+        }
+        return true;
+    }
+
+    public function is_blacklisted($token): bool {
+        $CI =& get_instance();
+        if (!$CI->db->table_exists('jwt_blacklist')) {
+            return false;
+        }
+        $hash = hash('sha256', $token);
+        $row = $CI->db->where('token_hash', $hash)
+            ->where('expires_at >=', time())
+            ->limit(1)
+            ->get('jwt_blacklist')->row_array();
+        return !empty($row);
+    }
+
+    private function decode_ignore_blacklist($token) {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) return null;
+        [$header, $body, $sig] = $parts;
+        $expected = $this->base64_encode(hash_hmac('sha256', "$header.$body", $this->secret, true));
+        if (!hash_equals($expected, $sig)) return null;
+        $payload = json_decode($this->base64_decode($body), true);
+        if (!$payload || empty($payload['exp'])) return null;
+        return $payload;
+    }
+
+    public function ensure_blacklist_schema(): void {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        $CI =& get_instance();
+        if ($CI->db->table_exists('jwt_blacklist')) {
+            return;
+        }
+        $CI->db->query("CREATE TABLE IF NOT EXISTS `jwt_blacklist` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `token_hash` CHAR(64) NOT NULL,
+            `user_id` INT UNSIGNED NULL DEFAULT NULL,
+            `expires_at` INT UNSIGNED NOT NULL,
+            `created_at` DATETIME NOT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uq_jwt_hash` (`token_hash`),
+            KEY `idx_jwt_expires` (`expires_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
     private function base64_encode($data) {

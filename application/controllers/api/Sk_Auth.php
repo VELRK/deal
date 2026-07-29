@@ -130,6 +130,9 @@ class Sk_Auth extends Sk_Base_Api {
         if (!$user || !$this->Sk_User_model->verify_password($password, $user['password'])) {
             return $this->error('Invalid email or password.', 401);
         }
+        if (!empty($user['deleted_at'])) {
+            return $this->error('This account has been deleted.', 403);
+        }
         if (!$user['status']) {
             return $this->error('Your account has been blocked.', 403);
         }
@@ -331,6 +334,7 @@ class Sk_Auth extends Sk_Base_Api {
         }
 
         if (!$user['status']) return $this->error('Your account has been blocked.', 403);
+        if (!empty($user['deleted_at'])) return $this->error('This account has been deleted.', 403);
 
         $this->Sk_User_model->update_last_login($user['id']);
         $token = $this->sk_jwt->encode(['user_id' => $user['id'], 'email' => $user['email']]);
@@ -339,6 +343,59 @@ class Sk_Auth extends Sk_Base_Api {
             'token' => $token,
             'user'  => $this->_safe_user($user),
         ], 'Login successful.');
+    }
+
+    /**
+     * POST /shopkart-api/logout
+     * Auth required. Blacklists current Bearer token until it expires.
+     */
+    public function logout() {
+        $this->auth_required();
+        $token = $this->sk_jwt->get_token_from_request();
+        if ($token) {
+            $this->sk_jwt->blacklist($token, (int)($this->user['user_id'] ?? 0));
+        }
+        $this->success([], 'Logged out successfully.');
+    }
+
+    /**
+     * POST /shopkart-api/user/delete-account
+     * Auth required. Soft-deletes account (deleted_at + status=0) and blacklists token.
+     * Body optional: { "password": "...", "confirm": true }
+     */
+    public function delete_account() {
+        $this->auth_required();
+        $userId = (int)($this->user['user_id'] ?? 0);
+        $user = $this->Sk_User_model->get_by_id($userId);
+        if (!$user || !empty($user['deleted_at'])) {
+            return $this->error('Account not found.', 404);
+        }
+
+        $data = $this->body();
+        $confirm = !empty($data['confirm']) || !empty($data['delete']) || (($data['confirm'] ?? '') === 'DELETE');
+        // Password required for email/password accounts (not OTP placeholder emails)
+        $isOtpAccount = strpos((string)$user['email'], '@shopkart.app') !== false;
+        $password = (string)($data['password'] ?? '');
+        if (!$isOtpAccount) {
+            if ($password === '') {
+                return $this->error('Password is required to delete your account.');
+            }
+            if (!$this->Sk_User_model->verify_password($password, $user['password'])) {
+                return $this->error('Incorrect password.', 401);
+            }
+        } elseif (!$confirm) {
+            return $this->error('Send confirm=true to delete your account.');
+        }
+
+        $this->Sk_User_model->ensure_deleted_at_column();
+        $this->Sk_User_model->soft_delete($userId);
+
+        $token = $this->sk_jwt->get_token_from_request();
+        if ($token) {
+            $this->sk_jwt->blacklist($token, $userId);
+        }
+
+        $this->success([], 'Your account has been deleted.');
     }
 
     private function _safe_user($user) {

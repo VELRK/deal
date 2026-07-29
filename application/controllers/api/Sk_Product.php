@@ -76,4 +76,56 @@ class Sk_Product extends Sk_Base_Api {
         $result = $this->Sk_Product_model->get_all(['search' => $q, 'status' => 'active'], 20, 0);
         $this->success($result['data']);
     }
+
+    /** GET /shopkart-api/products/recommended — special_product (fallback: featured). */
+    public function recommended() {
+        $this->_list_preset(['special_product' => 1], 'newest');
+    }
+
+    /** GET /shopkart-api/products/new-arrivals */
+    public function new_arrivals() {
+        $this->_list_preset([], 'newest');
+    }
+
+    /** GET /shopkart-api/products/top-selling */
+    public function top_selling() {
+        $this->_list_preset([], 'popular');
+    }
+
+    private function _list_preset(array $extraFilters, string $defaultSort) {
+        $limit  = min((int)($this->input->get('limit') ?? 20), 100);
+        $page   = max(1, (int)($this->input->get('page') ?? 1));
+        $offset = ($page - 1) * $limit;
+        $sort   = $this->input->get('sort') ?: $defaultSort;
+
+        $filters = array_merge([
+            'status' => 'active',
+            'sort'   => $sort,
+        ], $extraFilters);
+
+        $cacheKey = 'products_preset_' . md5(json_encode([$filters, $limit, $page]));
+        $cached = $this->get_cache($cacheKey, 60);
+        if ($cached !== null) {
+            return $this->success($cached);
+        }
+
+        $result = $this->Sk_Product_model->get_all($filters, $limit, $offset);
+
+        // Recommended: if no special products, fall back to featured
+        if (!empty($extraFilters['special_product']) && (int)$result['total'] === 0) {
+            unset($filters['special_product']);
+            $filters['featured'] = 1;
+            $result = $this->Sk_Product_model->get_all($filters, $limit, $offset);
+        }
+
+        $data = [
+            'products'    => $result['data'],
+            'total'       => $result['total'],
+            'page'        => $page,
+            'limit'       => $limit,
+            'total_pages' => $limit > 0 ? (int)ceil($result['total'] / $limit) : 0,
+        ];
+        $this->set_cache($cacheKey, $data);
+        $this->success($data);
+    }
 }

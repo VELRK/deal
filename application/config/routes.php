@@ -531,9 +531,15 @@ $route['shopkart-api/otp-verify']['POST']  = 'api/Sk_Auth/otp_verify';
 $route['shopkart-api/forgot-password']['POST'] = 'api/Sk_Auth/forgot_password';
 $route['shopkart-api/forgot-password/verify']['POST'] = 'api/Sk_Auth/verify_reset_code';
 $route['shopkart-api/reset-password']['POST'] = 'api/Sk_Auth/reset_password';
+$route['shopkart-api/logout']['POST'] = 'api/Sk_Auth/logout';
+$route['shopkart-api/user/delete-account']['POST'] = 'api/Sk_Auth/delete_account';
+$route['shopkart-api/user/delete-account']['DELETE'] = 'api/Sk_Auth/delete_account';
 // Products
 $route['shopkart-api/variant-units']['GET'] = 'api/Sk_Variant_unit/index';
 $route['shopkart-api/products']['GET'] = 'api/Sk_Product/index';
+$route['shopkart-api/products/recommended']['GET'] = 'api/Sk_Product/recommended';
+$route['shopkart-api/products/new-arrivals']['GET'] = 'api/Sk_Product/new_arrivals';
+$route['shopkart-api/products/top-selling']['GET'] = 'api/Sk_Product/top_selling';
 $route['shopkart-api/product/(:any)']['GET'] = 'api/Sk_Product/show/$1';
 $route['shopkart-api/categories']['GET'] = 'api/Sk_Category/index';
 $route['shopkart-api/nav-menu']['GET']   = 'api/Sk_NavMenu/index';
@@ -597,6 +603,10 @@ $route['shopkart-api/seo']['GET'] = 'api/Sk_Seo/page';
 $route['shopkart-api/seo/global']['GET'] = 'api/Sk_Seo/global_config';
 // Contact form
 $route['shopkart-api/contact']['POST'] = 'api/Sk_Contact/store';
+// Affiliate enquiry (mobile)
+$route['shopkart-api/affiliate/enquiry']['POST'] = 'api/Sk_Affiliate_enquiry/store';
+$route['shopkart-api/affiliate/enquiry']['GET']  = 'api/Sk_Affiliate_enquiry/index';
+$route['shopkart-api/affiliate/enquiry/(:num)']['GET'] = 'api/Sk_Affiliate_enquiry/show/$1';
 // Blogs (public)
 $route['shopkart-api/blogs']['GET']          = 'api/Sk_Blog/index';
 $route['shopkart-api/blog/(:any)']['GET']    = 'api/Sk_Blog/show/$1';
