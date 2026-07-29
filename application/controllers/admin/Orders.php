@@ -233,13 +233,22 @@ class Orders extends Sk_Base {
         );
 
         if (!empty($result['success'])) {
-            $this->_jt_apply_tracking_sync((int)$id, $result, $tracks);
+            $sync = sk_jt_sync_order_tracking((int)$id, $result);
+            $tracks = $sync['tracks'] ?? $tracks;
+            $msgOut = $msg !== '' ? $msg : 'Tracking fetched.';
+            if (!empty($sync['status_changed'])) {
+                $msgOut .= ' Order status updated to ' . ($sync['status'] ?? '') . '.';
+            }
             return $this->json([
-                'success' => true,
-                'message' => $msg !== '' ? $msg : 'Tracking fetched.',
-                'tracks'  => $tracks,
-                'bill_code' => $billCode,
-                'raw'     => $result['raw'] ?? null,
+                'success'        => true,
+                'message'        => $msgOut,
+                'tracks'         => $tracks,
+                'bill_code'      => $billCode,
+                'status'         => $sync['status'] ?? ($order['status'] ?? null),
+                'status_changed' => !empty($sync['status_changed']),
+                'previous_status'=> $sync['previous_status'] ?? null,
+                'courier_status' => $sync['courier_status'] ?? null,
+                'raw'            => $result['raw'] ?? null,
             ]);
         }
 

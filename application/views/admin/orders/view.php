@@ -208,6 +208,7 @@
         <div class="small mb-3">
           <div><span class="text-muted">AWB:</span> <strong><?= htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—') ?></strong></div>
           <div><span class="text-muted">Courier:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
+          <div><span class="text-muted">Order:</span> <strong><?= htmlspecialchars(ucfirst($order['status'] ?? '')) ?></strong> <span class="text-muted small">(syncs from JT)</span></div>
           <?php if (!empty($order['jt_shipment_created_at'])): ?>
           <div><span class="text-muted">Created:</span> <?= sk_jt_format_datetime($order['jt_shipment_created_at']) ?></div>
           <?php endif; ?>

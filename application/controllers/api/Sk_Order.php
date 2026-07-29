@@ -224,6 +224,10 @@ class Sk_Order extends Sk_Base_Api {
         $gateway_amount = round(max(0, $total - $royalty_used_rm - $wallet_amount), 2);
         // Fully covered by royalty and/or wallet → paid now (no COD/online remainder)
         $is_paid_now    = ($gateway_amount <= 0.009);
+        // COD + fully paid (wallet/royalty) → Confirmed immediately.
+        // Razorpay with amount due stays Pending until payment verify succeeds.
+        $is_cod         = strtolower((string)$payment_method) === 'cod';
+        $confirm_now    = $is_paid_now || $is_cod;
 
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
@@ -248,9 +252,9 @@ class Sk_Order extends Sk_Base_Api {
             'royalty_used_rm'     => $royalty_used_rm,
             'payment_method'   => $payment_method,
             'payment_status'   => $is_paid_now ? 'paid' : 'pending',
-            'status'           => $is_paid_now ? 'confirmed' : 'pending',
+            'status'           => $confirm_now ? 'confirmed' : 'pending',
             'status_updated_at'=> $now,
-            'confirmed_at'     => $is_paid_now ? $now : null,
+            'confirmed_at'     => $confirm_now ? $now : null,
             'notes'            => trim(
                 ($data['note'] ?? $data['notes'] ?? '')
                 . ($wallet_discount > 0 ? ' [Wallet discount: ' . $wallet_discount . ']' : '')

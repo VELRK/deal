@@ -24,6 +24,17 @@ $hasAwb = $awb !== '';
 <div class="alert alert-warning">JT Express is disabled in Settings.</div>
 <?php endif; ?>
 
+<?php if (!empty($status_changed)): ?>
+<div class="alert alert-success">
+  <i class="bi bi-arrow-repeat me-1"></i>
+  Order status auto-updated from JT tracking:
+  <strong><?= htmlspecialchars(ucfirst($status_before ?? '')) ?></strong>
+  →
+  <strong><?= htmlspecialchars(ucfirst($synced_status ?? ($order['status'] ?? ''))) ?></strong>
+  (customer notified; admin email sent)
+</div>
+<?php endif; ?>
+
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="card shadow-sm border-warning mb-3">
@@ -35,8 +46,12 @@ $hasAwb = $awb !== '';
       </div>
       <div class="card-body small">
         <div class="mb-2"><span class="text-muted">AWB:</span> <strong id="jtAwb"><?= htmlspecialchars($awb ?: '—') ?></strong></div>
-        <div class="mb-2"><span class="text-muted">Courier status:</span> <?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></div>
-        <div class="mb-2"><span class="text-muted">Order status:</span> <?= htmlspecialchars($order['status'] ?? '') ?></div>
+        <div class="mb-2"><span class="text-muted">Courier status:</span> <span id="jtCourier"><?= htmlspecialchars($order['jt_courier_status'] ?? 'not created') ?></span></div>
+        <div class="mb-2">
+          <span class="text-muted">Order status:</span>
+          <span class="badge bg-dark" id="jtOrderStatus"><?= htmlspecialchars(ucfirst($order['status'] ?? '')) ?></span>
+          <span class="text-muted small ms-1">(auto-updates from JT scans)</span>
+        </div>
         <div class="mb-2"><span class="text-muted">Ready to pick up:</span> <?= sk_jt_format_datetime($order['processing_at'] ?? $order['jt_shipment_created_at'] ?? null) ?></div>
         <?php if (!empty($order['jt_shipment_created_at'])): ?>
         <div class="mb-2"><span class="text-muted">JT created:</span> <?= sk_jt_format_datetime($order['jt_shipment_created_at']) ?></div>
@@ -151,6 +166,14 @@ function jtAction(action) {
       }
       if (msg) msg.textContent = res.message || 'Tracking updated.';
       if (res.bill_code) document.getElementById('jtAwb').textContent = res.bill_code;
+      if (res.courier_status) {
+        var c = document.getElementById('jtCourier');
+        if (c) c.textContent = res.courier_status;
+      }
+      if (res.status) {
+        var s = document.getElementById('jtOrderStatus');
+        if (s) s.textContent = res.status.charAt(0).toUpperCase() + res.status.slice(1);
+      }
       setTimeout(function() { location.reload(); }, 1200);
       return;
     }
