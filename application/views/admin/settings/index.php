@@ -8,6 +8,7 @@
   <!-- Nav Tabs -->
   <ul class="nav nav-tabs mb-3" id="settingsTabs">
     <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-whatsapp"><i class="bi bi-whatsapp me-1"></i>Order WhatsApp</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-invoice">Invoice</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-payment">Payment</button></li>
     <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-email">Email</button></li>
@@ -105,49 +106,48 @@
                       value="<?= htmlspecialchars($settings['whatsapp_number'] ?? '') ?>"
                       placeholder="e.g. 919876543210">
                   </div>
-                  <div class="form-text small text-muted">Malaysia country code without + (default 60).</div>
+                  <div class="form-text small text-muted">Malaysia country code without + (default 60). Order status alerts are under the <strong>Order WhatsApp</strong> tab.</div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- Order WhatsApp (Askeva) — visible to admin + vendor accounts -->
+    <div class="tab-pane fade" id="tab-whatsapp">
+      <div class="card sk-table-card shadow-sm">
+        <div class="card-body">
+          <h6 class="mb-1"><i class="bi bi-whatsapp text-success me-1"></i>Order WhatsApp (Askeva)</h6>
+          <p class="text-muted small mb-3">Send WhatsApp messages to customers when order status changes (pending, confirmed, processing, shipped, delivered, cancelled). Uses the platform Askeva account for all vendors.</p>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" name="askeva_whatsapp_enabled" id="askevaToggle" value="1"
+              <?= (!isset($settings['askeva_whatsapp_enabled']) || $settings['askeva_whatsapp_enabled'] == '1') ? 'checked' : '' ?>>
+            <label class="form-check-label" for="askevaToggle">Send WhatsApp on every order status change</label>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">API URL</label>
+              <input type="text" name="askeva_api_url" class="form-control"
+                value="<?= htmlspecialchars($settings['askeva_api_url'] ?? 'https://backend.askeva.io/v1/message/send-message') ?>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Template language</label>
+              <input type="text" name="askeva_template_lang" class="form-control"
+                value="<?= htmlspecialchars($settings['askeva_template_lang'] ?? 'en') ?>">
+            </div>
             <div class="col-12">
-              <label class="form-label fw-medium">Order WhatsApp (Askeva)</label>
-              <div class="card bg-light border-0 shadow-none">
-                <div class="card-body">
-                  <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" name="askeva_whatsapp_enabled" id="askevaToggle" value="1"
-                      <?= (!isset($settings['askeva_whatsapp_enabled']) || $settings['askeva_whatsapp_enabled'] == '1') ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="askevaToggle">Send WhatsApp on every order status change</label>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label small mb-1">API URL</label>
-                    <input type="text" name="askeva_api_url" class="form-control form-control-sm"
-                      value="<?= htmlspecialchars($settings['askeva_api_url'] ?? 'https://backend.askeva.io/v1/message/send-message') ?>">
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label small mb-1">API Token</label>
-                    <input type="password" name="askeva_api_token" class="form-control form-control-sm"
-                      value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Askeva token' ?>">
-                  </div>
-                  <div class="row g-2">
-                    <div class="col-md-8">
-                      <label class="form-label small mb-1">Optional utility template name</label>
-                      <input type="text" name="askeva_order_template" class="form-control form-control-sm"
-                        value="<?= htmlspecialchars($settings['askeva_order_template'] ?? '') ?>"
-                        placeholder="Leave empty = free text; use if session closed">
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label small mb-1">Template language</label>
-                      <input type="text" name="askeva_template_lang" class="form-control form-control-sm"
-                        value="<?= htmlspecialchars($settings['askeva_template_lang'] ?? 'en') ?>">
-                    </div>
-                  </div>
-                  <div class="form-text small text-muted mt-2">
-                    Sends utility text to the customer phone on pending/confirmed/processing/shipped/delivered/cancelled.
-                    If WhatsApp returns “session not opened”, set an approved utility template with 2 body variables (order no, status).
-                  </div>
-                </div>
-              </div>
+              <label class="form-label">API Token</label>
+              <input type="password" name="askeva_api_token" class="form-control"
+                value="" placeholder="<?= !empty($settings['askeva_api_token']) ? '•••• saved (leave blank to keep)' : 'Paste Askeva token' ?>">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Optional utility template name</label>
+              <input type="text" name="askeva_order_template" class="form-control"
+                value="<?= htmlspecialchars($settings['askeva_order_template'] ?? '') ?>"
+                placeholder="Leave empty = free text; use if session closed">
+              <div class="form-text">If WhatsApp returns “session not opened”, set an approved utility template with 2 body variables (order no, status).</div>
             </div>
           </div>
         </div>

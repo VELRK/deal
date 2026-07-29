@@ -6,10 +6,11 @@ require_once APPPATH . 'controllers/admin/Sk_Base.php';
 class Settings extends Sk_Base {
 
     public function index() {
-        $this->load->helper(['sk_invoice', 'sk_jt_express', 'sk_isms']);
+        $this->load->helper(['sk_invoice', 'sk_jt_express', 'sk_isms', 'sk_whatsapp']);
         sk_invoice_ensure_vendor_schema();
         sk_jt_express_ensure_schema();
         sk_isms_ensure_schema();
+        sk_whatsapp_ensure_settings();
         $data['title']    = 'Settings - ShopKart Admin';
         $data['settings'] = $this->Sk_Admin_model->get_settings();
         $data['jt_config'] = sk_jt_express_config();
