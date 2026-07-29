@@ -319,7 +319,18 @@ class Sk_Product_model extends CI_Model {
         $this->db->order_by('p.stock', 'ASC')->order_by('p.name', 'ASC')->limit($limit, $offset);
         $rows = $this->db->get()->result_array();
         foreach ($rows as &$row) {
+            // Keep true products.stock — attach_variants overwrites with default variant stock
+            $productStock = (int)($row['stock'] ?? 0);
             $this->attach_variants($row);
+            $row['product_stock'] = $productStock;
+            $row['stock'] = $productStock;
+            if (!empty($row['variants'])) {
+                $sum = 0;
+                foreach ($row['variants'] as $v) {
+                    $sum += (int)($v['stock'] ?? 0);
+                }
+                $row['variant_stock_total'] = $sum;
+            }
         }
         unset($row);
         return ['rows' => $rows, 'total' => $total];

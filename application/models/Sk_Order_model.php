@@ -53,6 +53,10 @@ class Sk_Order_model extends CI_Model {
 
     public function update_status($order_id, $status) {
         $this->ensure_jt_schema();
+        $order_id = (int)$order_id;
+        $prev = $this->db->select('status')->where('id', $order_id)->get('orders')->row_array();
+        $prevStatus = (string)($prev['status'] ?? '');
+
         $now = date('Y-m-d H:i:s');
         $data = [
             'status'            => $status,
@@ -71,6 +75,12 @@ class Sk_Order_model extends CI_Model {
             $data['delivered_at'] = $now;
         }
         $this->db->where('id', $order_id)->update('orders', $data);
+
+        // Cancel / return → put inventory back once (order confirmed had reduced stock)
+        if (in_array($status, ['cancelled', 'returned'], true)
+            && !in_array($prevStatus, ['cancelled', 'returned'], true)) {
+            $this->restore_stock_for_order($order_id);
+        }
     }
 
     public function update_jt_shipment($order_id, array $data) {
@@ -335,6 +345,16 @@ class Sk_Order_model extends CI_Model {
     }
 
     public function restore_stock_for_order(int $orderId): void {
+        $this->ensure_stock_restored_schema();
+        $order = $this->db->select('id, stock_restored_at')->where('id', $orderId)->get('orders')->row_array();
+        if (!$order) {
+            return;
+        }
+        // Already restored (cancel + return / double call) — do not add stock twice
+        if (!empty($order['stock_restored_at'])) {
+            return;
+        }
+
         $this->load->model('Sk_Product_model');
         foreach ($this->get_items($orderId) as $item) {
             $qty = (int)($item['quantity'] ?? 0);
@@ -346,6 +366,21 @@ class Sk_Order_model extends CI_Model {
                 $qty,
                 !empty($item['variant_id']) ? (int)$item['variant_id'] : null
             );
+        }
+        $this->db->where('id', $orderId)->update('orders', [
+            'stock_restored_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /** One-time stock return flag so cancel/return never double-adds inventory. */
+    public function ensure_stock_restored_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('stock_restored_at', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `stock_restored_at` DATETIME NULL DEFAULT NULL');
         }
     }
 
@@ -421,6 +456,7 @@ class Sk_Order_model extends CI_Model {
 
         $newPaymentStatus = $wasPaid ? 'refunded' : 'failed';
         $this->update_status($orderId, 'cancelled');
+        // update_status also tries restore; stock_restored_at prevents double add
         $this->update_payment_status($orderId, $newPaymentStatus);
 
         $msg = 'Order cancelled.';
