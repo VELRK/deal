@@ -59,8 +59,13 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^admin/(.+)$ index.php/admin/$1 [L]
 
+# Public signed invoice (email view / PDF download) → CodeIgniter
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^invoice/(.+)$ index.php/invoice/$1 [L]
+
 # Route root and all SPA paths to the React frontend
 RewriteRule ^$ frontend/index.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(?!shopkart-api|shopkart|admin|uploads).*$ frontend/index.html [L]
+RewriteRule ^(?!shopkart-api|shopkart|admin|invoice|uploads).*$ frontend/index.html [L]
