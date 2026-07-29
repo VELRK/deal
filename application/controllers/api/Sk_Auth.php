@@ -8,11 +8,12 @@ class Sk_Auth extends Sk_Base_Api {
     public function register() {
         $data = $this->body();
         $name     = trim($data['name'] ?? '');
-        $email    = trim($data['email'] ?? '');
+        $email    = strtolower(trim($data['email'] ?? ''));
         $password = $data['password'] ?? '';
+        $phoneRaw = trim($data['phone'] ?? '');
 
-        if (!$name || !$email || !$password) {
-            return $this->error('Name, email and password are required.');
+        if (!$name || !$email || !$password || $phoneRaw === '') {
+            return $this->error('Name, email, phone and password are required.');
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->error('Invalid email address.');
@@ -20,26 +21,25 @@ class Sk_Auth extends Sk_Base_Api {
         if (strlen($password) < 6) {
             return $this->error('Password must be at least 6 characters.');
         }
-        if ($this->Sk_User_model->get_by_email($email)) {
+        if ($this->Sk_User_model->email_exists($email)) {
             return $this->error('Email already registered.');
         }
 
-        $phone = trim($data['phone'] ?? '');
-        if ($phone !== '') {
-            $this->load->helper('sk_isms');
-            $settings = $this->get_settings();
-            $normalized = sk_isms_normalize_phone($phone, $settings);
-            if ($normalized === '') {
-                return $this->error(sk_isms_phone_error());
-            }
-            $phone = $normalized;
+        $this->load->helper('sk_isms');
+        $settings = $this->get_settings();
+        $phone = sk_isms_normalize_phone($phoneRaw, $settings);
+        if ($phone === '') {
+            return $this->error(sk_isms_phone_error());
+        }
+        if ($this->Sk_User_model->phone_exists($phone)) {
+            return $this->error('Phone number already registered.');
         }
 
         $user_id = $this->Sk_User_model->create([
             'name'  => $name,
             'email' => $email,
             'password' => $password,
-            'phone' => $phone !== '' ? $phone : null,
+            'phone' => $phone,
         ]);
 
         // Save address if provided
@@ -50,7 +50,7 @@ class Sk_Auth extends Sk_Base_Api {
                 'user_id'      => $user_id,
                 'label'        => 'Home',
                 'full_name'    => $name,
-                'phone'        => $phone !== '' ? $phone : ($data['phone'] ?? ''),
+                'phone'        => $phone,
                 'line1'        => $address['line1'],
                 'line2'        => $address['line2'] ?? '',
                 'city'         => $address['city'] ?? '',
@@ -71,9 +71,57 @@ class Sk_Auth extends Sk_Base_Api {
         ], 'Registration successful.', 201);
     }
 
+    /** Public: check if email / phone already registered (register form). */
+    public function check_availability() {
+        $data = array_merge($this->input->get() ?: [], $this->body() ?: []);
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        $phoneRaw = trim((string)($data['phone'] ?? ''));
+
+        $out = [
+            'email' => null,
+            'phone' => null,
+        ];
+
+        if ($email !== '') {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $out['email'] = ['available' => false, 'message' => 'Invalid email address.'];
+            } elseif ($this->Sk_User_model->email_exists($email)) {
+                $out['email'] = ['available' => false, 'message' => 'Email already registered.'];
+            } else {
+                $out['email'] = ['available' => true, 'message' => 'Email is available.'];
+            }
+        }
+
+        if ($phoneRaw !== '') {
+            $this->load->helper('sk_isms');
+            $normalized = sk_isms_normalize_phone($phoneRaw, $this->get_settings());
+            if ($normalized === '') {
+                $out['phone'] = ['available' => false, 'message' => sk_isms_phone_error()];
+            } elseif ($this->Sk_User_model->phone_exists($normalized)) {
+                $out['phone'] = ['available' => false, 'message' => 'Phone number already registered.'];
+            } else {
+                $out['phone'] = ['available' => true, 'message' => 'Phone number is available.'];
+            }
+        }
+
+        if ($out['email'] === null && $out['phone'] === null) {
+            return $this->error('Provide email and/or phone to check.');
+        }
+
+        $ok = true;
+        if (is_array($out['email']) && empty($out['email']['available'])) {
+            $ok = false;
+        }
+        if (is_array($out['phone']) && empty($out['phone']['available'])) {
+            $ok = false;
+        }
+
+        $this->success($out, $ok ? 'Available.' : 'Already registered.', $ok ? 200 : 409);
+    }
+
     public function login() {
         $data = $this->body();
-        $email    = trim($data['email'] ?? '');
+        $email    = strtolower(trim($data['email'] ?? ''));
         $password = $data['password'] ?? '';
 
         if (!$email || !$password) return $this->error('Email and password required.');

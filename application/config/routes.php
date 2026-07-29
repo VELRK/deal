@@ -519,6 +519,8 @@ $route['shopkart/testimonials/delete/(:num)'] = 'admin/Testimonials/delete/$1';
 // ============================================================
 // Auth
 $route['shopkart-api/register']['POST']    = 'api/Sk_Auth/register';
+$route['shopkart-api/check-availability']['GET']  = 'api/Sk_Auth/check_availability';
+$route['shopkart-api/check-availability']['POST'] = 'api/Sk_Auth/check_availability';
 $route['shopkart-api/login']['POST']       = 'api/Sk_Auth/login';
 $route['shopkart-api/otp-request']['POST'] = 'api/Sk_Auth/otp_request';
 $route['shopkart-api/otp-verify']['POST']  = 'api/Sk_Auth/otp_verify';

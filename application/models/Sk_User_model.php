@@ -12,11 +12,59 @@ class Sk_User_model extends CI_Model {
     }
 
     public function get_by_email($email) {
+        $email = strtolower(trim((string) $email));
+        if ($email === '') {
+            return null;
+        }
         return $this->db->where('email', $email)->get('users')->row_array();
     }
 
     public function get_by_phone($phone) {
-        return $this->db->where('phone', $phone)->get('users')->row_array();
+        $phone = trim((string) $phone);
+        if ($phone === '') {
+            return null;
+        }
+        $row = $this->db->where('phone', $phone)->get('users')->row_array();
+        if ($row) {
+            return $row;
+        }
+        // Match common MY variants (60… / 0… / +60…)
+        $digits = preg_replace('/\D+/', '', $phone);
+        if ($digits === '') {
+            return null;
+        }
+        $variants = array_values(array_unique(array_filter([
+            $digits,
+            '+' . $digits,
+            (strpos($digits, '60') === 0 && strlen($digits) > 2) ? ('0' . substr($digits, 2)) : null,
+            (strpos($digits, '0') === 0) ? ('60' . substr($digits, 1)) : null,
+        ])));
+        if (!$variants) {
+            return null;
+        }
+        return $this->db->where_in('phone', $variants)->get('users')->row_array();
+    }
+
+    public function email_exists($email, $exclude_id = null): bool {
+        $email = strtolower(trim((string) $email));
+        if ($email === '') {
+            return false;
+        }
+        if ($exclude_id) {
+            $this->db->where('id !=', (int) $exclude_id);
+        }
+        return (int) $this->db->where('email', $email)->count_all_results('users') > 0;
+    }
+
+    public function phone_exists($phone, $exclude_id = null): bool {
+        $user = $this->get_by_phone($phone);
+        if (!$user) {
+            return false;
+        }
+        if ($exclude_id && (int) $user['id'] === (int) $exclude_id) {
+            return false;
+        }
+        return true;
     }
 
     public function get_by_id($id) {
