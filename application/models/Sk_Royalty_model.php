@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Royalty points ledger — separate from customer wallet (cash top-ups).
- * Earn: 1 pt per RM purchase (configurable). Redeem value uses wallet_points_per_rm (default 5 pts = RM 1).
+ * Earn: RM 5000 purchase → 500 pts (0.1 pts/RM). Redeem value uses wallet_points_per_rm (5 pts = RM 1 → 500 pts = RM 100).
  */
 class Sk_Royalty_model extends CI_Model {
 
@@ -63,10 +63,10 @@ class Sk_Royalty_model extends CI_Model {
             'show_on_cart'      => $canRedeem,
             'points_per_rm'     => $this->points_per_rm(),
             'conversion_label'  => '500 points = RM 100',
-            'earn_label'        => 'RM 500 purchase = 500 pts (RM 100)',
+            'earn_label'        => 'RM 5000 purchase = 500 pts',
             'hint'              => $canRedeem
                 ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2) . '). Apply at checkout like a coupon.')
-                : ('Earn royalty on every paid order. Need RM ' . number_format($minRedeemRm, 0)
+                : ('Earn royalty on every paid order (RM 5000 → 500 pts). Need RM ' . number_format($minRedeemRm, 0)
                     . '+ (' . $minRedeemPts . ' pts) to redeem on cart. You have '
                     . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),
         ];

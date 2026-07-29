@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * Royalty points — separate from wallet cash.
  * Earn after paid/COD orders; redeem like a coupon when balance ≥ RM 100 (500 pts).
  * Rate: 1 point per RM 1 spent → RM 500 = 500 pts = RM 100 credit
- * (redeem value uses wallet_points_per_rm, default 5 pts / RM).
+ * Earn: RM 5000 purchase → 500 pts (0.1 pts / RM). Redeem: 500 pts → RM 100 (5 pts / RM).
  */
 function sk_royalty_ensure_schema() {
     static $done = false;
@@ -64,10 +64,11 @@ function sk_royalty_ensure_schema() {
 
     $defaults = [
         'royalty_enabled'           => '1',
-        // 500 pts = RM 100 redeem value (5 pts / RM)
+        // Redeem: 500 pts → RM 100 (5 pts / RM) via wallet_points_per_rm
         'royalty_min_redeem_points' => '500',
         'royalty_min_redeem_rm'     => '100',
-        'royalty_earn_points_per_rm'=> '1',
+        // Earn: RM 5000 purchase → 500 pts (0.1 pts / RM)
+        'royalty_earn_points_per_rm'=> '0.1',
     ];
     $hasGroup = $CI->db->field_exists('group', 'settings');
     foreach ($defaults as $key => $value) {
@@ -88,6 +89,21 @@ function sk_royalty_ensure_schema() {
     }
     if ((int)$CI->db->where('key', 'royalty_min_redeem_rm')->count_all_results('settings') < 1) {
         $row = ['key' => 'royalty_min_redeem_rm', 'value' => '100'];
+        if ($hasGroup) {
+            $row['group'] = 'wallet';
+        }
+        $CI->db->insert('settings', $row);
+    }
+
+    // Migrate earn rate 1 → 0.1 (RM 5000 → 500 pts) once from old 1:1 rule
+    $earnRate = $CI->db->where('key', 'royalty_earn_points_per_rm')->get('settings')->row_array();
+    if ($earnRate) {
+        $rateVal = (float)($earnRate['value'] ?? 0);
+        if (abs($rateVal - 1.0) < 0.0001) {
+            $CI->db->where('key', 'royalty_earn_points_per_rm')->update('settings', ['value' => '0.1']);
+        }
+    } else {
+        $row = ['key' => 'royalty_earn_points_per_rm', 'value' => '0.1'];
         if ($hasGroup) {
             $row['group'] = 'wallet';
         }
@@ -233,9 +249,9 @@ function sk_royalty_earn_points_for_amount(float $purchaseRm, array $settings = 
         $CI->load->model('Sk_Admin_model');
         $settings = $CI->Sk_Admin_model->get_settings();
     }
-    $rate = (float)($settings['royalty_earn_points_per_rm'] ?? 1);
+    $rate = (float)($settings['royalty_earn_points_per_rm'] ?? 0.1);
     if ($rate <= 0) {
-        $rate = 1;
+        $rate = 0.1;
     }
     return (int)floor(max(0, $purchaseRm) * $rate);
 }

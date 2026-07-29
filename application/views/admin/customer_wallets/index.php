@@ -65,7 +65,7 @@
       </div>
       <div class="col-md-2">
         <label class="form-label small">Earn pts per RM purchase</label>
-        <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '1') ?>" title="RM 500 → 500 pts">
+        <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '0.1') ?>" title="RM 5000 → 500 pts (0.1 pts / RM)">
       </div>
       <div class="col-md-2">
         <label class="form-label small">Min redeem pts (cart)</label>

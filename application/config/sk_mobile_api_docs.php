@@ -551,6 +551,7 @@ $config['catalog'] = [
                         'show_on_cart' => true,
                         'points_per_rm' => 5,
                         'conversion_label' => '500 points = RM 100',
+                        'earn_label' => 'RM 5000 purchase = 500 pts',
                         'hint' => 'You have 520 royalty points (RM 104.00). Apply at checkout like a coupon.',
                     ],
                 ],
@@ -565,7 +566,7 @@ $config['catalog'] = [
         'path' => 'cart/add',
         'auth' => 'optional',
         'verified' => true,
-        'how' => 'Add product (optional variant_id). Quantity defaults to 1. Fails if stock insufficient. Response includes item created_at and summary.royalty (points if logged in).',
+        'how' => 'Add product (optional variant_id). Quantity defaults to 1. Fails if stock insufficient. Response includes item created_at and summary.royalty (points if logged in). Earn: RM 5000 → 500 pts; Redeem: 500 pts → RM 100.',
         'query' => [],
         'headers' => [
             'Content-Type' => 'application/json',

@@ -10,14 +10,13 @@ SELECT 'askeva_api_url', 'https://backend.askeva.io/v1/message/send-message'
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'askeva_api_url');
 
 INSERT INTO `settings` (`key`, `value`)
-SELECT 'askeva_api_token', '5c9fbbe16cbd3ec293504d7d4d758e1adf160554f488609ef64df040d05f2176e44afba64867f635ae34fa48c296203707809db18d5b13e2609176cf18642f10'
+SELECT 'askeva_api_token', '674e498739ed6b8f2ed24ebdc3b243272776edd10cca20161979f8c72637842b05bab827f1867cd2efb49331993e20b0dc196c48de22694331f722bd079bab53'
 WHERE NOT EXISTS (SELECT 1 FROM `settings` WHERE `key` = 'askeva_api_token');
 
--- Fill blank token left by earlier seed
+-- Always set current production token
 UPDATE `settings`
-SET `value` = '5c9fbbe16cbd3ec293504d7d4d758e1adf160554f488609ef64df040d05f2176e44afba64867f635ae34fa48c296203707809db18d5b13e2609176cf18642f10'
-WHERE `key` = 'askeva_api_token'
-  AND (`value` IS NULL OR TRIM(`value`) = '');
+SET `value` = '674e498739ed6b8f2ed24ebdc3b243272776edd10cca20161979f8c72637842b05bab827f1867cd2efb49331993e20b0dc196c48de22694331f722bd079bab53'
+WHERE `key` = 'askeva_api_token';
 
 UPDATE `settings`
 SET `value` = 'https://backend.askeva.io/v1/message/send-message'
