@@ -5,9 +5,10 @@ require_once APPPATH . 'controllers/admin/Sk_Base.php';
 
 /**
  * JT Express module — list + detailed create/track UI.
+ * Controller name Jt_shipments avoids PHP class clash with libraries/Jt_express.php.
  * Create / print / track / cancel actions stay on admin/Orders (shared).
  */
-class Jt_express extends Sk_Base {
+class Jt_shipments extends Sk_Base {
 
     public function __construct() {
         parent::__construct();
@@ -50,7 +51,6 @@ class Jt_express extends Sk_Base {
 
         $settings = $this->Sk_Admin_model->get_settings();
 
-        // Soft refresh tracking when AWB exists (reuse Orders private via load)
         if (!empty($order['jt_bill_code'])
             && !in_array($order['status'], ['cancelled', 'returned'], true)
         ) {
@@ -71,12 +71,11 @@ class Jt_express extends Sk_Base {
         if ($billCode === '') {
             return;
         }
-        require_once APPPATH . 'libraries/Jt_express.php';
-        $jt = new Jt_express($settings);
-        if (!$jt->is_enabled()) {
+        $this->load->library('Jt_express', $settings, 'jt_api');
+        if (!$this->jt_api->is_enabled()) {
             return;
         }
-        $result = $jt->track($billCode);
+        $result = $this->jt_api->track($billCode);
         if (!empty($result['success'])) {
             sk_jt_sync_order_tracking($orderId, $result);
         }

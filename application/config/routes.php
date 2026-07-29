@@ -450,10 +450,10 @@ $route['shopkart/orders/jt_create/(:num)'] = 'admin/Orders/jt_create/$1';
 $route['shopkart/orders/jt_print/(:num)'] = 'admin/Orders/jt_print/$1';
 $route['shopkart/orders/jt_track/(:num)'] = 'admin/Orders/jt_track/$1';
 $route['shopkart/orders/jt_cancel/(:num)'] = 'admin/Orders/jt_cancel/$1';
-$route['shopkart/jt-express'] = 'admin/Jt_express/index';
-$route['shopkart/jt-express/view/(:num)'] = 'admin/Jt_express/view/$1';
-$route['admin/jt-express'] = 'admin/Jt_express/index';
-$route['admin/jt-express/view/(:num)'] = 'admin/Jt_express/view/$1';
+$route['shopkart/jt-express'] = 'admin/Jt_shipments/index';
+$route['shopkart/jt-express/view/(:num)'] = 'admin/Jt_shipments/view/$1';
+$route['admin/jt-express'] = 'admin/Jt_shipments/index';
+$route['admin/jt-express/view/(:num)'] = 'admin/Jt_shipments/view/$1';
 // Customers
 $route['shopkart/customers'] = 'admin/Customers/index';
 $route['shopkart/customers/view/(:num)'] = 'admin/Customers/view/$1';
