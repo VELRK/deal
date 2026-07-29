@@ -4,13 +4,13 @@ $groupsJson  = json_encode($groups, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNIC
 $guideJson   = json_encode($guide, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 ?>
 <style>
-.ae-wrap{display:flex;gap:0;min-height:calc(100vh - 120px);background:#1e1e2e;border-radius:12px;overflow:hidden;color:#cdd6f4;font-size:13px}
-.ae-side{width:300px;min-width:260px;background:#181825;border-right:1px solid #313244;display:flex;flex-direction:column}
-.ae-side-head{padding:14px 14px 10px;border-bottom:1px solid #313244}
+.ae-wrap{display:flex;gap:0;height:calc(100vh - 140px);max-height:calc(100vh - 140px);background:#1e1e2e;border-radius:12px;overflow:hidden;color:#cdd6f4;font-size:13px}
+.ae-side{width:300px;min-width:260px;background:#181825;border-right:1px solid #313244;display:flex;flex-direction:column;min-height:0;max-height:100%;overflow:hidden}
+.ae-side-head{padding:14px 14px 10px;border-bottom:1px solid #313244;flex-shrink:0}
 .ae-side-head h5{margin:0;color:#cba6f7;font-size:14px;font-weight:700}
-.ae-side-head small{color:#6c7086}
+.ae-side-head small{color:#6c7086;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ae-search{width:100%;margin-top:10px;background:#313244;border:1px solid #45475a;color:#cdd6f4;border-radius:8px;padding:8px 10px}
-.ae-list{overflow:auto;flex:1;padding:8px}
+.ae-list{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:8px;-webkit-overflow-scrolling:touch}
 .ae-group{margin-bottom:10px}
 .ae-group-title{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c7086;padding:6px 8px;font-weight:700}
 .ae-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:#cdd6f4;padding:8px 10px;border-radius:8px;cursor:pointer}
@@ -21,8 +21,8 @@ $guideJson   = json_encode($guide, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICO
 .ae-badge{font-size:9px;padding:1px 5px;border-radius:999px;background:#45475a;color:#a6adc8}
 .ae-badge.auth{background:#45475a;color:#f9e2af}
 .ae-badge.ok{background:#1e3a2f;color:#a6e3a1}
-.ae-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.ae-top{padding:12px 14px;border-bottom:1px solid #313244;background:#1e1e2e;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ae-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.ae-top{padding:12px 14px;border-bottom:1px solid #313244;background:#1e1e2e;display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-shrink:0}
 .ae-url{flex:1;min-width:220px;display:flex;background:#313244;border:1px solid #45475a;border-radius:8px;overflow:hidden}
 .ae-url select{border:0;background:#45475a;color:#cdd6f4;font-weight:800;padding:0 10px}
 .ae-url input{flex:1;border:0;background:transparent;color:#cdd6f4;padding:10px 12px;outline:none;font-family:ui-monospace,Consolas,monospace;font-size:12px}
@@ -30,16 +30,16 @@ $guideJson   = json_encode($guide, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICO
 .ae-btn-send{background:#cba6f7;color:#1e1e2e}
 .ae-btn-send:disabled{opacity:.55;cursor:wait}
 .ae-btn-ghost{background:#313244;color:#cdd6f4}
-.ae-token-row{padding:10px 14px;border-bottom:1px solid #313244;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#181825}
+.ae-token-row{padding:10px 14px;border-bottom:1px solid #313244;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#181825;flex-shrink:0}
 .ae-token-row label{color:#6c7086;font-size:11px;font-weight:700;text-transform:uppercase}
 .ae-token-row input{flex:1;min-width:180px;background:#313244;border:1px solid #45475a;color:#cdd6f4;border-radius:8px;padding:8px 10px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.ae-tabs{display:flex;gap:4px;padding:8px 14px 0;border-bottom:1px solid #313244}
+.ae-tabs{display:flex;gap:4px;padding:8px 14px 0;border-bottom:1px solid #313244;flex-shrink:0}
 .ae-tab{background:transparent;border:0;color:#6c7086;padding:8px 12px;border-radius:8px 8px 0 0;font-weight:700;cursor:pointer}
 .ae-tab.active{background:#313244;color:#cba6f7}
-.ae-pane{display:none;padding:14px;overflow:auto;flex:1}
+.ae-pane{display:none;padding:14px;overflow:auto;flex:1;min-height:0}
 .ae-pane.active{display:block}
 .ae-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:1100px){.ae-wrap{flex-direction:column}.ae-side{width:100%;max-height:280px}.ae-grid{grid-template-columns:1fr}}
+@media(max-width:1100px){.ae-wrap{flex-direction:column;height:auto;max-height:none}.ae-side{width:100%;max-height:280px}.ae-list{max-height:220px}.ae-main{min-height:60vh}.ae-grid{grid-template-columns:1fr}}
 .ae-card{background:#181825;border:1px solid #313244;border-radius:10px;padding:12px}
 .ae-card h6{margin:0 0 8px;color:#cba6f7;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .ae-how{color:#a6adc8;line-height:1.55;margin:0}
@@ -55,6 +55,10 @@ $guideJson   = json_encode($guide, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICO
 .ae-tips{margin:0;padding-left:18px;color:#a6adc8}
 .ae-tips li{margin-bottom:4px}
 .ae-empty{color:#6c7086;padding:40px;text-align:center}
+/* Sidebar scrollbar */
+.ae-list::-webkit-scrollbar{width:8px}
+.ae-list::-webkit-scrollbar-thumb{background:#45475a;border-radius:8px}
+.ae-list::-webkit-scrollbar-track{background:#181825}
 </style>
 
 <div class="sk-page-header d-flex align-items-center justify-content-between mb-3">
