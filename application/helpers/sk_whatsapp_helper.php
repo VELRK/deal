@@ -16,6 +16,7 @@ function sk_whatsapp_ensure_settings(): void {
     if (!isset($CI->db)) {
         $CI->load->database();
     }
+    sk_whatsapp_ensure_log_schema();
     $CI->config->load('whatsapp', true);
     $fileCfg = $CI->config->item('whatsapp') ?: [];
     $defaults = [
@@ -97,19 +98,192 @@ function sk_whatsapp_normalize_phone(string $phone, array $settings = []): strin
 }
 
 function sk_whatsapp_order_phone(array $order, array $settings = []): string {
-    $candidates = [
-        $order['shipping_phone'] ?? '',
-        $order['billing_phone'] ?? '',
-        $order['customer_phone'] ?? '',
+    $info = sk_whatsapp_order_phone_info($order, $settings);
+    return $info['phone'];
+}
+
+/** @return array{phone:string,source:string} */
+function sk_whatsapp_order_phone_info(array $order, array $settings = []): array {
+    $map = [
+        'shipping' => $order['shipping_phone'] ?? '',
+        'billing'  => $order['billing_phone'] ?? '',
+        'customer' => $order['customer_phone'] ?? '',
     ];
-    foreach ($candidates as $p) {
+    foreach ($map as $source => $p) {
         $n = sk_whatsapp_normalize_phone((string)$p, $settings);
         if (strlen($n) >= 10) {
-            return $n;
+            return ['phone' => $n, 'source' => $source];
         }
     }
-    return '';
+    return ['phone' => '', 'source' => 'none'];
 }
+
+function sk_whatsapp_ensure_log_schema(): void {
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    $ready = true;
+    $CI =& get_instance();
+    if (!$CI->db->table_exists('whatsapp_logs')) {
+        $CI->db->query("CREATE TABLE IF NOT EXISTS `whatsapp_logs` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `order_id` INT UNSIGNED NULL DEFAULT NULL,
+            `order_number` VARCHAR(64) NULL DEFAULT NULL,
+            `phone` VARCHAR(32) NULL DEFAULT NULL,
+            `phone_source` VARCHAR(20) NULL DEFAULT NULL,
+            `status_trigger` VARCHAR(40) NULL DEFAULT NULL,
+            `channel` VARCHAR(20) NULL DEFAULT NULL,
+            `delivery_status` VARCHAR(20) NOT NULL DEFAULT 'failed',
+            `reason` VARCHAR(500) NULL DEFAULT NULL,
+            `http_code` INT NULL DEFAULT NULL,
+            `api_message` TEXT NULL,
+            `api_response` MEDIUMTEXT NULL,
+            `message_body` TEXT NULL,
+            `created_at` DATETIME NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_wa_order` (`order_id`),
+            KEY `idx_wa_status` (`delivery_status`),
+            KEY `idx_wa_created` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+}
+
+function sk_whatsapp_log(array $row): void {
+    $CI =& get_instance();
+    sk_whatsapp_ensure_log_schema();
+    $data = [
+        'order_id'        => isset($row['order_id']) ? (int)$row['order_id'] : null,
+        'order_number'    => isset($row['order_number']) ? substr((string)$row['order_number'], 0, 64) : null,
+        'phone'           => isset($row['phone']) ? substr((string)$row['phone'], 0, 32) : null,
+        'phone_source'    => isset($row['phone_source']) ? substr((string)$row['phone_source'], 0, 20) : null,
+        'status_trigger'  => isset($row['status_trigger']) ? substr((string)$row['status_trigger'], 0, 40) : null,
+        'channel'         => isset($row['channel']) ? substr((string)$row['channel'], 0, 20) : null,
+        'delivery_status' => substr((string)($row['delivery_status'] ?? 'failed'), 0, 20),
+        'reason'          => isset($row['reason']) ? substr((string)$row['reason'], 0, 500) : null,
+        'http_code'       => isset($row['http_code']) ? (int)$row['http_code'] : null,
+        'api_message'     => $row['api_message'] ?? null,
+        'api_response'    => is_string($row['api_response'] ?? null)
+            ? $row['api_response']
+            : (isset($row['api_response']) ? json_encode($row['api_response'], JSON_UNESCAPED_UNICODE) : null),
+        'message_body'    => $row['message_body'] ?? null,
+        'created_at'      => date('Y-m-d H:i:s'),
+    ];
+    $CI->db->insert('whatsapp_logs', $data);
+}
+
+/**
+ * Notify customer on order status change via WhatsApp.
+ * Tries text first; if session closed and a utility template is set, falls back to template.
+ * Every attempt is stored in whatsapp_logs for the delivery report.
+ */
+function sk_whatsapp_notify_order_status(array $order, string $status, array $settings = null): array {
+    $CI =& get_instance();
+    if ($settings === null) {
+        $CI->load->model('Sk_Admin_model');
+        $settings = $CI->Sk_Admin_model->get_settings();
+    }
+    sk_whatsapp_ensure_log_schema();
+
+    $orderId = (int)($order['id'] ?? 0) ?: null;
+    $orderNo = (string)($order['order_number'] ?? '');
+    $baseLog = [
+        'order_id'       => $orderId,
+        'order_number'   => $orderNo,
+        'status_trigger' => $status,
+    ];
+
+    $cfg = sk_whatsapp_config($settings);
+    if (!$cfg['enabled']) {
+        $result = ['success' => false, 'message' => 'WhatsApp notifications disabled in Settings.', 'via' => 'none'];
+        sk_whatsapp_log($baseLog + [
+            'phone' => null,
+            'phone_source' => 'none',
+            'channel' => 'none',
+            'delivery_status' => 'skipped',
+            'reason' => $result['message'],
+            'api_message' => $result['message'],
+        ]);
+        return $result;
+    }
+
+    if ($cfg['token'] === '') {
+        $result = ['success' => false, 'message' => 'Askeva API token not configured.', 'via' => 'none'];
+        sk_whatsapp_log($baseLog + [
+            'channel' => 'none',
+            'delivery_status' => 'skipped',
+            'reason' => $result['message'],
+            'api_message' => $result['message'],
+        ]);
+        return $result;
+    }
+
+    $phoneInfo = sk_whatsapp_order_phone_info($order, $settings);
+    $phone = $phoneInfo['phone'];
+    if ($phone === '') {
+        $result = ['success' => false, 'message' => 'No customer phone on order (shipping/billing/registration all empty).', 'via' => 'none'];
+        sk_whatsapp_log($baseLog + [
+            'phone' => null,
+            'phone_source' => 'none',
+            'channel' => 'none',
+            'delivery_status' => 'skipped',
+            'reason' => $result['message'],
+            'api_message' => $result['message'],
+        ]);
+        return $result;
+    }
+
+    $msg = sk_whatsapp_order_message($order, $status, $settings);
+    $result = sk_whatsapp_send_text($phone, $msg, $settings);
+    $result['via'] = 'text';
+
+    $needTemplate = !$result['success'] && (
+        stripos((string)($result['message'] ?? ''), 'session') !== false
+        || stripos((string)($result['message'] ?? ''), 'not opened') !== false
+    );
+
+    $textFailReason = (string)($result['message'] ?? 'text send failed');
+
+    if ($needTemplate) {
+        if ($cfg['template'] !== '') {
+            $label = sk_whatsapp_status_label($status);
+            $tplResult = sk_whatsapp_send_template($phone, $cfg['template'], [$orderNo ?: (string)$orderId, $label], $settings);
+            $tplResult['via'] = 'template';
+            // Keep text failure context if template also fails
+            if (empty($tplResult['success'])) {
+                $tplResult['message'] = 'Text failed (' . $textFailReason . '); template failed: ' . ($tplResult['message'] ?? 'unknown');
+            } else {
+                $tplResult['message'] = 'Sent via template after text failed: ' . $textFailReason;
+            }
+            $result = $tplResult;
+        } else {
+            $result['message'] = $textFailReason . ' — set an approved utility template in Settings → Order WhatsApp (session not open).';
+            $result['via'] = 'text';
+        }
+    }
+
+    $delivered = !empty($result['success']);
+    sk_whatsapp_log($baseLog + [
+        'phone'           => $phone,
+        'phone_source'    => $phoneInfo['source'],
+        'channel'         => $result['via'] ?? 'text',
+        'delivery_status' => $delivered ? 'sent' : 'failed',
+        'reason'          => $delivered
+            ? ('Delivered via ' . ($result['via'] ?? 'text') . ' to ' . $phoneInfo['source'] . ' phone')
+            : (string)($result['message'] ?? 'Send failed'),
+        'http_code'       => $result['http'] ?? null,
+        'api_message'     => $result['message'] ?? null,
+        'api_response'    => $result['response'] ?? null,
+        'message_body'    => $msg,
+    ]);
+
+    log_message('info', 'Askeva WA order ' . ($order['id'] ?? '?') . ' status=' . $status
+        . ' via=' . ($result['via'] ?? '?') . ' ok=' . ($delivered ? '1' : '0')
+        . ' msg=' . ($result['message'] ?? ''));
+
+    return $result;
+}
+
 
 function sk_whatsapp_status_label(string $status): string {
     $map = [
@@ -234,48 +408,4 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
             ]],
         ],
     ], $cfg);
-}
-
-/**
- * Notify customer on order status change via WhatsApp.
- * Tries text first; if session closed and a utility template is set, falls back to template.
- */
-function sk_whatsapp_notify_order_status(array $order, string $status, array $settings = null): array {
-    $CI =& get_instance();
-    if ($settings === null) {
-        $CI->load->model('Sk_Admin_model');
-        $settings = $CI->Sk_Admin_model->get_settings();
-    }
-    $cfg = sk_whatsapp_config($settings);
-    if (!$cfg['enabled']) {
-        return ['success' => false, 'message' => 'disabled'];
-    }
-
-    $phone = sk_whatsapp_order_phone($order, $settings);
-    if ($phone === '') {
-        return ['success' => false, 'message' => 'No customer phone on order.'];
-    }
-
-    $msg = sk_whatsapp_order_message($order, $status, $settings);
-    $result = sk_whatsapp_send_text($phone, $msg, $settings);
-
-    $needTemplate = !$result['success'] && (
-        stripos((string)($result['message'] ?? ''), 'session') !== false
-        || stripos((string)($result['message'] ?? ''), 'not opened') !== false
-    );
-
-    if ($needTemplate && $cfg['template'] !== '') {
-        $orderNo = $order['order_number'] ?? (string)($order['id'] ?? '');
-        $label = sk_whatsapp_status_label($status);
-        $result = sk_whatsapp_send_template($phone, $cfg['template'], [$orderNo, $label], $settings);
-        $result['via'] = 'template';
-    } else {
-        $result['via'] = 'text';
-    }
-
-    log_message('info', 'Askeva WA order ' . ($order['id'] ?? '?') . ' status=' . $status
-        . ' via=' . ($result['via'] ?? '?') . ' ok=' . (!empty($result['success']) ? '1' : '0')
-        . ' msg=' . ($result['message'] ?? ''));
-
-    return $result;
 }
