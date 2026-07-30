@@ -100,15 +100,20 @@ function sk_whatsapp_config(array $settings = null): array {
     }
     $statusTemplates = array_merge($defaultTemplates, $statusTemplates);
 
-    $fallbackTpl = trim((string)($fileCfg['fallback_template'] ?? 'order_status_update'));
+    $fallbackTpl = trim((string)($fileCfg['fallback_template'] ?? ''));
     // Admin setting overrides fallback only (per-status names live in whatsapp.php).
     $settingsTpl = trim((string)($settings['askeva_order_template'] ?? ''));
     if ($settingsTpl !== '') {
         $fallbackTpl = $settingsTpl;
     }
-    $lang = trim((string)($settings['askeva_template_lang'] ?? ''));
-    if ($lang === '') {
-        $lang = trim((string)($fileCfg['template_lang'] ?? 'en')) ?: 'en';
+    // Prefer file lang (templates are approved as "en"). Settings override only when non-empty
+    // and matches a simple code — avoid en_US / en_GB breaking Syncr ("Template is not valid").
+    $lang = trim((string)($fileCfg['template_lang'] ?? 'en')) ?: 'en';
+    $settingsLang = strtolower(trim((string)($settings['askeva_template_lang'] ?? '')));
+    if ($settingsLang !== '' && preg_match('/^[a-z]{2}$/', $settingsLang)) {
+        $lang = $settingsLang;
+    } elseif ($settingsLang !== '' && preg_match('/^([a-z]{2})[_-]/', $settingsLang, $m)) {
+        $lang = $m[1]; // en_US → en
     }
 
     return [
@@ -121,6 +126,20 @@ function sk_whatsapp_config(array $settings = null): array {
         // TESTING override — all messages go here when set
         'test_force_phone'  => preg_replace('/\D+/', '', (string)($fileCfg['test_force_phone'] ?? '')),
     ];
+}
+
+/** Meta rejects template params with newlines/tabs; keep body vars single-line. */
+function sk_whatsapp_sanitize_param(string $value): string {
+    $value = str_replace(["\r", "\n", "\t"], ' ', $value);
+    $value = preg_replace('/ {5,}/', '    ', $value);
+    $value = trim($value);
+    if ($value === '') {
+        $value = '-';
+    }
+    if (strlen($value) > 1024) {
+        $value = substr($value, 0, 1024);
+    }
+    return $value;
 }
 
 /** Resolve destination phone (applies test_force_phone when configured). */
@@ -488,18 +507,26 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
     }
     $params = [];
     foreach ($bodyParams as $p) {
-        $params[] = ['type' => 'text', 'text' => (string)$p];
+        $params[] = ['type' => 'text', 'text' => sk_whatsapp_sanitize_param((string)$p)];
     }
-    return sk_whatsapp_api_send([
+    $payload = [
         'to'       => $to,
         'type'     => 'template',
         'template' => [
-            'language'   => ['policy' => 'deterministic', 'code' => $cfg['lang']],
+            'language'   => ['policy' => 'deterministic', 'code' => $cfg['lang'] ?: 'en'],
             'name'       => $templateName,
             'components' => [[
                 'type'       => 'body',
                 'parameters'  => $params,
             ]],
         ],
-    ], $cfg);
+    ];
+    $result = sk_whatsapp_api_send($payload, $cfg);
+    // Attach request snapshot so WhatsApp report shows exactly what Syncr received
+    if (empty($result['success'])) {
+        $result['message'] = (string)($result['message'] ?? 'failed')
+            . ' [tpl=' . $templateName . ' lang=' . ($cfg['lang'] ?: 'en')
+            . ' params=' . json_encode(array_column($params, 'text'), JSON_UNESCAPED_UNICODE) . ']';
+    }
+    return $result;
 }
