@@ -2,9 +2,18 @@
 
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
   <h5 class="sk-page-title mb-0"><i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp Log #<?= (int)$log['id'] ?></h5>
-  <a href="<?= site_url('shopkart/whatsapp-report') ?>" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i> Back to report
-  </a>
+  <div class="d-flex gap-2">
+    <?php if (!empty($log['order_id'])): ?>
+    <a href="<?= site_url('shopkart/whatsapp-report/resend/'.$log['id'].'?back=view') ?>"
+       class="btn btn-sm btn-success"
+       onclick="return confirm('Resend WhatsApp for this order status again?');">
+      <i class="bi bi-arrow-repeat me-1"></i> Resend
+    </a>
+    <?php endif; ?>
+    <a href="<?= site_url('shopkart/whatsapp-report') ?>" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Back to report
+    </a>
+  </div>
 </div>
 
 <?php

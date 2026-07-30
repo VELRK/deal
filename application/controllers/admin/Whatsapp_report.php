@@ -94,4 +94,73 @@ class Whatsapp_report extends Sk_Base {
         $data['log']   = $row;
         $this->render('whatsapp_report/view', $data);
     }
+
+    /**
+     * Resend WhatsApp for a log row (uses same order + status_trigger).
+     * GET/POST shopkart/whatsapp-report/resend/{id}
+     */
+    public function resend($id = 0) {
+        $this->load->helper('sk_whatsapp');
+        sk_whatsapp_ensure_log_schema();
+        $this->load->model('Sk_Order_model');
+        $this->load->model('Sk_Admin_model');
+
+        $id = (int)$id;
+        $log = $this->db->where('id', $id)->get('whatsapp_logs')->row_array();
+        if (!$log) {
+            $this->session->set_flashdata('error', 'WhatsApp log not found.');
+            redirect('shopkart/whatsapp-report');
+        }
+
+        $orderId = (int)($log['order_id'] ?? 0);
+        if ($orderId < 1) {
+            $this->session->set_flashdata('error', 'Cannot resend: no order linked to this log.');
+            redirect('shopkart/whatsapp-report/view/' . $id);
+        }
+
+        $order = $this->Sk_Order_model->get_by_id($orderId);
+        if (!$order) {
+            $this->session->set_flashdata('error', 'Order #' . $orderId . ' not found.');
+            redirect('shopkart/whatsapp-report/view/' . $id);
+        }
+
+        // Prefer the status that was originally triggered; fall back to current order status
+        $status = trim((string)($log['status_trigger'] ?? ''));
+        $allowed = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'];
+        if ($status === '' || !in_array($status, $allowed, true)) {
+            $status = trim((string)($order['status'] ?? 'pending'));
+        }
+        if (!in_array($status, $allowed, true)) {
+            $status = 'pending';
+        }
+
+        // Ensure name fields for template {{Customername}}
+        if (empty($order['customer_name']) && !empty($order['shipping_name'])) {
+            $order['customer_name'] = $order['shipping_name'];
+        }
+
+        $settings = $this->Sk_Admin_model->get_settings();
+        $result = sk_whatsapp_notify_order_status($order, $status, $settings);
+
+        $ok = !empty($result['success']);
+        $msg = (string)($result['message'] ?? ($ok ? 'Resent successfully.' : 'Resend failed.'));
+        $via = (string)($result['via'] ?? '');
+        if ($via !== '') {
+            $msg .= ' (via ' . $via . ')';
+        }
+
+        if ($ok) {
+            $this->session->set_flashdata('success', 'WhatsApp resent for order '
+                . ($order['order_number'] ?? ('#'.$orderId)) . ': ' . $msg);
+        } else {
+            $this->session->set_flashdata('error', 'Resend failed: ' . $msg);
+        }
+
+        // Back to filtered list if referer was the report list
+        $back = $this->input->get('back', TRUE);
+        if ($back === 'view') {
+            redirect('shopkart/whatsapp-report/view/' . $id);
+        }
+        redirect('shopkart/whatsapp-report' . ($this->input->server('QUERY_STRING') ? '?' . $this->input->server('QUERY_STRING') : ''));
+    }
 }

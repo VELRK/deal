@@ -483,8 +483,10 @@ $route['shopkart/reports/export'] = 'admin/Reports/export';
 $route['shopkart/coupon-report'] = 'admin/CouponReport/index';
 $route['shopkart/whatsapp-report'] = 'admin/Whatsapp_report/index';
 $route['shopkart/whatsapp-report/view/(:num)'] = 'admin/Whatsapp_report/view/$1';
+$route['shopkart/whatsapp-report/resend/(:num)'] = 'admin/Whatsapp_report/resend/$1';
 $route['admin/whatsapp-report'] = 'admin/Whatsapp_report/index';
 $route['admin/whatsapp-report/view/(:num)'] = 'admin/Whatsapp_report/view/$1';
+$route['admin/whatsapp-report/resend/(:num)'] = 'admin/Whatsapp_report/resend/$1';
 // Settings
 $route['shopkart/settings'] = 'admin/Settings/index';
 $route['shopkart/settings/update'] = 'admin/Settings/update';

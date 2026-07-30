@@ -88,7 +88,7 @@ $qs = http_build_query(array_filter([
             <th>Channel</th>
             <th>Status</th>
             <th>Reason / detail</th>
-            <th></th>
+            <th class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -99,6 +99,7 @@ $qs = http_build_query(array_filter([
               'failed' => 'bg-danger',
               'skipped' => 'bg-warning text-dark',
             ][$log['delivery_status']] ?? 'bg-secondary';
+            $canResend = !empty($log['order_id']);
           ?>
           <tr>
             <td class="small text-nowrap"><?= date('d M Y H:i', strtotime($log['created_at'])) ?></td>
@@ -128,7 +129,15 @@ $qs = http_build_query(array_filter([
                 <div class="text-muted" style="font-size:11px;">HTTP <?= (int)$log['http_code'] ?></div>
               <?php endif; ?>
             </td>
-            <td>
+            <td class="text-end text-nowrap">
+              <?php if ($canResend): ?>
+              <a href="<?= site_url('shopkart/whatsapp-report/resend/'.$log['id']) ?>"
+                 class="btn btn-sm btn-outline-success"
+                 title="Resend WhatsApp for this order status"
+                 onclick="return confirm('Resend WhatsApp for <?= htmlspecialchars(addslashes($log['order_number'] ?: ('#'.$log['order_id']))) ?> (<?= htmlspecialchars(addslashes($log['status_trigger'] ?: 'status')) ?>)?');">
+                <i class="bi bi-arrow-repeat"></i> Resend
+              </a>
+              <?php endif; ?>
               <a href="<?= site_url('shopkart/whatsapp-report/view/'.$log['id']) ?>" class="btn btn-sm btn-outline-primary" title="Details">
                 <i class="bi bi-eye"></i>
               </a>
