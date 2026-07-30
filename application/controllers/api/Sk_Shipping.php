@@ -135,10 +135,13 @@ class Sk_Shipping extends Sk_Base_Api {
      *   POST {base}/shopkart-api/shipping/jt-webhook
      *
      * Docs: JT POSTs x-www-form-urlencoded with bizContent = JSON array of
-     * { billCode, txlogisticId?, details[] }. Expects JSON:
-     *   { "code":"1", "msg":"success", "data":"SUCCESS", "requestID":"..." }
+     * { billCode, txlogisticId?, details[] }. Expects EXACT JSON ACK:
+     *   { "code":"1", "msg":"success", "data":"SUCCESS" }
+     * Joint-debugging fails if code!=1 or data is not the string "SUCCESS".
      */
     public function jt_webhook() {
+        $this->load->helper('sk_jt_express');
+
         $raw = (string)$this->input->raw_input_stream;
         $payload = json_decode($raw, true);
         if (!is_array($payload) || !$payload) {
@@ -151,47 +154,43 @@ class Sk_Shipping extends Sk_Base_Api {
             $payload = ['bizContent' => $_POST['bizContent']];
         }
         // Raw body may be only bizContent=... (form)
-        if (!$payload && $raw !== '' && stripos($raw, 'bizContent=') === 0) {
+        if (!$payload && $raw !== '' && stripos($raw, 'bizContent=') !== false) {
             parse_str($raw, $parsed);
             if (is_array($parsed) && $parsed) {
                 $payload = $parsed;
             }
         }
 
-        if (!$payload) {
-            log_message('error', 'JT webhook empty payload: ' . substr($raw, 0, 2000));
-            return $this->_jt_webhook_reply(false, 'Empty webhook payload.');
-        }
-
         log_message('info', 'JT webhook headers apiAccount=' . ($this->input->get_request_header('apiAccount', true) ?: '')
             . ' digest=' . substr((string)($this->input->get_request_header('digest', true) ?: ''), 0, 20)
-            . ' body=' . substr(json_encode($payload), 0, 2000));
+            . ' body=' . substr($raw !== '' ? $raw : json_encode($payload), 0, 2000));
+
+        // Joint-debug / health probe with empty body — still ACK success so console "Passes".
+        if (!$payload) {
+            return $this->_jt_webhook_reply(true, 'success', 'SUCCESS');
+        }
 
         $items = $this->_jt_webhook_expand_items($payload);
-        if (!$items) {
-            log_message('error', 'JT webhook no shipment items: ' . substr(json_encode($payload), 0, 2000));
-            // Still ACK so JT does not retry forever on malformed noise
-            return $this->_jt_webhook_reply(true, 'No shipment items; acknowledged.');
-        }
-
-        $results = [];
-        foreach ($items as $item) {
-            if (is_array($item)) {
-                $results[] = sk_jt_apply_webhook_payload($item);
+        if ($items) {
+            $results = [];
+            foreach ($items as $item) {
+                if (is_array($item)) {
+                    $results[] = sk_jt_apply_webhook_payload($item);
+                }
             }
-        }
-
-        $anyOk = false;
-        foreach ($results as $r) {
-            if (!empty($r['success'])) {
-                $anyOk = true;
-                break;
+            $okCount = 0;
+            foreach ($results as $r) {
+                if (!empty($r['success'])) {
+                    $okCount++;
+                }
             }
+            log_message('info', 'JT webhook processed items=' . count($results) . ' ok=' . $okCount);
+        } else {
+            log_message('info', 'JT webhook no shipment items (still ACK): ' . substr(json_encode($payload), 0, 1000));
         }
-        log_message('info', 'JT webhook processed items=' . count($results) . ' ok=' . ($anyOk ? '1' : '0'));
 
-        // JT expects success ACK even when AWB is unknown (avoid endless retries)
-        return $this->_jt_webhook_reply(true, $anyOk ? 'success' : 'acknowledged', $results);
+        // Always return JT canonical success shape (do NOT put debug arrays in data).
+        return $this->_jt_webhook_reply(true, 'success', 'SUCCESS');
     }
 
     /**
@@ -233,16 +232,20 @@ class Sk_Shipping extends Sk_Base_Api {
         return [];
     }
 
-    /** JT Open Platform expected webhook response shape. */
-    protected function _jt_webhook_reply(bool $ok, string $msg, $data = 'SUCCESS') {
+    /**
+     * JT Open Platform / joint-debugging expected webhook response.
+     * Must keep data as the literal string "SUCCESS".
+     */
+    protected function _jt_webhook_reply(bool $ok, string $msg = 'success', $data = 'SUCCESS') {
         http_response_code(200);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'code'      => $ok ? '1' : '0',
-            'msg'       => $msg !== '' ? $msg : ($ok ? 'success' : 'fail'),
-            'data'      => $data === null ? 'SUCCESS' : $data,
-            'requestID' => bin2hex(random_bytes(8)),
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        header('Content-Type: application/json; charset=UTF-8');
+        // Prefer exact JT sample field order / types (strings).
+        $out = [
+            'code' => $ok ? '1' : '0',
+            'msg'  => $msg !== '' ? $msg : ($ok ? 'success' : 'fail'),
+            'data' => (is_string($data) && $data !== '') ? $data : 'SUCCESS',
+        ];
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 }
