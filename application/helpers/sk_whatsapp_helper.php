@@ -343,22 +343,16 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
 
     $msg = sk_whatsapp_order_message($order, $status, $settings);
 
-    // Prefer approved utility template (works outside 24h session). Free-text only as fallback.
+    // Prefer approved utility template (works outside 24h session — no open chat needed).
+    // Free-text only when no template is mapped (text requires an open 24h customer session).
     $tpl = sk_whatsapp_template_for_status($status, $order, $cfg);
     if ($tpl !== null) {
         $result = sk_whatsapp_send_template($phone, $tpl['name'], $tpl['params'], $settings);
         $result['via'] = 'template:' . $tpl['name'];
         if (empty($result['success'])) {
-            $tplFail = (string)($result['message'] ?? 'template failed');
-            $textResult = sk_whatsapp_send_text($phone, $msg, $settings);
-            $textResult['via'] = 'text';
-            if (!empty($textResult['success'])) {
-                $textResult['message'] = 'Sent via text after template "' . $tpl['name'] . '" failed: ' . $tplFail;
-                $result = $textResult;
-            } else {
-                $result['message'] = 'Template "' . $tpl['name'] . '" failed: ' . $tplFail
-                    . '; text also failed: ' . ($textResult['message'] ?? 'unknown');
-            }
+            // Do not fall back to free text — it needs a 24h session and confuses the report.
+            $result['message'] = 'Template "' . $tpl['name'] . '" failed: '
+                . (string)($result['message'] ?? 'unknown');
         } else {
             $result['message'] = 'Sent via template "' . $tpl['name'] . '"'
                 . ($cfgForce !== '' ? ' (test phone ' . $cfgForce . ')' : '');
@@ -369,7 +363,7 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
         if (empty($result['success'])) {
             $result['message'] = (string)($result['message'] ?? 'text send failed')
                 . ' — no WhatsApp utility template configured for status "' . $status
-                . '" (see database/whatsapp_order_templates.txt).';
+                . '" (see database/whatsapp_order_templates.txt). Templates do not need a 24h session.';
         }
     }
 
