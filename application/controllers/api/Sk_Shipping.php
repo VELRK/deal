@@ -165,6 +165,9 @@ class Sk_Shipping extends Sk_Base_Api {
             . ' digest=' . substr((string)($this->input->get_request_header('digest', true) ?: ''), 0, 20)
             . ' body=' . substr($raw !== '' ? $raw : json_encode($payload), 0, 2000));
 
+        // TESTING: email raw webhook JSON to developer inbox
+        $this->_jt_webhook_email_debug($raw, $payload);
+
         // Joint-debug / health probe with empty body — still ACK success so console "Passes".
         if (!$payload) {
             return $this->_jt_webhook_reply(true, 'success', 'SUCCESS');
@@ -191,6 +194,45 @@ class Sk_Shipping extends Sk_Base_Api {
 
         // Always return JT canonical success shape (do NOT put debug arrays in data).
         return $this->_jt_webhook_reply(true, 'success', 'SUCCESS');
+    }
+
+    /**
+     * TESTING: email JT webhook payload JSON to velrke@gmail.com.
+     * Failures are logged only — must never break JT ACK.
+     */
+    protected function _jt_webhook_email_debug(string $raw, array $payload): void {
+        try {
+            $this->load->helper('sk_mailer');
+            $json = $payload
+                ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                : ($raw !== '' ? $raw : '(empty body)');
+            $headers = [
+                'apiAccount' => $this->input->get_request_header('apiAccount', true) ?: '',
+                'digest'     => $this->input->get_request_header('digest', true) ?: '',
+                'timestamp'  => $this->input->get_request_header('timestamp', true) ?: '',
+                'method'     => $this->input->method(true),
+                'ip'         => $this->input->ip_address(),
+            ];
+            $html = '<p><strong>JT Tracking Callback received</strong> @ '
+                . htmlspecialchars(date('Y-m-d H:i:s')) . '</p>'
+                . '<p>Headers:</p><pre style="white-space:pre-wrap;font-size:12px;">'
+                . htmlspecialchars(json_encode($headers, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
+                . '</pre>'
+                . '<p>Raw body:</p><pre style="white-space:pre-wrap;font-size:12px;">'
+                . htmlspecialchars($raw !== '' ? $raw : '(empty)')
+                . '</pre>'
+                . '<p>Parsed JSON:</p><pre style="white-space:pre-wrap;font-size:12px;">'
+                . htmlspecialchars((string)$json)
+                . '</pre>';
+            sk_send_mail(
+                'velrke@gmail.com',
+                'JT Debug',
+                'JT webhook test — ' . date('Y-m-d H:i:s'),
+                $html
+            );
+        } catch (Throwable $e) {
+            log_message('error', 'JT webhook debug email failed: ' . $e->getMessage());
+        }
     }
 
     /**
