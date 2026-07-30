@@ -291,8 +291,12 @@
             Turn <strong>Sandbox</strong> OFF to use production credentials from config (<code>application/config/jt_express.php</code>).
             <br><span class="text-muted">Database setup runs automatically when you open this page (no PHP CLI needed). Or import <code>database/jt_express.sql</code> in phpMyAdmin.</span>
             <hr class="my-2">
-            <strong>Status sync webhook</strong> (register in JT Open Platform so every JT status change updates our database):
+            <strong>Status sync webhook</strong> (register in JT Open Platform → Tracking Callback / Joint-Debugging):
             <br><code class="user-select-all"><?= site_url('shopkart-api/shipping/jt-webhook') ?></code>
+            <div class="small text-muted mt-2">
+              Expected ACK: <code>{"code":"1","msg":"success","data":"SUCCESS"}</code>
+              · Encoding UTF-8 · Method POST (form <code>bizContent</code>)
+            </div>
             <br><span class="text-muted">JT pushes <code>bizContent</code> (AWB + scan details) to this URL after each tracking change. Also auto-syncs when you open an order or click Track. For sandbox, fill sender phone/address/city/state/postcode below.</span>
           </div>
           <div class="row g-3">
