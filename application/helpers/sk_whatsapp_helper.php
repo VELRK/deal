@@ -75,14 +75,15 @@ function sk_whatsapp_config(array $settings = null): array {
         }
     }
 
-    $token = trim((string)($settings['askeva_api_token'] ?? ''));
-    if ($token === '') {
-        $token = trim((string)($fileCfg['api_key'] ?? ''));
-    }
-    $url = trim((string)($settings['askeva_api_url'] ?? ''));
-    if ($url === '') {
-        $url = trim((string)($fileCfg['api_url'] ?? 'https://waadmin.syncr.in/v1/message/send-message'));
-    }
+    // Prefer committed whatsapp.php token/URL so live matches git after pull
+    // (DB settings often keep a stale Askeva token → Syncr "Template is not valid").
+    $fileToken = trim((string)($fileCfg['api_key'] ?? ''));
+    $dbToken   = trim((string)($settings['askeva_api_token'] ?? ''));
+    $token     = $fileToken !== '' ? $fileToken : $dbToken;
+
+    $fileUrl = trim((string)($fileCfg['api_url'] ?? ''));
+    $dbUrl   = trim((string)($settings['askeva_api_url'] ?? ''));
+    $url     = $fileUrl !== '' ? $fileUrl : ($dbUrl !== '' ? $dbUrl : 'https://waadmin.syncr.in/v1/message/send-message');
 
     // Hard defaults so confirmed/shipped/etc. always map even if config is stale on server
     $defaultTemplates = [
@@ -123,6 +124,7 @@ function sk_whatsapp_config(array $settings = null): array {
         'template'          => $fallbackTpl,
         'status_templates'  => $statusTemplates,
         'lang'              => $lang,
+        'param_mode'        => strtolower(trim((string)($fileCfg['template_param_mode'] ?? 'auto'))) ?: 'auto',
         'param_names'       => [
             'customer' => trim((string)(($fileCfg['template_param_names']['customer'] ?? 'Customername'))) ?: 'Customername',
             'order'    => trim((string)(($fileCfg['template_param_names']['order'] ?? 'OrderName'))) ?: 'OrderName',
@@ -157,9 +159,9 @@ function sk_whatsapp_destination_phone(string $to, array $settings = null): stri
 }
 
 /**
- * Resolve template name + body params for a status.
- * Askeva named vars: {{Customername}}, {{OrderName}}
- * @return array{name:string,params:array}|null
+ * Resolve template name + body values for a status.
+ * Values are always [customer_name, order_number] in that order ({{1}}/{{2}} or named map built at send time).
+ * @return array{name:string,values:string[]}|null
  */
 function sk_whatsapp_template_for_status(string $status, array $order, array $cfg): ?array {
     $orderNo = (string)($order['order_number'] ?? ($order['id'] ?? ''));
@@ -167,8 +169,6 @@ function sk_whatsapp_template_for_status(string $status, array $order, array $cf
     if ($name === '') {
         $name = 'Customer';
     }
-    $custKey = trim((string)($cfg['param_names']['customer'] ?? 'Customername')) ?: 'Customername';
-    $ordKey  = trim((string)($cfg['param_names']['order'] ?? 'OrderName')) ?: 'OrderName';
 
     $map = $cfg['status_templates'] ?? [];
     $tplName = '';
@@ -176,23 +176,17 @@ function sk_whatsapp_template_for_status(string $status, array $order, array $cf
         $tplName = trim((string)$map[$status]);
     }
     if ($tplName !== '') {
-        // Named parameters matching Askeva template variables
         return [
             'name'   => $tplName,
-            'params' => [
-                $custKey => $name,
-                $ordKey  => $orderNo,
-            ],
+            // Keep order: {{1}}/Customername = name, {{2}}/OrderName = order no
+            'values' => [$name, $orderNo],
         ];
     }
     $fallback = trim((string)($cfg['template'] ?? ''));
     if ($fallback !== '') {
         return [
             'name'   => $fallback,
-            'params' => [
-                $ordKey  => $orderNo,
-                $custKey => sk_whatsapp_status_label($status),
-            ],
+            'values' => [$orderNo, sk_whatsapp_status_label($status)],
         ];
     }
     return null;
@@ -366,7 +360,7 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
     // Free-text only when no template is mapped (text requires an open 24h customer session).
     $tpl = sk_whatsapp_template_for_status($status, $order, $cfg);
     if ($tpl !== null) {
-        $result = sk_whatsapp_send_template($phone, $tpl['name'], $tpl['params'], $settings);
+        $result = sk_whatsapp_send_template($phone, $tpl['name'], $tpl['values'], $settings);
         $result['via'] = 'template:' . $tpl['name'];
         if (empty($result['success'])) {
             // Do not fall back to free text — it needs a 24h session and confuses the report.
@@ -508,8 +502,34 @@ function sk_whatsapp_send_text(string $to, string $body, array $settings = null)
     ], $cfg);
 }
 
-/** Send approved utility template. $bodyParams = list OR named map (Customername => …). */
-function sk_whatsapp_send_template(string $to, string $templateName, array $bodyParams, array $settings = null): array {
+/**
+ * Build body parameters for Syncr/Meta.
+ * @param string[] $values ordered body texts
+ * @param bool $named when true, attach parameter_name (Customername / OrderName)
+ */
+function sk_whatsapp_build_body_params(array $values, array $cfg, bool $named): array {
+    $params = [];
+    $keys = [
+        trim((string)($cfg['param_names']['customer'] ?? 'Customername')) ?: 'Customername',
+        trim((string)($cfg['param_names']['order'] ?? 'OrderName')) ?: 'OrderName',
+    ];
+    $i = 0;
+    foreach ($values as $p) {
+        $entry = [
+            'type' => 'text',
+            'text' => sk_whatsapp_sanitize_param((string)$p),
+        ];
+        if ($named) {
+            $entry['parameter_name'] = $keys[$i] ?? ('var' . ($i + 1));
+        }
+        $params[] = $entry;
+        $i++;
+    }
+    return $params;
+}
+
+/** Send approved utility template. $bodyValues = ordered list of body texts. */
+function sk_whatsapp_send_template(string $to, string $templateName, array $bodyValues, array $settings = null): array {
     $cfg = sk_whatsapp_config($settings);
     if (!$cfg['enabled'] || $templateName === '') {
         return ['success' => false, 'message' => 'Template not configured.'];
@@ -518,39 +538,65 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
     if ($to === '') {
         return ['success' => false, 'message' => 'Invalid phone.'];
     }
-    $params = [];
-    $isNamed = $bodyParams !== [] && array_keys($bodyParams) !== range(0, count($bodyParams) - 1);
-    foreach ($bodyParams as $key => $p) {
-        $entry = [
-            'type' => 'text',
-            'text' => sk_whatsapp_sanitize_param((string)$p),
-        ];
-        if ($isNamed && !is_int($key)) {
-            // Askeva/Meta named variables e.g. {{Customername}}, {{OrderName}}
-            $entry['parameter_name'] = (string)$key;
-        }
-        $params[] = $entry;
+
+    // Normalize to a 0-indexed list of strings (ignore accidental string keys).
+    $values = [];
+    foreach ($bodyValues as $p) {
+        $values[] = (string)$p;
     }
-    $payload = [
-        'to'       => $to,
-        'type'     => 'template',
-        'template' => [
-            'language'   => ['policy' => 'deterministic', 'code' => $cfg['lang'] ?: 'en'],
-            'name'       => $templateName,
-            'components' => [[
-                'type'       => 'body',
-                'parameters'  => $params,
-            ]],
-        ],
-    ];
-    $result = sk_whatsapp_api_send($payload, $cfg);
+
+    $mode = strtolower((string)($cfg['param_mode'] ?? 'auto'));
+    if (!in_array($mode, ['positional', 'named', 'auto'], true)) {
+        $mode = 'auto';
+    }
+    $attempts = $mode === 'named'
+        ? [true]
+        : ($mode === 'positional' ? [false] : [false, true]); // auto: positional then named
+
+    $result = ['success' => false, 'message' => 'no attempt'];
+    $lastParams = [];
+    $usedNamed = false;
+    foreach ($attempts as $named) {
+        $usedNamed = $named;
+        $params = sk_whatsapp_build_body_params($values, $cfg, $named);
+        $lastParams = $params;
+        $payload = [
+            'to'       => $to,
+            'type'     => 'template',
+            'template' => [
+                'language'   => ['policy' => 'deterministic', 'code' => $cfg['lang'] ?: 'en'],
+                'name'       => $templateName,
+                'components' => [[
+                    'type'      => 'body',
+                    'parameters' => $params,
+                ]],
+            ],
+        ];
+        $result = sk_whatsapp_api_send($payload, $cfg);
+        if (!empty($result['success'])) {
+            break;
+        }
+        $err = strtolower((string)($result['message'] ?? ''));
+        // Retry other style only for format / validity style errors
+        $retryable = (strpos($err, 'template is not valid') !== false)
+            || (strpos($err, 'parameter name') !== false)
+            || (strpos($err, 'invalid parameter') !== false)
+            || (strpos($err, 'number of parameters') !== false);
+        if (!$retryable) {
+            break;
+        }
+    }
+
     if (empty($result['success'])) {
         $snap = [];
-        foreach ($params as $p) {
+        foreach ($lastParams as $p) {
             $snap[] = (isset($p['parameter_name']) ? $p['parameter_name'] . '=' : '') . ($p['text'] ?? '');
         }
+        $tokenTip = $cfg['token'] !== '' ? ('…' . substr($cfg['token'], -6)) : '(empty)';
         $result['message'] = (string)($result['message'] ?? 'failed')
             . ' [tpl=' . $templateName . ' lang=' . ($cfg['lang'] ?: 'en')
+            . ' style=' . ($usedNamed ? 'named' : 'positional')
+            . ' token=' . $tokenTip
             . ' params=' . json_encode($snap, JSON_UNESCAPED_UNICODE) . ']';
     }
     return $result;

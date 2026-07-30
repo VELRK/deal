@@ -6,16 +6,15 @@ Language : en
 Create EACH template with the EXACT template name shown.
 Configured in: application/config/whatsapp.php
 
-Named variables (match Askeva exactly):
-  {{Customername}} = Customer name
-  {{OrderName}}    = Order number
+Variables (either style works; app mode=auto tries both):
+  Positional: {{1}} = customer name, {{2}} = order number
+  Named:      {{Customername}}, {{OrderName}}
 
 Sample for approval:
-  Customername = Ahmad
-  OrderName    = ORD-12345
+  {{1}} / Customername = Ahmad
+  {{2}} / OrderName    = ORD-12345
 
-App sends:
-  parameter_name "Customername" + "OrderName"
+App sends positional first, then named if Syncr rejects.
 
 ================================================================================
 1) Template name: order_received

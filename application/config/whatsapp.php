@@ -21,10 +21,14 @@ $config['whatsapp']['development_mode'] = false;
 $config['whatsapp']['template_lang'] = 'en';
 
 /*
-| Named body variables used in Askeva/Meta templates, e.g.:
-|   Hi {{Customername}}, your order {{OrderName}} has been confirmed...
-| Keys must match the template variable names exactly.
+| Parameter style for template body vars:
+|   positional — {{1}}, {{2}} (Syncr/Meta classic; preferred)
+|   named      — {{Customername}}, {{OrderName}} + parameter_name in API
+|   auto       — try positional, then named if Syncr rejects
 */
+$config['whatsapp']['template_param_mode'] = 'auto';
+
+/* Used only when mode is named (or auto fallback to named). */
 $config['whatsapp']['template_param_names'] = [
     'customer' => 'Customername',
     'order'    => 'OrderName',

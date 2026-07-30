@@ -139,8 +139,8 @@ class Whatsapp_report extends Sk_Base {
             $order['customer_name'] = $order['shipping_name'];
         }
 
-        $settings = $this->Sk_Admin_model->get_settings();
-        $result = sk_whatsapp_notify_order_status($order, $status, $settings);
+        // null settings → helper loads fresh after syncing token/URL from whatsapp.php
+        $result = sk_whatsapp_notify_order_status($order, $status, null);
 
         $ok = !empty($result['success']);
         $msg = (string)($result['message'] ?? ($ok ? 'Resent successfully.' : 'Resend failed.'));
