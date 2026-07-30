@@ -1,9 +1,19 @@
 CREATE TABLE IF NOT EXISTS `contact_enquiries` (
-  `id`         INT(11) NOT NULL AUTO_INCREMENT,
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`    INT UNSIGNED NULL DEFAULT NULL,
   `name`       VARCHAR(150) NOT NULL,
   `email`      VARCHAR(150) NOT NULL,
+  `phone`      VARCHAR(40) NULL DEFAULT NULL,
+  `subject`    VARCHAR(200) NULL DEFAULT NULL,
   `message`    TEXT NOT NULL,
-  `status`     ENUM('new','read','replied') NOT NULL DEFAULT 'new',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  `source`     VARCHAR(20) NOT NULL DEFAULT 'app',
+  `status`     ENUM('new','read','replied','closed') NOT NULL DEFAULT 'new',
+  `admin_note` TEXT NULL,
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_contact_email` (`email`),
+  KEY `idx_contact_user` (`user_id`),
+  KEY `idx_contact_status` (`status`),
+  KEY `idx_contact_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

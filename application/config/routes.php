@@ -511,6 +511,7 @@ $route['shopkart/reviews/reject/(:num)']  = 'admin/Reviews/reject/$1';
 $route['shopkart/reviews/delete/(:num)']  = 'admin/Reviews/delete/$1';
 // Contacts (admin)
 $route['shopkart/contacts'] = 'admin/Contacts/index';
+$route['shopkart/contacts/view/(:num)'] = 'admin/Contacts/view/$1';
 $route['shopkart/contacts/mark_read/(:num)'] = 'admin/Contacts/mark_read/$1';
 $route['shopkart/contacts/delete/(:num)'] = 'admin/Contacts/delete/$1';
 // Blogs (admin)
@@ -617,8 +618,10 @@ $route['shopkart-api/site-settings']['GET'] = 'api/Sk_Settings/index';
 $route['shopkart-api/seo/page/(:any)']['GET'] = 'api/Sk_Seo/page/$1';
 $route['shopkart-api/seo']['GET'] = 'api/Sk_Seo/page';
 $route['shopkart-api/seo/global']['GET'] = 'api/Sk_Seo/global_config';
-// Contact form
+// Contact form (mobile + web)
 $route['shopkart-api/contact']['POST'] = 'api/Sk_Contact/store';
+$route['shopkart-api/contact']['GET']  = 'api/Sk_Contact/index';
+$route['shopkart-api/contact/(:num)']['GET'] = 'api/Sk_Contact/show/$1';
 // Affiliate enquiry (mobile)
 $route['shopkart-api/affiliate/enquiry']['POST'] = 'api/Sk_Affiliate_enquiry/store';
 $route['shopkart-api/affiliate/enquiry']['GET']  = 'api/Sk_Affiliate_enquiry/index';
