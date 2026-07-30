@@ -28,6 +28,22 @@ $is_vendor = !empty($is_vendor_scope);
 
 </div>
 
+<?php if (empty($is_vendor)): ?>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link active" href="<?= site_url('shopkart/affiliates') ?>">Affiliates</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="<?= site_url('shopkart/affiliates/enquiries') ?>">
+      Enquiries
+      <?php if (!empty($enquiry_new_count)): ?>
+        <span class="badge bg-danger ms-1"><?= (int)$enquiry_new_count ?></span>
+      <?php endif; ?>
+    </a>
+  </li>
+</ul>
+<?php endif; ?>
+
 
 
 <?php if (!$is_vendor): ?>

@@ -302,6 +302,10 @@ $route['shopkart/affiliate/profile'] = 'admin/Affiliate_portal/profile';
 
 // Admin — Affiliates & wallets
 $route['shopkart/affiliates'] = 'admin/Affiliates/index';
+$route['shopkart/affiliates/enquiries'] = 'admin/Affiliates/enquiries';
+$route['shopkart/affiliates/enquiry_mark/(:num)'] = 'admin/Affiliates/enquiry_mark/$1';
+$route['shopkart/affiliates/enquiry_delete/(:num)'] = 'admin/Affiliates/enquiry_delete/$1';
+$route['shopkart/affiliates/enquiry_convert/(:num)'] = 'admin/Affiliates/enquiry_convert/$1';
 $route['shopkart/affiliates/add'] = 'admin/Affiliates/add';
 $route['shopkart/affiliates/store'] = 'admin/Affiliates/store';
 $route['shopkart/affiliates/view/(:num)'] = 'admin/Affiliates/view/$1';

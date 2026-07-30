@@ -1,5 +1,8 @@
-<?php $is_edit = !empty($affiliate); $a = $affiliate ?? []; $is_vendor = !empty($is_vendor_scope); ?>
+<?php $is_edit = !empty($affiliate); $a = $affiliate ?? ($prefill ?? []); $is_vendor = !empty($is_vendor_scope); ?>
 <div class="sk-page-header"><h5 class="sk-page-title"><?= $is_edit ? 'Edit Affiliate' : 'Add Affiliate' ?></h5></div>
+<?php if (!$is_edit && !empty($prefill['email'])): ?>
+<div class="alert alert-info py-2">Prefilling from affiliate enquiry — review and save to create the affiliate account.</div>
+<?php endif; ?>
 <div class="card shadow-sm" style="max-width:640px;">
   <div class="card-body">
     <form action="<?= site_url($is_edit ? 'admin/affiliates/update/'.$a['id'] : 'admin/affiliates/store') ?>" method="post">
@@ -55,14 +58,14 @@
       <div class="mb-3">
         <label class="form-label">Promo Code</label>
         <div class="input-group">
-          <input type="text" name="promo_code" id="affPromo" class="form-control text-uppercase" value="<?= htmlspecialchars($a['promo_code']??'') ?>" placeholder="Auto: first 4 of name + last 4 of phone" <?= $is_edit ? '' : 'readonly' ?>>
+          <input type="text" name="promo_code" id="affPromo" class="form-control text-uppercase" value="<?= htmlspecialchars($a['promo_code']??'') ?>" placeholder="Auto: first 4 of name + last 4 of phone" <?= $is_edit ? '' : (empty($a['promo_code']) ? 'readonly' : '') ?>>
           <?php if ($is_edit): ?>
           <button type="button" class="btn btn-outline-secondary" id="checkPromoBtn">Check</button>
           <?php else: ?>
           <button type="button" class="btn btn-outline-secondary" id="genPromoBtn" title="Regenerate">Auto</button>
           <?php endif; ?>
         </div>
-        <small id="promoStatus" class="text-muted"><?= $is_edit ? '' : 'Generated from name (first 4 letters, padded with 0) + phone (last 4 digits).' ?></small>
+        <small id="promoStatus" class="text-muted"><?= $is_edit ? '' : (!empty($a['promo_code']) ? 'Suggested from enquiry — click Auto to regenerate.' : 'Generated from name (first 4 letters, padded with 0) + phone (last 4 digits).') ?></small>
       </div>
       <div class="row">
         <div class="col-md-4 mb-3"><label class="form-label">Affiliate Commission %</label><input type="number" step="0.01" name="commission_rate" class="form-control" value="<?= htmlspecialchars($a['commission_rate']??'5') ?>"><small class="text-muted">Earned by affiliate on each sale</small></div>
@@ -123,13 +126,15 @@ function buildPromo() {
 }
 function refreshPromo() {
   var el = document.getElementById('affPromo');
-  if (!el || el.readOnly === false && <?= $is_edit ? 'true' : 'false' ?>) return;
-  if (!<?= $is_edit ? 'true' : 'false' ?>) el.value = buildPromo();
+  if (!el || <?= $is_edit ? 'true' : 'false' ?>) return;
+  if (el.dataset.locked === '1' && el.value) return;
+  el.value = buildPromo();
 }
 document.getElementById('affName')?.addEventListener('input', refreshPromo);
 document.getElementById('affPhone')?.addEventListener('input', refreshPromo);
 document.getElementById('genPromoBtn')?.addEventListener('click', function() {
-  document.getElementById('affPromo').value = buildPromo();
+  var el = document.getElementById('affPromo');
+  if (el) { el.dataset.locked = '0'; el.readOnly = true; el.value = buildPromo(); }
 });
 document.getElementById('checkPromoBtn')?.addEventListener('click', function() {
   var code = document.getElementById('affPromo').value.trim();
@@ -140,5 +145,8 @@ document.getElementById('checkPromoBtn')?.addEventListener('click', function() {
       document.getElementById('promoStatus').className = d.available ? 'text-success' : 'text-danger';
     });
 });
-<?php if (!$is_edit): ?>refreshPromo();<?php endif; ?>
+<?php if (!$is_edit && empty($a['promo_code'])): ?>refreshPromo();
+<?php elseif (!$is_edit && !empty($a['promo_code'])): ?>
+document.getElementById('affPromo').dataset.locked = '1';
+<?php endif; ?>
 </script>

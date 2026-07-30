@@ -60,7 +60,156 @@ class Affiliates extends Sk_Base {
         $data['counts']     = $this->Sk_Affiliate_model->status_counts($vendorId);
         $data['is_vendor_scope'] = (bool)$vendorId;
         $data['affiliate_discount_enabled'] = $this->Sk_Affiliate_model->is_checkout_discount_globally_enabled();
+        $data['enquiry_new_count'] = $this->_enquiry_new_count();
+        $data['active_tab'] = 'affiliates';
         $this->render('affiliates/list', $data);
+    }
+
+    /**
+     * Website + mobile affiliate enquiry form submissions.
+     * GET shopkart/affiliates/enquiries
+     */
+    public function enquiries() {
+        if (!$this->is_super_admin()) {
+            show_error('Only admin can view affiliate enquiries.', 403);
+        }
+        $this->_ensure_enquiry_schema();
+        $status = trim((string)$this->input->get('status', TRUE));
+        $search = trim((string)$this->input->get('search', TRUE));
+        $page = max(1, (int)($this->input->get('page') ?? 1));
+        $limit = 25;
+        $offset = ($page - 1) * $limit;
+
+        if ($status !== '' && in_array($status, ['new', 'read', 'replied', 'closed'], true)) {
+            $this->db->where('status', $status);
+        }
+        if ($search !== '') {
+            $this->db->group_start()
+                ->like('name', $search)
+                ->or_like('email', $search)
+                ->or_like('phone', $search)
+                ->or_like('promo_code', $search)
+                ->or_like('message', $search)
+                ->group_end();
+        }
+        $total = (int)$this->db->count_all_results('affiliate_enquiries');
+
+        if ($status !== '' && in_array($status, ['new', 'read', 'replied', 'closed'], true)) {
+            $this->db->where('status', $status);
+        }
+        if ($search !== '') {
+            $this->db->group_start()
+                ->like('name', $search)
+                ->or_like('email', $search)
+                ->or_like('phone', $search)
+                ->or_like('promo_code', $search)
+                ->or_like('message', $search)
+                ->group_end();
+        }
+        $rows = $this->db->order_by('id', 'DESC')->limit($limit, $offset)
+            ->get('affiliate_enquiries')->result_array();
+
+        $data['title'] = 'Affiliate Enquiries';
+        $data['enquiries'] = $rows;
+        $data['total'] = $total;
+        $data['page'] = $page;
+        $data['limit'] = $limit;
+        $data['filters'] = ['status' => $status, 'search' => $search];
+        $data['enquiry_new_count'] = $this->_enquiry_new_count();
+        $data['active_tab'] = 'enquiries';
+        $data['is_vendor_scope'] = false;
+        $this->render('affiliates/enquiries', $data);
+    }
+
+    public function enquiry_mark($id = 0) {
+        if (!$this->is_super_admin()) {
+            return $this->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+        $this->_ensure_enquiry_schema();
+        $id = (int)$id;
+        $status = trim((string)($this->input->post('status') ?: $this->input->get('status') ?: 'read'));
+        if (!in_array($status, ['new', 'read', 'replied', 'closed'], true)) {
+            $status = 'read';
+        }
+        $row = $this->db->where('id', $id)->get('affiliate_enquiries')->row_array();
+        if (!$row) {
+            return $this->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+        $this->db->where('id', $id)->update('affiliate_enquiries', [
+            'status'     => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        return $this->json(['success' => true, 'status' => $status]);
+    }
+
+    public function enquiry_delete($id = 0) {
+        if (!$this->is_super_admin()) {
+            return $this->json(['success' => false, 'message' => 'Access denied'], 403);
+        }
+        $this->_ensure_enquiry_schema();
+        $id = (int)$id;
+        $this->db->where('id', $id)->delete('affiliate_enquiries');
+        return $this->json(['success' => true]);
+    }
+
+    /** Prefill Add Affiliate form from an enquiry. */
+    public function enquiry_convert($id = 0) {
+        if (!$this->is_super_admin()) {
+            show_error('Access denied.', 403);
+        }
+        $this->_ensure_enquiry_schema();
+        $row = $this->db->where('id', (int)$id)->get('affiliate_enquiries')->row_array();
+        if (!$row) {
+            $this->session->set_flashdata('error', 'Enquiry not found.');
+            redirect('admin/affiliates/enquiries');
+        }
+        $this->db->where('id', (int)$id)->update('affiliate_enquiries', [
+            'status'     => 'replied',
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        $qs = http_build_query([
+            'name'       => $row['name'] ?? '',
+            'email'      => $row['email'] ?? '',
+            'phone'      => $row['phone'] ?? '',
+            'promo_code' => $row['promo_code'] ?? '',
+            'from_enquiry' => (int)$id,
+        ]);
+        redirect('admin/affiliates/add?' . $qs);
+    }
+
+    protected function _enquiry_new_count(): int {
+        if (!$this->is_super_admin()) {
+            return 0;
+        }
+        $this->_ensure_enquiry_schema();
+        if (!$this->db->table_exists('affiliate_enquiries')) {
+            return 0;
+        }
+        return (int)$this->db->where('status', 'new')->count_all_results('affiliate_enquiries');
+    }
+
+    protected function _ensure_enquiry_schema(): void {
+        if ($this->db->table_exists('affiliate_enquiries')) {
+            return;
+        }
+        $this->db->query("CREATE TABLE IF NOT EXISTS `affiliate_enquiries` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `user_id` INT UNSIGNED NULL DEFAULT NULL,
+            `name` VARCHAR(150) NOT NULL,
+            `email` VARCHAR(150) NOT NULL,
+            `phone` VARCHAR(40) NULL DEFAULT NULL,
+            `promo_code` VARCHAR(60) NULL DEFAULT NULL,
+            `message` TEXT NOT NULL,
+            `status` ENUM('new','read','replied','closed') NOT NULL DEFAULT 'new',
+            `admin_note` TEXT NULL,
+            `created_at` DATETIME NOT NULL,
+            `updated_at` DATETIME NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_aff_enq_email` (`email`),
+            KEY `idx_aff_enq_user` (`user_id`),
+            KEY `idx_aff_enq_status` (`status`),
+            KEY `idx_aff_enq_created` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
     public function add() {
@@ -71,6 +220,13 @@ class Affiliates extends Sk_Base {
         if ($this->is_super_admin() && !$this->scoped_vendor_id()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 500, 0)['rows'] ?? [];
         }
+        // Prefill from website/mobile enquiry convert link (not an edit record)
+        $data['prefill'] = [
+            'name'       => trim((string)$this->input->get('name', TRUE)),
+            'email'      => trim((string)$this->input->get('email', TRUE)),
+            'phone'      => trim((string)$this->input->get('phone', TRUE)),
+            'promo_code' => strtoupper(trim((string)$this->input->get('promo_code', TRUE))),
+        ];
         $this->render('affiliates/form', $data);
     }
 
