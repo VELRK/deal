@@ -1,69 +1,62 @@
 ================================================================================
-WHATSAPP UTILITY TEMPLATES — copy/paste into Meta / Askeva
+WHATSAPP UTILITY TEMPLATES — Askeva / Syncr / Meta
 ================================================================================
 Category : UTILITY
 Language : en
-Create EACH template below with the EXACT template name shown.
-After approval, names are already configured in:
-  application/config/whatsapp.php
+Create EACH template with the EXACT template name shown.
+Configured in: application/config/whatsapp.php
 
-Variables (all status templates):
-  {{1}} = Customer name
-  {{2}} = Order number
+Named variables (match Askeva exactly):
+  {{Customername}} = Customer name
+  {{OrderName}}    = Order number
 
-Sample values for Meta approval:
-  {{1}} = Ahmad
-  {{2}} = ORD-12345
+Sample for approval:
+  Customername = Ahmad
+  OrderName    = ORD-12345
+
+App sends:
+  parameter_name "Customername" + "OrderName"
 
 ================================================================================
 1) Template name: order_received
-   Status: pending → "Order Received"
+   Status: pending
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been received. We will confirm it shortly. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, your order {{OrderName}} has been received. We will confirm it shortly. Thank you for shopping with us.
 
 ================================================================================
 2) Template name: order_confirmed
-   Status: confirmed → "Order Confirmed"
+   Status: confirmed
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been confirmed and is being prepared. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, your order {{OrderName}} has been confirmed and is being prepared. Thank you for shopping with us.
 
 ================================================================================
 3) Template name: order_ready_pickup
-   Status: processing → "Ready to Pick Up"
+   Status: processing
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} is ready to pick up. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, your order {{OrderName}} is ready to pick up. Thank you for shopping with us.
 
 ================================================================================
 4) Template name: order_shipped
-   Status: shipped → "Shipped"
+   Status: shipped
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been shipped. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, your order {{OrderName}} has been shipped. Thank you for shopping with us.
 
 ================================================================================
 5) Template name: order_delivered
-   Status: delivered → "Delivered"
+   Status: delivered
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been delivered. We hope you enjoy your purchase. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, your order {{OrderName}} has been delivered. We hope you enjoy your purchase. Thank you for shopping with us.
 
 ================================================================================
 6) Template name: order_cancelled
-   Status: cancelled → "Cancelled"
+   Status: cancelled
 --------------------------------------------------------------------------------
-Hi {{1}}, your order {{2}} has been cancelled. If you have questions, please contact us. Thank you.
+Hi {{Customername}}, your order {{OrderName}} has been cancelled. If you have questions, please contact us. Thank you.
 
 ================================================================================
 7) Template name: order_returned
-   Status: returned → "Return Requested"
+   Status: returned
 --------------------------------------------------------------------------------
-Hi {{1}}, we have received a return request for your order {{2}}. Our team will process it shortly. Thank you.
-
-================================================================================
-OPTIONAL FALLBACK (single template for any status)
-Template name: order_status_update
-Variables:
-  {{1}} = Order number
-  {{2}} = Status label (e.g. Shipped)
---------------------------------------------------------------------------------
-Hello! Your order {{1}} status is now: {{2}}. Thank you for shopping with 2DEAL.
+Hi {{Customername}}, we have received a return request for your order {{OrderName}}. Our team will process it shortly. Thank you.
 
 ================================================================================

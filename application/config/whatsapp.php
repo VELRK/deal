@@ -21,8 +21,17 @@ $config['whatsapp']['development_mode'] = false;
 $config['whatsapp']['template_lang'] = 'en';
 
 /*
-| Per-status UTILITY templates ({{1}}=customer name, {{2}}=order number).
-| Used automatically when free-text fails with "session not opened".
+| Named body variables used in Askeva/Meta templates, e.g.:
+|   Hi {{Customername}}, your order {{OrderName}} has been confirmed...
+| Keys must match the template variable names exactly.
+*/
+$config['whatsapp']['template_param_names'] = [
+    'customer' => 'Customername',
+    'order'    => 'OrderName',
+];
+
+/*
+| Per-status UTILITY templates (Customername + OrderName).
 */
 $config['whatsapp']['status_templates'] = [
     'pending'    => 'order_received',
@@ -34,7 +43,7 @@ $config['whatsapp']['status_templates'] = [
     'returned'   => 'order_returned',
 ];
 
-/* Optional single fallback: {{1}}=order number, {{2}}=status label. Leave empty if unused. */
+/* Optional single fallback. Leave empty if unused. */
 $config['whatsapp']['fallback_template'] = '';
 
 /*

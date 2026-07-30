@@ -123,6 +123,10 @@ function sk_whatsapp_config(array $settings = null): array {
         'template'          => $fallbackTpl,
         'status_templates'  => $statusTemplates,
         'lang'              => $lang,
+        'param_names'       => [
+            'customer' => trim((string)(($fileCfg['template_param_names']['customer'] ?? 'Customername'))) ?: 'Customername',
+            'order'    => trim((string)(($fileCfg['template_param_names']['order'] ?? 'OrderName'))) ?: 'OrderName',
+        ],
         // TESTING override — all messages go here when set
         'test_force_phone'  => preg_replace('/\D+/', '', (string)($fileCfg['test_force_phone'] ?? '')),
     ];
@@ -154,9 +158,8 @@ function sk_whatsapp_destination_phone(string $to, array $settings = null): stri
 
 /**
  * Resolve template name + body params for a status.
- * Per-status templates: {{1}}=name, {{2}}=order no
- * Fallback template: {{1}}=order no, {{2}}=status label
- * @return array{name:string,params:string[]}|null
+ * Askeva named vars: {{Customername}}, {{OrderName}}
+ * @return array{name:string,params:array}|null
  */
 function sk_whatsapp_template_for_status(string $status, array $order, array $cfg): ?array {
     $orderNo = (string)($order['order_number'] ?? ($order['id'] ?? ''));
@@ -164,17 +167,33 @@ function sk_whatsapp_template_for_status(string $status, array $order, array $cf
     if ($name === '') {
         $name = 'Customer';
     }
+    $custKey = trim((string)($cfg['param_names']['customer'] ?? 'Customername')) ?: 'Customername';
+    $ordKey  = trim((string)($cfg['param_names']['order'] ?? 'OrderName')) ?: 'OrderName';
+
     $map = $cfg['status_templates'] ?? [];
     $tplName = '';
     if (is_array($map) && !empty($map[$status])) {
         $tplName = trim((string)$map[$status]);
     }
     if ($tplName !== '') {
-        return ['name' => $tplName, 'params' => [$name, $orderNo]];
+        // Named parameters matching Askeva template variables
+        return [
+            'name'   => $tplName,
+            'params' => [
+                $custKey => $name,
+                $ordKey  => $orderNo,
+            ],
+        ];
     }
     $fallback = trim((string)($cfg['template'] ?? ''));
     if ($fallback !== '') {
-        return ['name' => $fallback, 'params' => [$orderNo, sk_whatsapp_status_label($status)]];
+        return [
+            'name'   => $fallback,
+            'params' => [
+                $ordKey  => $orderNo,
+                $custKey => sk_whatsapp_status_label($status),
+            ],
+        ];
     }
     return null;
 }
@@ -489,7 +508,7 @@ function sk_whatsapp_send_text(string $to, string $body, array $settings = null)
     ], $cfg);
 }
 
-/** Send approved utility template (body params = strings). */
+/** Send approved utility template. $bodyParams = list OR named map (Customername => …). */
 function sk_whatsapp_send_template(string $to, string $templateName, array $bodyParams, array $settings = null): array {
     $cfg = sk_whatsapp_config($settings);
     if (!$cfg['enabled'] || $templateName === '') {
@@ -500,8 +519,17 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
         return ['success' => false, 'message' => 'Invalid phone.'];
     }
     $params = [];
-    foreach ($bodyParams as $p) {
-        $params[] = ['type' => 'text', 'text' => sk_whatsapp_sanitize_param((string)$p)];
+    $isNamed = $bodyParams !== [] && array_keys($bodyParams) !== range(0, count($bodyParams) - 1);
+    foreach ($bodyParams as $key => $p) {
+        $entry = [
+            'type' => 'text',
+            'text' => sk_whatsapp_sanitize_param((string)$p),
+        ];
+        if ($isNamed && !is_int($key)) {
+            // Askeva/Meta named variables e.g. {{Customername}}, {{OrderName}}
+            $entry['parameter_name'] = (string)$key;
+        }
+        $params[] = $entry;
     }
     $payload = [
         'to'       => $to,
@@ -516,11 +544,14 @@ function sk_whatsapp_send_template(string $to, string $templateName, array $body
         ],
     ];
     $result = sk_whatsapp_api_send($payload, $cfg);
-    // Attach request snapshot so WhatsApp report shows exactly what Syncr received
     if (empty($result['success'])) {
+        $snap = [];
+        foreach ($params as $p) {
+            $snap[] = (isset($p['parameter_name']) ? $p['parameter_name'] . '=' : '') . ($p['text'] ?? '');
+        }
         $result['message'] = (string)($result['message'] ?? 'failed')
             . ' [tpl=' . $templateName . ' lang=' . ($cfg['lang'] ?: 'en')
-            . ' params=' . json_encode(array_column($params, 'text'), JSON_UNESCAPED_UNICODE) . ']';
+            . ' params=' . json_encode($snap, JSON_UNESCAPED_UNICODE) . ']';
     }
     return $result;
 }
