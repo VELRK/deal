@@ -72,20 +72,58 @@ class Sk_Cart extends Sk_Base_Api {
     public function index() {
         $key   = $this->_cart_key();
         $items = $this->_get_cart_items($key);
-        $this->success(['items' => $items, 'summary' => $this->_summary($items)]);
+        $summary = $this->_summary($items);
+        $payload = [
+            'items'   => $items,
+            'summary' => $summary,
+        ];
+
+        // When cart is below free-delivery threshold, include same-variant / same-category suggestions
+        $include = $this->input->get('include_suggestions');
+        $wantSuggestions = ($include === null || $include === '' || $include === '1' || $include === 'true');
+        if ($wantSuggestions && !empty($items) && empty($summary['free_delivery']['eligible'])) {
+            $limit = min(24, max(1, (int)($this->input->get('suggestions_limit') ?? 12)));
+            $payload['suggestions'] = $this->_build_suggestions($items, $limit);
+        } else {
+            $payload['suggestions'] = [
+                'products' => [],
+                'based_on' => [],
+                'title'    => null,
+                'reason'   => !empty($summary['free_delivery']['eligible'])
+                    ? 'free_delivery_already_eligible'
+                    : (empty($items) ? 'empty_cart' : 'skipped'),
+            ];
+        }
+
+        $this->success($payload);
     }
 
     /**
      * GET /shopkart-api/cart/suggestions
      * Suggest other products in the same category that share the cart line's pack size.
+     * Includes free_delivery context so mobile can show “add more for free delivery”.
      */
     public function suggestions() {
         $key   = $this->_cart_key();
         $items = $this->_get_cart_items($key);
         $limit = min(24, max(1, (int)($this->input->get('limit') ?? 12)));
+        $summary = $this->_summary($items);
+        $block = $this->_build_suggestions($items, $limit);
+        $block['free_delivery'] = $summary['free_delivery'] ?? null;
+        $this->success($block);
+    }
 
+    /**
+     * Build same-variant (preferred) / same-category suggestion products with full detail.
+     */
+    private function _build_suggestions(array $items, int $limit = 12): array {
         if (empty($items)) {
-            return $this->success(['products' => [], 'based_on' => []]);
+            return [
+                'products' => [],
+                'based_on' => [],
+                'title'    => null,
+                'reason'   => 'empty_cart',
+            ];
         }
 
         $exclude = [];
@@ -116,11 +154,23 @@ class Sk_Cart extends Sk_Base_Api {
             ];
         }
 
-        $products = $this->Sk_Product_model->get_cart_suggestions($seeds, $exclude, $limit);
-        $this->success([
+        $products = $this->Sk_Product_model->get_cart_suggestions($seeds, $exclude, $limit, true);
+        $pack = '';
+        foreach ($based_on as $b) {
+            if (!empty($b['variant_label'])) {
+                $pack = (string)$b['variant_label'];
+                break;
+            }
+        }
+
+        return [
             'products' => $products,
             'based_on' => $based_on,
-        ]);
+            'title'    => $pack !== ''
+                ? ('More ' . $pack . ' packs in this category')
+                : 'Similar products in this category',
+            'reason'   => 'same_variant_same_category',
+        ];
     }
 
     public function add() {
@@ -289,12 +339,19 @@ class Sk_Cart extends Sk_Base_Api {
     private function _summary($items) {
         $subtotal = array_sum(array_column($items, 'subtotal'));
         $settings = $this->get_settings();
+        $threshold = (float)($settings['free_shipping_above'] ?? 999);
+        $shipCharge = (float)($settings['shipping_charge'] ?? 50);
+        $eligible = $subtotal > 0 && $subtotal >= $threshold;
         // Empty cart: no shipping charge (avoid RM50 total with Subtotal RM0)
         $shipping = ($subtotal <= 0 || empty($items))
             ? 0
-            : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
+            : ($eligible ? 0 : $shipCharge);
         // Storefront does not charge/show GST
         $tax      = 0;
+        $amountToFree = ($subtotal <= 0 || $eligible)
+            ? 0.0
+            : round(max(0, $threshold - $subtotal), 2);
+
         $summary = [
             'subtotal'     => round($subtotal, 2),
             'shipping'     => (float)$shipping,
@@ -302,6 +359,19 @@ class Sk_Cart extends Sk_Base_Api {
             'discount'     => 0,
             'total'        => round($subtotal + $shipping + $tax, 2),
             'item_count'   => array_sum(array_column($items, 'quantity')),
+            'free_delivery' => [
+                'eligible'           => $eligible,
+                'threshold'          => $threshold,
+                'shipping_charge'    => $shipCharge,
+                'amount_remaining'   => $amountToFree,
+                'currency'           => $settings['currency_symbol'] ?? 'RM',
+                'message'            => empty($items)
+                    ? null
+                    : ($eligible
+                        ? 'You qualify for free delivery.'
+                        : ('Add ' . ($settings['currency_symbol'] ?? 'RM') . number_format($amountToFree, 2)
+                            . ' more for free delivery.')),
+            ],
         ];
 
         // Royalty points (separate ledger from wallet) — show when logged in

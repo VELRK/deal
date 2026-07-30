@@ -326,8 +326,10 @@ class Sk_Product_model extends CI_Model {
      *
      * @param array $seeds Each: category_id, product_id, unit_id?, unit_value?, label?
      * @param int[] $exclude_ids Product IDs already in cart
+     * @param int $limit
+     * @param bool $full_detail Reload each hit via get_by_id (images, videos, all variants)
      */
-    public function get_cart_suggestions(array $seeds, array $exclude_ids = [], $limit = 12) {
+    public function get_cart_suggestions(array $seeds, array $exclude_ids = [], $limit = 12, $full_detail = false) {
         $limit = max(1, min(24, (int)$limit));
         $exclude_ids = array_values(array_unique(array_filter(array_map('intval', $exclude_ids))));
         $category_ids = [];
@@ -360,11 +362,8 @@ class Sk_Product_model extends CI_Model {
         $prefer = array_values($variant_keys);
 
         if ($this->variant_model()->schema_ready() && !empty($prefer)) {
-            $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, b.name as brand_name, MIN(pv.id) as match_variant_id')
+            $this->db->select('p.id, MIN(pv.id) as match_variant_id')
                      ->from('products p')
-                     ->join('categories c', 'c.id = p.category_id', 'left')
-                     ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
-                     ->join('brands b', 'b.id = p.brand_id', 'left')
                      ->join('product_variants pv', 'pv.product_id = p.id AND pv.status = 1', 'inner')
                      ->where('p.status', 'active')
                      ->where_in('p.category_id', $category_ids);
@@ -402,11 +401,8 @@ class Sk_Product_model extends CI_Model {
 
         if ($need > 0) {
             $exclude_fill = array_values(array_unique(array_merge($exclude_ids, $found_ids)));
-            $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, b.name as brand_name')
+            $this->db->select('p.id')
                      ->from('products p')
-                     ->join('categories c', 'c.id = p.category_id', 'left')
-                     ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
-                     ->join('brands b', 'b.id = p.brand_id', 'left')
                      ->where('p.status', 'active')
                      ->where_in('p.category_id', $category_ids);
             if (!empty($exclude_fill)) {
@@ -416,15 +412,40 @@ class Sk_Product_model extends CI_Model {
                              ->order_by('p.created_at', 'DESC')
                              ->limit($need)
                              ->get()->result_array();
-            $matched = array_merge($matched, $fill);
+            foreach ($fill as $f) {
+                $matched[] = ['id' => (int)$f['id'], 'match_variant_id' => 0];
+            }
         }
 
-        foreach ($matched as &$row) {
-            $match_vid = isset($row['match_variant_id']) ? (int)$row['match_variant_id'] : 0;
-            unset($row['match_variant_id']);
-            $row['images'] = $this->get_images($row['id']);
-            $this->_decode_json_fields($row);
-            $this->attach_variants($row);
+        $out = [];
+        foreach ($matched as $hit) {
+            $pid = (int)($hit['id'] ?? 0);
+            $match_vid = isset($hit['match_variant_id']) ? (int)$hit['match_variant_id'] : 0;
+            if ($pid < 1) {
+                continue;
+            }
+
+            if ($full_detail) {
+                $row = $this->get_by_id($pid);
+                if (!$row || ($row['status'] ?? '') !== 'active') {
+                    continue;
+                }
+            } else {
+                $row = $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, b.name as brand_name')
+                                ->from('products p')
+                                ->join('categories c', 'c.id = p.category_id', 'left')
+                                ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
+                                ->join('brands b', 'b.id = p.brand_id', 'left')
+                                ->where('p.id', $pid)
+                                ->get()->row_array();
+                if (!$row) {
+                    continue;
+                }
+                $row['images'] = $this->get_images($pid);
+                $this->_decode_json_fields($row);
+                $this->attach_variants($row);
+                $this->apply_sale_timing($row);
+            }
 
             $preferred = false;
             if ($match_vid > 0 && !empty($row['variants'])) {
@@ -448,10 +469,10 @@ class Sk_Product_model extends CI_Model {
 
             $this->apply_sale_timing($row);
             $row['suggestion_reason'] = $preferred ? 'same_variant' : 'same_category';
+            $out[] = $row;
         }
-        unset($row);
 
-        return $matched;
+        return $out;
     }
 
     /** Make a specific variant the product default for list/card display. */
