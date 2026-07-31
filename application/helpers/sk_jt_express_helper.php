@@ -98,7 +98,7 @@ function sk_jt_express_ensure_schema() {
         'courier_provider'       => 'VARCHAR(30) NULL DEFAULT NULL',
         'jt_txlogistic_id'       => 'VARCHAR(64) NULL DEFAULT NULL',
         'jt_bill_code'           => 'VARCHAR(64) NULL DEFAULT NULL',
-        'jt_courier_status'      => 'VARCHAR(80) NULL DEFAULT NULL',
+        'jt_courier_status'      => 'VARCHAR(500) NULL DEFAULT NULL',
         'jt_label_data'          => 'MEDIUMTEXT NULL',
         'jt_track_data'          => 'MEDIUMTEXT NULL',
         'jt_shipment_created_at' => 'DATETIME NULL DEFAULT NULL',
@@ -109,6 +109,14 @@ function sk_jt_express_ensure_schema() {
     foreach ($cols as $col => $def) {
         if (!$CI->db->field_exists($col, 'orders')) {
             $CI->db->query("ALTER TABLE `orders` ADD COLUMN `{$col}` {$def}");
+        }
+    }
+    // Widen courier status so bilingual EN/MS text is not truncated
+    $field = $CI->db->field_data('orders');
+    foreach ($field as $f) {
+        if ($f->name === 'jt_courier_status' && isset($f->max_length) && (int)$f->max_length < 500) {
+            $CI->db->query('ALTER TABLE `orders` MODIFY COLUMN `jt_courier_status` VARCHAR(500) NULL DEFAULT NULL');
+            break;
         }
     }
 
@@ -228,8 +236,8 @@ function sk_jt_localize_track_desc(string $desc): string {
     $out = $desc;
     $translatedParts = [];
 
-    // Translate content inside [brackets] (common JT reason format)
-    $out = preg_replace_callback('/\[([^\]]+)\]/u', function ($m) use ($map, &$translatedParts) {
+    // Translate content inside [brackets] or 【fullwidth】 (JT MY reason format)
+    $out = preg_replace_callback('/[\[\x{3010}]([^\]\x{3011}]+)[\]\x{3011}]/u', function ($m) use ($map, &$translatedParts) {
         $inner = trim($m[1]);
         $en = $map[$inner] ?? null;
         if ($en === null) {
@@ -242,7 +250,10 @@ function sk_jt_localize_track_desc(string $desc): string {
         }
         if ($en !== null) {
             $translatedParts[] = $en;
-            return '[' . $en . ' / ' . $inner . ']';
+            // Keep same bracket style as input (ASCII or fullwidth)
+            $open = mb_substr($m[0], 0, 1);
+            $close = mb_substr($m[0], -1);
+            return $open . $en . ' / ' . $inner . $close;
         }
         return $m[0];
     }, $out);
@@ -360,7 +371,7 @@ function sk_jt_sync_order_tracking(int $orderId, array $trackResult): array {
         'jt_track_data' => json_encode($trackResult['raw'] ?? $trackResult['data'] ?? $trackResult),
     ];
     if ($latestLabel !== '') {
-        $update['jt_courier_status'] = mb_substr($latestLabel, 0, 80);
+        $update['jt_courier_status'] = mb_substr($latestLabel, 0, 500);
     }
 
     $newStatus = null;
