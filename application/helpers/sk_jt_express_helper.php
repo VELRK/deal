@@ -180,14 +180,90 @@ function sk_jt_normalize_tracks(array $result): array {
     return $tracks;
 }
 
-/** Human-readable line for one JT tracking event. */
+/** Human-readable line for one JT tracking event (English + Malay when present). */
 function sk_jt_track_event_label(array $event): string {
     $time = trim((string)($event['scanTime'] ?? $event['time'] ?? $event['acceptTime'] ?? $event['date'] ?? ''));
     $desc = trim((string)($event['desc'] ?? $event['remark'] ?? $event['scanType'] ?? $event['status'] ?? $event['scanCode'] ?? ''));
     if ($desc === '') {
         $desc = json_encode($event);
     }
+    $desc = sk_jt_localize_track_desc($desc);
     return $time !== '' ? ($time . ' — ' . $desc) : $desc;
+}
+
+/**
+ * Show English alongside Malay JT scan text.
+ * e.g. reason [Pengirim Minta…] → English + original Malay.
+ */
+function sk_jt_localize_track_desc(string $desc): string {
+    $desc = trim($desc);
+    if ($desc === '') {
+        return $desc;
+    }
+
+    // Phrase map (Malay → English). Longer phrases first.
+    $map = [
+        'Pengirim Minta Untuk Penjadualan Pick-up Semula' => 'Sender requested to reschedule pick-up',
+        'Pengirim minta untuk penjadualan pick-up semula' => 'Sender requested to reschedule pick-up',
+        'Penjadualan Pick-up Semula' => 'Reschedule pick-up',
+        'Penjadualan Pick Up Semula' => 'Reschedule pick-up',
+        'Penerima Tidak Di Tempat' => 'Recipient not at address',
+        'Penerima tidak di tempat' => 'Recipient not at address',
+        'Alamat Tidak Lengkap' => 'Incomplete address',
+        'Alamat tidak lengkap' => 'Incomplete address',
+        'Alamat Salah' => 'Wrong address',
+        'Nombor Telefon Salah' => 'Wrong phone number',
+        'Nombor telefon salah' => 'Wrong phone number',
+        'Penerima Menolak' => 'Recipient refused delivery',
+        'Penerima menolak' => 'Recipient refused delivery',
+        'Kawasan Sukar Dihubungi' => 'Hard-to-reach area',
+        'Menunggu Pickup' => 'Awaiting pick-up',
+        'Dalam Transit' => 'In transit',
+        'Dihantar' => 'Delivered',
+        'Dibatalkan' => 'Cancelled',
+        'Package is being hold' => 'Package is on hold',
+        'Package is being held' => 'Package is on hold',
+    ];
+
+    $out = $desc;
+    $translatedParts = [];
+
+    // Translate content inside [brackets] (common JT reason format)
+    $out = preg_replace_callback('/\[([^\]]+)\]/u', function ($m) use ($map, &$translatedParts) {
+        $inner = trim($m[1]);
+        $en = $map[$inner] ?? null;
+        if ($en === null) {
+            foreach ($map as $ms => $eng) {
+                if (strcasecmp($ms, $inner) === 0) {
+                    $en = $eng;
+                    break;
+                }
+            }
+        }
+        if ($en !== null) {
+            $translatedParts[] = $en;
+            return '[' . $en . ' / ' . $inner . ']';
+        }
+        return $m[0];
+    }, $out);
+
+    // Replace remaining whole-phrase Malay outside brackets
+    foreach ($map as $ms => $en) {
+        if ($ms === '' || stripos($ms, 'Package is being') === 0) {
+            // English grammar fixes applied separately
+            continue;
+        }
+        if (mb_stripos($out, $ms) !== false && mb_stripos($out, $en) === false) {
+            $out = str_ireplace($ms, $en . ' / ' . $ms, $out);
+            $translatedParts[] = $en;
+        }
+    }
+
+    // Light English grammar polish from JT
+    $out = str_ireplace('Package is being hold', 'Package is on hold', $out);
+    $out = str_ireplace('Package is being held', 'Package is on hold', $out);
+
+    return $out;
 }
 
 /** Parse stored jt_track_data JSON from orders row. */

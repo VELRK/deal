@@ -76,12 +76,18 @@ class Sk_Shipping extends Sk_Base_Api {
 
             $labels = [];
             foreach ($tracks as $ev) {
+                $rawDesc = trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? ''));
                 $labels[] = [
                     'time'  => trim((string)($ev['scanTime'] ?? $ev['time'] ?? $ev['acceptTime'] ?? $ev['date'] ?? '')),
-                    'desc'  => trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? '')),
+                    'desc'  => sk_jt_localize_track_desc($rawDesc),
                     'label' => sk_jt_track_event_label($ev),
                     'raw'   => $ev,
                 ];
+            }
+
+            $statusLine = $order['jt_courier_status'] ?? ($labels[0]['desc'] ?? null);
+            if (is_string($statusLine) && $statusLine !== '') {
+                $statusLine = sk_jt_localize_track_desc($statusLine);
             }
 
             return $this->success([
@@ -89,7 +95,7 @@ class Sk_Shipping extends Sk_Base_Api {
                 'tracking_number'        => $billCode,
                 'order_status'           => $order['status'] ?? null,
                 'courier'                => 'jt_express',
-                'courier_status'         => $order['jt_courier_status'] ?? ($labels[0]['desc'] ?? null),
+                'courier_status'         => $statusLine,
                 'processing_at'          => $order['processing_at'] ?? null,
                 'jt_shipment_created_at' => $order['jt_shipment_created_at'] ?? null,
                 'shipped_at'             => $order['shipped_at'] ?? null,
@@ -107,19 +113,25 @@ class Sk_Shipping extends Sk_Base_Api {
         $stored = sk_jt_tracks_from_order($order);
         $labels = [];
         foreach ($stored as $ev) {
+            $rawDesc = trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? ''));
             $labels[] = [
                 'time'  => trim((string)($ev['scanTime'] ?? $ev['time'] ?? $ev['acceptTime'] ?? $ev['date'] ?? '')),
-                'desc'  => trim((string)($ev['desc'] ?? $ev['remark'] ?? $ev['scanType'] ?? $ev['status'] ?? '')),
+                'desc'  => sk_jt_localize_track_desc($rawDesc),
                 'label' => sk_jt_track_event_label($ev),
                 'raw'   => $ev,
             ];
+        }
+
+        $statusLine = $order['jt_courier_status'] ?? null;
+        if (is_string($statusLine) && $statusLine !== '') {
+            $statusLine = sk_jt_localize_track_desc($statusLine);
         }
 
         return $this->success([
             'order_number'    => $order['order_number'],
             'tracking_number' => $billCode ?: null,
             'order_status'    => $order['status'],
-            'courier_status'  => $order['jt_courier_status'] ?? null,
+            'courier_status'  => $statusLine,
             'tracks'          => $stored,
             'events'          => $labels,
             'has_tracking'    => $billCode !== '',
