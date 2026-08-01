@@ -35,7 +35,23 @@ class Sk_Admin_model extends CI_Model {
             $settings[$row['key']] = $row['value'];
         }
         $this->_ensure_brand_name($settings);
+        $this->_ensure_currency_symbol($settings);
         return $settings;
+    }
+
+    /** Keep currency_symbol as Rs across admin + APIs. */
+    private function _ensure_currency_symbol(array &$settings): void {
+        static $done = false;
+        $sym = trim((string)($settings['currency_symbol'] ?? ''));
+        if ($sym === '' || strcasecmp($sym, 'RM') === 0 || $sym === '₹') {
+            $settings['currency_symbol'] = 'Rs';
+            if (!$done) {
+                $done = true;
+                $this->save_settings(['currency_symbol' => 'Rs']);
+            }
+            return;
+        }
+        $done = true;
     }
 
     /**

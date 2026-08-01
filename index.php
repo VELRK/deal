@@ -72,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	}
 	define('ENVIRONMENT', $ci_env);
 
+	// Business timezone — keeps WhatsApp reports, orders, royalty timestamps consistent
+	date_default_timezone_set('Asia/Kolkata');
+
 /*
  *---------------------------------------------------------------
  * ERROR REPORTING

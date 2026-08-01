@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Royalty points — separate from wallet cash.
- * Earn after paid/COD orders; unlock redeem when balance ≥ RM 100 (500 pts).
- * Earn: RM 5000 purchase → 500 pts (0.1 pts / RM). Redeem: 500 pts → RM 100 (5 pts / RM).
+ * Earn after paid/COD orders; unlock redeem when balance ≥ Rs 100 (500 pts).
+ * Earn: Rs 5000 purchase → 500 pts (0.1 pts / RM). Redeem: 500 pts → Rs 100 (5 pts / RM).
  * Royalty pays toward any bill amount; remainder uses COD / online / wallet.
  */
 function sk_royalty_ensure_schema() {
@@ -21,7 +21,7 @@ function sk_royalty_ensure_schema() {
 
     $cols = [
         'royalty_earned_points' => 'INT NOT NULL DEFAULT 0',
-        'royalty_earned_rm'     => 'DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+        'royalty_earned_Rs'     => 'DECIMAL(12,2) NOT NULL DEFAULT 0.00',
         'royalty_used_points'   => 'INT NOT NULL DEFAULT 0',
         'royalty_used_rm'       => 'DECIMAL(12,2) NOT NULL DEFAULT 0.00',
     ];
@@ -64,10 +64,10 @@ function sk_royalty_ensure_schema() {
 
     $defaults = [
         'royalty_enabled'           => '1',
-        // Redeem: 500 pts → RM 100 (5 pts / RM) via wallet_points_per_rm
+        // Redeem: 500 pts → Rs 100 (5 pts / RM) via wallet_points_per_rm
         'royalty_min_redeem_points' => '500',
         'royalty_min_redeem_rm'     => '100',
-        // Earn: RM 5000 purchase → 500 pts (0.1 pts / RM)
+        // Earn: Rs 5000 purchase → 500 pts (0.1 pts / RM)
         'royalty_earn_points_per_rm'=> '0.1',
     ];
     $hasGroup = $CI->db->field_exists('group', 'settings');
@@ -82,7 +82,7 @@ function sk_royalty_ensure_schema() {
         $CI->db->insert('settings', $row);
     }
 
-    // Legacy min was 100 pts (RM 20) — raise to 500 pts (RM 100) once
+    // Legacy min was 100 pts (Rs 20) — raise to 500 pts (Rs 100) once
     $minPts = $CI->db->where('key', 'royalty_min_redeem_points')->get('settings')->row_array();
     if ($minPts && (int)($minPts['value'] ?? 0) === 100) {
         $CI->db->where('key', 'royalty_min_redeem_points')->update('settings', ['value' => '500']);
@@ -95,7 +95,7 @@ function sk_royalty_ensure_schema() {
         $CI->db->insert('settings', $row);
     }
 
-    // Migrate earn rate 1 → 0.1 (RM 5000 → 500 pts) once from old 1:1 rule
+    // Migrate earn rate 1 → 0.1 (Rs 5000 → 500 pts) once from old 1:1 rule
     $earnRate = $CI->db->where('key', 'royalty_earn_points_per_rm')->get('settings')->row_array();
     if ($earnRate) {
         $rateVal = (float)($earnRate['value'] ?? 0);
@@ -116,7 +116,7 @@ function sk_royalty_ensure_schema() {
 }
 
 /**
- * One-time: move legacy royalty_earn wallet credits into royalty ledger and reverse wallet RM.
+ * One-time: move legacy royalty_earn wallet credits into royalty ledger and reverse wallet Rs.
  */
 function sk_royalty_migrate_wallet_credits() {
     $CI =& get_instance();
@@ -221,7 +221,7 @@ function sk_royalty_enabled(array $settings = null): bool {
 }
 
 /**
- * TESTING: hide RM100 unlock gate — show Apply in cart whenever customer has any points.
+ * TESTING: hide Rs100 unlock gate — show Apply in cart whenever customer has any points.
  * Set to false (or settings royalty_test_unlock=0) before production go-live.
  */
 function sk_royalty_test_unlock(array $settings = null): bool {
@@ -230,11 +230,11 @@ function sk_royalty_test_unlock(array $settings = null): bool {
         $CI->load->model('Sk_Admin_model');
         $settings = $CI->Sk_Admin_model->get_settings();
     }
-    // Default ON for testing; set settings key royalty_test_unlock=0 to restore RM100 gate
+    // Default ON for testing; set settings key royalty_test_unlock=0 to restore Rs100 gate
     return ($settings['royalty_test_unlock'] ?? '1') !== '0';
 }
 
-/** Minimum royalty value (RM) required to show/redeem on cart. Default RM 100. */
+/** Minimum royalty value (Rs) required to show/redeem on cart. Default Rs 100. */
 function sk_royalty_min_redeem_rm(array $settings = null): float {
     if ($settings === null) {
         $CI =& get_instance();
@@ -245,7 +245,7 @@ function sk_royalty_min_redeem_rm(array $settings = null): float {
     return $n > 0 ? $n : 100.0;
 }
 
-/** Minimum royalty points to redeem. Default 500 (= RM 100 at 5 pts/RM). */
+/** Minimum royalty points to redeem. Default 500 (= Rs 100 at 5 pts/Rs). */
 function sk_royalty_min_redeem_points(array $settings = null): int {
     if ($settings === null) {
         $CI =& get_instance();
@@ -256,7 +256,7 @@ function sk_royalty_min_redeem_points(array $settings = null): int {
     return $n > 0 ? $n : 500;
 }
 
-/** Points earned for a purchase amount (RM). Default 0.1 pts per RM (RM 5000 → 500 pts). */
+/** Points earned for a purchase amount (Rs). Default 0.1 pts per Rs (Rs 5000 → 500 pts). */
 function sk_royalty_earn_points_for_amount(float $purchaseRm, array $settings = null): int {
     if ($settings === null) {
         $CI =& get_instance();
@@ -285,7 +285,7 @@ function sk_royalty_backfill_from_orders(): void {
     }
 
     $CI->load->model('Sk_Royalty_model');
-    $orders = $CI->db->select('id, user_id, royalty_earned_points, royalty_earned_rm, created_at')
+    $orders = $CI->db->select('id, user_id, royalty_earned_points, royalty_earned_Rs, created_at')
         ->where('royalty_earned_points >', 0)
         ->get('orders')
         ->result_array();
@@ -294,20 +294,20 @@ function sk_royalty_backfill_from_orders(): void {
         $userId = (int)$o['user_id'];
         $orderId = (int)$o['id'];
         $points = (int)$o['royalty_earned_points'];
-        $rm = round((float)$o['royalty_earned_rm'], 2);
+        $Rs = round((float)$o['royalty_earned_Rs'], 2);
         if ($userId < 1 || $points < 1) {
             continue;
         }
-        if ($rm <= 0) {
-            $rm = $CI->Sk_Royalty_model->points_to_rm($points);
+        if ($Rs <= 0) {
+            $Rs = $CI->Sk_Royalty_model->points_to_rm($points);
         }
         $ref = 'ORD-' . $orderId . '-ROYALTY';
         $CI->Sk_Royalty_model->credit(
             $userId,
             $points,
-            $rm,
+            $Rs,
             $ref,
-            'Royalty earn ' . $points . ' pts (RM ' . number_format($rm, 2) . ') for order #' . $orderId,
+            'Royalty earn ' . $points . ' pts (Rs ' . number_format($Rs, 2) . ') for order #' . $orderId,
             $orderId
         );
     }
@@ -367,7 +367,7 @@ function sk_royalty_backfill_paid_orders(): void {
 
 /**
  * Credit royalty after order is paid. Idempotent. Does NOT touch wallet.
- * @return array{success:bool,points?:int,rm?:float,message?:string}
+ * @return array{success:bool,points?:int,Rs?:float,message?:string}
  */
 function sk_royalty_credit_for_order(array $order): array {
     sk_royalty_ensure_schema();
@@ -398,7 +398,7 @@ function sk_royalty_credit_for_order(array $order): array {
         return [
             'success' => true,
             'points'  => (int)($order['royalty_earned_points'] ?? 0),
-            'rm'      => (float)($order['royalty_earned_rm'] ?? 0),
+            'Rs'      => (float)($order['royalty_earned_Rs'] ?? 0),
             'message' => 'Already credited.',
         ];
     }
@@ -406,7 +406,7 @@ function sk_royalty_credit_for_order(array $order): array {
     // Order flagged as earned but ledger missing (pre-separation) → sync into ledger
     $flaggedPts = (int)($order['royalty_earned_points'] ?? 0);
     if ($flaggedPts > 0) {
-        $flaggedRm = round((float)($order['royalty_earned_rm'] ?? 0), 2);
+        $flaggedRm = round((float)($order['royalty_earned_Rs'] ?? 0), 2);
         if ($flaggedRm <= 0) {
             $flaggedRm = $CI->Sk_Royalty_model->points_to_rm($flaggedPts);
         }
@@ -415,13 +415,13 @@ function sk_royalty_credit_for_order(array $order): array {
             $flaggedPts,
             $flaggedRm,
             $ref,
-            'Royalty earn ' . $flaggedPts . ' pts (RM ' . number_format($flaggedRm, 2) . ') for order #' . $orderId,
+            'Royalty earn ' . $flaggedPts . ' pts (Rs ' . number_format($flaggedRm, 2) . ') for order #' . $orderId,
             $orderId
         );
         return [
             'success' => (bool)$ok,
             'points'  => $flaggedPts,
-            'rm'      => $flaggedRm,
+            'Rs'      => $flaggedRm,
             'message' => $ok ? 'Royalty synced to ledger.' : 'Sync failed.',
         ];
     }
@@ -434,20 +434,20 @@ function sk_royalty_credit_for_order(array $order): array {
 
     $points = sk_royalty_earn_points_for_amount($purchaseRm, $settings);
     if ($points < 1) {
-        return ['success' => true, 'points' => 0, 'rm' => 0.0, 'message' => 'No points for this amount.'];
+        return ['success' => true, 'points' => 0, 'Rs' => 0.0, 'message' => 'No points for this amount.'];
     }
 
-    $rm = $CI->Sk_Royalty_model->points_to_rm($points);
-    if ($rm <= 0) {
+    $Rs = $CI->Sk_Royalty_model->points_to_rm($points);
+    if ($Rs <= 0) {
         return ['success' => false, 'message' => 'Invalid conversion.'];
     }
 
     $ok = $CI->Sk_Royalty_model->credit(
         $userId,
         $points,
-        $rm,
+        $Rs,
         $ref,
-        'Royalty earn ' . $points . ' pts (RM ' . number_format($rm, 2) . ') for order #' . $orderId,
+        'Royalty earn ' . $points . ' pts (Rs ' . number_format($Rs, 2) . ') for order #' . $orderId,
         $orderId
     );
     if (!$ok) {
@@ -456,8 +456,8 @@ function sk_royalty_credit_for_order(array $order): array {
 
     $CI->db->where('id', $orderId)->update('orders', [
         'royalty_earned_points' => $points,
-        'royalty_earned_rm'     => $rm,
+        'royalty_earned_Rs'     => $Rs,
     ]);
 
-    return ['success' => true, 'points' => $points, 'rm' => $rm, 'message' => 'Royalty credited.'];
+    return ['success' => true, 'points' => $points, 'Rs' => $Rs, 'message' => 'Royalty credited.'];
 }

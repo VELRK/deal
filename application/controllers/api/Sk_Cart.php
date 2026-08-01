@@ -276,6 +276,73 @@ class Sk_Cart extends Sk_Base_Api {
         $this->success([], 'Cart cleared.');
     }
 
+    /**
+     * GET /shopkart-api/cart/products
+     * Alias for mobile apps: returns cart line items with full product details + summary.
+     * Same payload as GET /cart (without auto-suggestions unless requested).
+     */
+    public function products() {
+        $key   = $this->_cart_key();
+        $items = $this->_get_cart_items($key);
+        $this->success([
+            'items'   => $items,
+            'summary' => $this->_summary($items),
+        ]);
+    }
+
+    /**
+     * POST /shopkart-api/cart/merge
+     * JWT required. Merges guest X-Session-ID cart into the logged-in user cart.
+     * Body optional: { session_id } — otherwise uses X-Session-ID header.
+     */
+    public function merge() {
+        $user = $this->auth_required();
+        $userId = (int)($user['user_id'] ?? 0);
+        if ($userId < 1) {
+            return $this->error('Login required.', 401);
+        }
+
+        $body = $this->body();
+        $sessionId = trim((string)($body['session_id']
+            ?? $this->input->get_request_header('X-Session-ID')
+            ?? ''));
+        if ($sessionId === '') {
+            return $this->error('session_id or X-Session-ID required.');
+        }
+
+        $guestRows = $this->db->where('session_id', $sessionId)
+            ->where('(user_id IS NULL OR user_id = 0)', null, false)
+            ->get('cart')->result_array();
+
+        $merged = 0;
+        foreach ($guestRows as $row) {
+            $productId = (int)$row['product_id'];
+            $variantId = !empty($row['variant_id']) ? (int)$row['variant_id'] : null;
+            $qty = max(1, (int)$row['quantity']);
+
+            $userKey = ['user_id' => $userId, 'session_id' => null];
+            $existing = $this->_find_cart_row($userKey, $productId, $variantId);
+            if ($existing) {
+                $this->db->where('id', (int)$existing['id'])
+                    ->update('cart', ['quantity' => (int)$existing['quantity'] + $qty]);
+                $this->db->where('id', (int)$row['id'])->delete('cart');
+            } else {
+                $this->db->where('id', (int)$row['id'])->update('cart', [
+                    'user_id'    => $userId,
+                    'session_id' => null,
+                ]);
+            }
+            $merged++;
+        }
+
+        $items = $this->_get_cart_items(['user_id' => $userId, 'session_id' => null]);
+        $this->success([
+            'merged'  => $merged,
+            'items'   => $items,
+            'summary' => $this->_summary($items),
+        ], $merged > 0 ? 'Guest cart merged.' : 'Nothing to merge.');
+    }
+
     private function _get_cart_items($key) {
         $where = array_filter($key);
         $rows  = $this->db->where($where)->get('cart')->result_array();
@@ -364,12 +431,12 @@ class Sk_Cart extends Sk_Base_Api {
                 'threshold'          => $threshold,
                 'shipping_charge'    => $shipCharge,
                 'amount_remaining'   => $amountToFree,
-                'currency'           => $settings['currency_symbol'] ?? 'RM',
+                'currency'           => sk_currency_symbol($settings),
                 'message'            => empty($items)
                     ? null
                     : ($eligible
                         ? 'You qualify for free delivery.'
-                        : ('Add ' . ($settings['currency_symbol'] ?? 'RM') . number_format($amountToFree, 2)
+                        : ('Add ' . sk_currency_symbol($settings) . number_format($amountToFree, 2)
                             . ' more for free delivery.')),
             ],
         ];

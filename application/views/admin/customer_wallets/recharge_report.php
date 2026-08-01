@@ -1,7 +1,7 @@
-<?php /** @var array $rows */ /** @var array $filters */ ?>
+﻿<?php /** @var array $rows */ /** @var array $filters */ ?>
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
   <h5 class="sk-page-title mb-0">Wallet Recharge Report</h5>
-  <span class="badge bg-success-subtle text-success border">500 pts = RM 100 · <?= (float)$points_per_rm ?> pts / RM</span>
+  <span class="badge bg-success-subtle text-success border">500 pts = Rs 100 · <?= (float)$points_per_rm ?> pts / Rs</span>
 </div>
 
 <form class="card shadow-sm mb-3" method="get">
@@ -32,7 +32,7 @@
         <tr>
           <th>Date</th>
           <th>Customer</th>
-          <th>RM</th>
+          <th>Rs</th>
           <th>Points</th>
           <th>Source</th>
           <th>Reference</th>
@@ -49,11 +49,11 @@
             <div class="fw-semibold"><?= htmlspecialchars($r['name'] ?? '-') ?></div>
             <div class="small text-muted"><?= htmlspecialchars($r['email'] ?? '') ?></div>
           </td>
-          <td class="fw-semibold text-success">RM <?= number_format((float)$r['amount_rm'], 2) ?></td>
+          <td class="fw-semibold text-success">Rs <?= number_format((float)$r['amount_rm'], 2) ?></td>
           <td><?= (int)$r['points'] ?> pts</td>
           <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($r['source']) ?></span></td>
           <td class="small"><?= htmlspecialchars($r['reference'] ?? '') ?></td>
-          <td>RM <?= number_format((float)$r['balance_after'], 2) ?></td>
+          <td>Rs <?= number_format((float)$r['balance_after'], 2) ?></td>
         </tr>
         <?php endforeach; endif; ?>
       </tbody>

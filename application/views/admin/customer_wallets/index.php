@@ -1,8 +1,8 @@
-<?php $currency = $settings['currency_symbol'] ?? 'RM'; $is_vendor = !empty($is_vendor_scope); ?>
+﻿<?php $currency = $settings['currency_symbol'] ?? 'Rs'; $is_vendor = !empty($is_vendor_scope); ?>
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
   <div>
     <h5 class="sk-page-title mb-1"><i class="bi bi-wallet2 me-2 text-primary"></i>Customer Wallets</h5>
-    <small class="text-muted">MYR · 500 pts = RM 100 · Wallet pay discount <?= $discount_percent ?>%</small>
+    <small class="text-muted">MYR · 500 pts = Rs 100 · Wallet pay discount <?= $discount_percent ?>%</small>
   </div>
   <a href="<?= site_url('shopkart/royalty-report') ?>" class="btn btn-sm btn-outline-warning">Royalty Report</a>
   <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="btn btn-sm btn-outline-success">Recharge Report</a>
@@ -23,12 +23,12 @@
         <input type="number" step="0.01" name="customer_wallet_discount_percent" class="form-control form-control-sm" value="<?= htmlspecialchars($discount_percent) ?>">
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Points per RM</label>
-        <input type="number" step="0.01" name="wallet_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['wallet_points_per_rm'] ?? '5') ?>" title="500 pts / 100 RM = 5">
+        <label class="form-label small">Points per Rs</label>
+        <input type="number" step="0.01" name="wallet_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['wallet_points_per_rm'] ?? '5') ?>" title="500 pts / 100 Rs = 5">
       </div>
       <div class="col-md-1">
         <label class="form-label small">Symbol</label>
-        <input type="text" name="currency_symbol" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['currency_symbol'] ?? 'RM') ?>">
+        <input type="text" name="currency_symbol" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['currency_symbol'] ?? 'Rs') ?>">
       </div>
       <div class="col-md-1">
         <label class="form-label small">Code</label>
@@ -64,16 +64,16 @@
         </div>
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Earn pts per RM purchase</label>
-        <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '0.1') ?>" title="RM 5000 → 500 pts (0.1 pts / RM)">
+        <label class="form-label small">Earn pts per Rs purchase</label>
+        <input type="number" step="0.01" min="0.01" name="royalty_earn_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_earn_points_per_rm'] ?? '0.1') ?>" title="Rs 5000 → 500 pts (0.1 pts / RM)">
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Min pay pts (≥ RM 100)</label>
-        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '500') ?>" title="500 pts = RM 100 min payment">
+        <label class="form-label small">Min pay pts (≥ Rs 100)</label>
+        <input type="number" min="1" name="royalty_min_redeem_points" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_points'] ?? '500') ?>" title="500 pts = Rs 100 min payment">
       </div>
       <div class="col-md-2">
-        <label class="form-label small">Min pay RM on bill</label>
-        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Need this much royalty balance (RM) to unlock Apply">
+        <label class="form-label small">Min pay Rs on bill</label>
+        <input type="number" step="0.01" min="1" name="royalty_min_redeem_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['royalty_min_redeem_rm'] ?? '100') ?>" title="Need this much royalty balance (Rs) to unlock Apply">
       </div>
       <div class="col-md-2"><button class="btn btn-sm btn-success">Save Settings</button></div>
     </form>
@@ -98,7 +98,7 @@
 <div class="card sk-table-card shadow-sm">
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Customer</th><th>Email</th><th>Balance (RM)</th><th>Updated</th><th></th></tr></thead>
+      <thead><tr><th>Customer</th><th>Email</th><th>Balance (Rs)</th><th>Updated</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($wallets as $w): ?>
         <tr>

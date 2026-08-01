@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+﻿<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title">
@@ -80,7 +80,7 @@
         <?php if ((int)($order['royalty_earned_points'] ?? 0) > 0): ?>
         <div class="d-flex justify-content-between mb-2">
           <span class="text-muted">Earned on this order</span>
-          <strong class="text-success"><?= (int)$order['royalty_earned_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_earned_rm'], 2) ?>)</strong>
+          <strong class="text-success"><?= (int)$order['royalty_earned_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_earned_Rs'], 2) ?>)</strong>
         </div>
         <?php endif; ?>
         <?php if ((int)($order['royalty_used_points'] ?? 0) > 0): ?>
@@ -89,7 +89,7 @@
           <strong class="text-danger"><?= (int)$order['royalty_used_points'] ?> pts (<?= $currency . number_format((float)$order['royalty_used_rm'], 2) ?>)</strong>
         </div>
         <?php endif; ?>
-        <div class="text-muted" style="font-size:11px;">Earn: RM 5000 purchase = 500 pts (RM 100 credit). Royalty pays the bill (not a coupon). Shown on invoice for admin.</div>
+        <div class="text-muted" style="font-size:11px;">Earn: Rs 5000 purchase = 500 pts (Rs 100 credit). Royalty pays the bill (not a coupon). Shown on invoice for admin.</div>
       </div>
     </div>
     <?php endif; ?>

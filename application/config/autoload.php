@@ -89,7 +89,7 @@ $autoload['drivers'] = array();
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array('url', 'slug', 'security', 'api_response');
+$autoload['helper'] = array('url', 'slug', 'security', 'api_response', 'sk_currency', 'sk_datetime');
 
 /*
 | -------------------------------------------------------------------

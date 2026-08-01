@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
@@ -432,7 +432,7 @@ function sk_whatsapp_order_message(array $order, string $status, array $settings
         $lines[] = "Tracking / AWB: {$awb}";
     }
     $total = isset($order['total']) ? number_format((float)$order['total'], 2) : '';
-    $cur = $settings['currency_symbol'] ?? 'RM';
+    $cur = $settings['currency_symbol'] ?? 'Rs';
     if ($total !== '') {
         $lines[] = "Amount: {$cur}{$total}";
     }

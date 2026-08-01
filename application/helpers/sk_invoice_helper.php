@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
@@ -166,7 +166,7 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'payment_method' => sk_invoice_payment_method_label($order),
         'wallet_amount'  => (float)($order['wallet_amount'] ?? 0),
         'royalty_earned_points' => (int)($order['royalty_earned_points'] ?? 0),
-        'royalty_earned_rm'     => (float)($order['royalty_earned_rm'] ?? 0),
+        'royalty_earned_Rs'     => (float)($order['royalty_earned_Rs'] ?? 0),
         'royalty_used_points'   => (int)($order['royalty_used_points'] ?? 0),
         'royalty_used_rm'       => (float)($order['royalty_used_rm'] ?? 0),
         'payment_status' => ucfirst($order['payment_status'] ?? 'pending'),
@@ -373,7 +373,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
         $walletPayHtml .= "<div><strong>{$methodLabel} due:</strong> {$cur}" . number_format($onlinePaid, 2) . '</div>';
     }
     $royaltyEarnPts = (int)($invoice['royalty_earned_points'] ?? 0);
-    $royaltyEarnRm  = (float)($invoice['royalty_earned_rm'] ?? 0);
+    $royaltyEarnRm  = (float)($invoice['royalty_earned_Rs'] ?? 0);
     if ($royaltyEarnPts > 0 || $royaltyEarnRm > 0) {
         $walletPayHtml .= "<div><strong>Royalty earned:</strong> {$royaltyEarnPts} pts ({$cur}"
             . number_format($royaltyEarnRm, 2) . ')</div>';
@@ -496,7 +496,7 @@ function sk_invoice_email_body(array $invoice, array $order, array $settings = [
     $name = htmlspecialchars($order['customer_name'] ?? ($order['shipping_name'] ?? 'Customer'));
     $orderNo = htmlspecialchars($invoice['order_number'] ?? ($order['order_number'] ?? ''));
     $invoiceNo = htmlspecialchars($invoice['invoice_no'] ?? '');
-    $currency = htmlspecialchars($invoice['currency'] ?? ($settings['currency_symbol'] ?? 'RM'));
+    $currency = htmlspecialchars($invoice['currency'] ?? ($settings['currency_symbol'] ?? 'Rs'));
     $total = $currency . number_format((float)($invoice['total'] ?? $order['total'] ?? 0), 2);
     $date = htmlspecialchars($invoice['invoice_date'] ?? date('d M Y'));
     $payment = htmlspecialchars($invoice['payment_method'] ?? sk_invoice_payment_method_label($order));

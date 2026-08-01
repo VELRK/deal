@@ -62,7 +62,7 @@
             <td class="fw-semibold"><?= $currency . number_format($o['total'],2) ?></td>
             <td><span class="badge badge-<?= $o['status'] ?>"><?= ucfirst($o['status']) ?></span></td>
             <td><span class="badge badge-<?= $o['payment_status'] ?>"><?= ucfirst($o['payment_status']) ?></span></td>
-            <td><?= date('d M y, H:i', strtotime($o['created_at'])) ?></td>
+            <td><?= sk_format_datetime($o['created_at'], 'd M y, h:i A') ?></td>
             <td class="d-flex gap-1">
               <a href="<?= site_url('admin/orders/view/'.$o['id']) ?>" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-eye"></i>

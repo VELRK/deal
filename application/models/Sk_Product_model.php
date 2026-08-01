@@ -593,6 +593,10 @@ class Sk_Product_model extends CI_Model {
         if (!empty($filters['low_only'])) {
             $this->db->where('p.stock <= p.low_stock_alert', null, false);
         }
+        $categoryId = (int)($filters['category_id'] ?? 0);
+        if ($categoryId > 0) {
+            $this->db->where('p.category_id', $categoryId);
+        }
     }
 
     private function make_unique_slug($name, $table, $exclude_id = null) {

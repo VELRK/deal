@@ -23,9 +23,10 @@ class Inventory extends Sk_Base {
         $vendor_id = $this->current_vendor_id() ?: ((int)$this->input->get('vendor_id') ?: null);
 
         $filters = [
-            'search'   => $this->input->get('search', TRUE),
-            'low_only' => $this->input->get('low_only') === '1',
-            'vendor_id'=> $vendor_id,
+            'search'      => $this->input->get('search', TRUE),
+            'low_only'    => $this->input->get('low_only') === '1',
+            'vendor_id'   => $vendor_id,
+            'category_id' => (int)$this->input->get('category_id') ?: null,
         ];
 
         $result = $this->Sk_Product_model->get_inventory_list($filters, $limit, $offset);
@@ -39,6 +40,7 @@ class Inventory extends Sk_Base {
         $data['filters']  = $filters;
         $data['vendor_id']= $vendor_id;
         $data['neg_count']= $negCount;
+        $data['categories'] = $this->Sk_Admin_model->get_categories(1);
         if ($this->is_super_admin()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 200, 0)['rows'];
         }

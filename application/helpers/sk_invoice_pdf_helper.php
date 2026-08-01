@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
@@ -99,7 +99,7 @@ function sk_invoice_build_pdf(array $invoice): string {
     $cRate = $L + 400;
     $cAmt  = $R - 4;
 
-    $cur = sk_invoice_pdf_sanitize((string)($invoice['currency'] ?? 'RM'));
+    $cur = sk_invoice_pdf_sanitize((string)($invoice['currency'] ?? 'Rs'));
     $seller = $invoice['seller'] ?? [];
     $buyer  = $invoice['buyer'] ?? [];
 

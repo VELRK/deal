@@ -21,7 +21,7 @@
       <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required value="<?= htmlspecialchars($a['email']??'') ?>"></div>
       <div class="mb-3"><label class="form-label">Phone</label><input type="text" name="phone" id="affPhone" class="form-control" required value="<?= htmlspecialchars($a['phone']??'') ?>"></div>
       <div class="row">
-        <div class="col-md-6 mb-3"><label class="form-label">MyKAD Number</label><input type="text" name="mykad_number" class="form-control" value="<?= htmlspecialchars($a['mykad_number']??'') ?>" placeholder="e.g. 900101-14-5678"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">MyKAD Number</label><input type="text" name="mykad_number" class="form-control" value="<?= htmlspecialchars($a['mykad_number']??'') ?>" placeholder="Enter MyKad number"></div>
         <div class="col-md-6 mb-3"><label class="form-label">Passport Number</label><input type="text" name="passport_number" class="form-control" value="<?= htmlspecialchars($a['passport_number']??'') ?>"></div>
       </div>
       <div class="mb-3"><label class="form-label">Address</label><input type="text" name="address_line1" class="form-control mb-2" placeholder="Line 1" value="<?= htmlspecialchars($a['address_line1']??'') ?>"><input type="text" name="address_line2" class="form-control" placeholder="Line 2" value="<?= htmlspecialchars($a['address_line2']??'') ?>"></div>

@@ -1,6 +1,6 @@
 <?php
 /** @var array $rows */ /** @var array $filters */ /** @var int $total */ /** @var int $page */ /** @var int $limit */
-$currency = $settings['currency_symbol'] ?? 'RM';
+$currency = sk_currency_symbol($settings ?? null);
 $pages = max(1, (int)ceil($total / $limit));
 ?>
 <div class="sk-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -35,14 +35,25 @@ $pages = max(1, (int)ceil($total / $limit));
 
 <form class="card sk-table-card shadow-sm mb-3" method="get">
   <div class="card-body row g-2 align-items-end py-2">
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="form-label small">Search</label>
       <input type="text" name="search" class="form-control form-control-sm"
         value="<?= htmlspecialchars($filters['search'] ?? '') ?>"
         placeholder="Name or SKU">
     </div>
-    <?php if (!empty($vendors)): ?>
     <div class="col-md-3">
+      <label class="form-label small">Category</label>
+      <select name="category_id" class="form-select form-select-sm">
+        <option value="">All categories</option>
+        <?php foreach (($categories ?? []) as $cat): ?>
+        <option value="<?= (int)$cat['id'] ?>" <?= ((int)($filters['category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($cat['name'] ?? '') ?>
+        </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php if (!empty($vendors)): ?>
+    <div class="col-md-2">
       <label class="form-label small">Vendor</label>
       <select name="vendor_id" class="form-select form-select-sm">
         <option value="">All vendors</option>
@@ -54,7 +65,7 @@ $pages = max(1, (int)ceil($total / $limit));
       </select>
     </div>
     <?php endif; ?>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" name="low_only" value="1" id="lowOnly"
           <?= !empty($filters['low_only']) ? 'checked' : '' ?>>

@@ -102,7 +102,7 @@ $qs = http_build_query(array_filter([
             $canResend = !empty($log['order_id']);
           ?>
           <tr>
-            <td class="small text-nowrap"><?= date('d M Y H:i', strtotime($log['created_at'])) ?></td>
+            <td class="small text-nowrap"><?= sk_format_datetime($log['created_at'], 'd M Y, h:i A') ?></td>
             <td>
               <?php if (!empty($log['order_id'])): ?>
                 <a href="<?= site_url('shopkart/orders/view/'.$log['order_id']) ?>" class="fw-semibold text-decoration-none">

@@ -567,11 +567,13 @@ $route['shopkart-api/collection-banners']['GET']  = 'api/Sk_Banner/collection';
 $route['shopkart-api/search']['GET'] = 'api/Sk_Product/search';
 // Cart
 $route['shopkart-api/cart']['GET'] = 'api/Sk_Cart/index';
+$route['shopkart-api/cart/products']['GET'] = 'api/Sk_Cart/products';
 $route['shopkart-api/cart/suggestions']['GET'] = 'api/Sk_Cart/suggestions';
 $route['shopkart-api/cart/add']['POST'] = 'api/Sk_Cart/add';
 $route['shopkart-api/cart/update']['POST'] = 'api/Sk_Cart/update';
 $route['shopkart-api/cart/remove']['POST'] = 'api/Sk_Cart/remove';
 $route['shopkart-api/cart/clear']['POST'] = 'api/Sk_Cart/clear';
+$route['shopkart-api/cart/merge']['POST'] = 'api/Sk_Cart/merge';
 // Wishlist
 $route['shopkart-api/wishlist']['GET'] = 'api/Sk_User/wishlist';
 $route['shopkart-api/wishlist/toggle']['POST'] = 'api/Sk_User/wishlist_toggle';

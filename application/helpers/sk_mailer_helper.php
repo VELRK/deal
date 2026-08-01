@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
@@ -628,7 +628,7 @@ function sk_mail_affiliate_payout_paid(array $affiliate, array $payout, array $s
         return false;
     }
     $site_name = $settings['site_name'] ?? '2DEAL';
-    $currency  = $settings['currency_symbol'] ?? 'RM';
+    $currency  = $settings['currency_symbol'] ?? 'Rs';
     $amount    = number_format((float)($payout['amount'] ?? 0), 2);
     $ref       = htmlspecialchars($payout['payment_reference'] ?? '');
     $paidAt    = !empty($payout['paid_at']) ? date('d M Y, h:i A', strtotime($payout['paid_at'])) : date('d M Y, h:i A');

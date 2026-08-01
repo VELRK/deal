@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 require_once APPPATH . 'controllers/api/Sk_Base_Api.php';
@@ -181,7 +181,7 @@ class Sk_Order extends Sk_Base_Api {
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        // Royalty pays bill (up to balance). Testing unlock: any points ≥1; else need RM100+.
+        // Royalty pays bill (up to balance). Testing unlock: any points ≥1; else need Rs100+.
         if ($use_royalty && $royalty_enabled) {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
             $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
@@ -192,9 +192,9 @@ class Sk_Order extends Sk_Base_Api {
                 return $this->error(
                     $testUnlock
                         ? ('No royalty points to apply. You have ' . $availPts . ' pts.')
-                        : ('Need at least RM ' . number_format($minRoyaltyRm, 0)
+                        : ('Need at least Rs ' . number_format($minRoyaltyRm, 0)
                             . ' (' . $minRoyaltyPts . ' pts) royalty to pay with points. You have '
-                            . $availPts . ' pts (RM ' . number_format($availRm, 2) . ').')
+                            . $availPts . ' pts (Rs ' . number_format($availRm, 2) . ').')
                 );
             }
             if ($total <= 0) {
@@ -262,7 +262,7 @@ class Sk_Order extends Sk_Base_Api {
             'notes'            => trim(
                 ($data['note'] ?? $data['notes'] ?? '')
                 . ($wallet_discount > 0 ? ' [Wallet discount: ' . $wallet_discount . ']' : '')
-                . ($royalty_used_points > 0 ? ' [Royalty redeemed: ' . $royalty_used_points . ' pts / RM ' . number_format($royalty_used_rm, 2) . ']' : '')
+                . ($royalty_used_points > 0 ? ' [Royalty redeemed: ' . $royalty_used_points . ' pts / Rs ' . number_format($royalty_used_rm, 2) . ']' : '')
             ) ?: null,
             'shipping_name'    => $addr['full_name'],
             'shipping_phone'   => $shippingPhone,
@@ -318,7 +318,7 @@ class Sk_Order extends Sk_Base_Api {
                 $royalty_used_points,
                 $royalty_used_rm,
                 'ORD-' . $order_id . '-ROYALTY-REDEEM',
-                'Royalty redeem ' . $royalty_used_points . ' pts (RM ' . number_format($royalty_used_rm, 2) . ') for order #' . $order_id,
+                'Royalty redeem ' . $royalty_used_points . ' pts (Rs ' . number_format($royalty_used_rm, 2) . ') for order #' . $order_id,
                 $order_id
             )) {
                 if ($wallet_amount > 0) {

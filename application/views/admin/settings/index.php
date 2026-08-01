@@ -39,7 +39,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Currency Symbol</label>
-              <input type="text" name="currency_symbol" class="form-control" value="<?= htmlspecialchars($settings['currency_symbol'] ?? '₹') ?>">
+              <input type="text" name="currency_symbol" class="form-control" value="<?= htmlspecialchars($settings['currency_symbol'] ?? 'Rs') ?>">
             </div>
             <div class="col-md-4">
               <label class="form-label">Tax Rate (%)</label>
