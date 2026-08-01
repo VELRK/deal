@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 <h4 class="fw-bold mb-4"><i class="bi bi-currency-rupee text-success me-2"></i>Commission History</h4>
 <div class="card shadow-sm">
   <div class="card-body p-0">

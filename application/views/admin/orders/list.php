@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-cart-check me-2 text-warning"></i>Orders</h5>

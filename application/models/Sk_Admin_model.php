@@ -39,15 +39,16 @@ class Sk_Admin_model extends CI_Model {
         return $settings;
     }
 
-    /** Keep currency_symbol as Rs across admin + APIs. */
+    /** Keep currency_symbol as RM across admin + APIs. */
     private function _ensure_currency_symbol(array &$settings): void {
         static $done = false;
         $sym = trim((string)($settings['currency_symbol'] ?? ''));
-        if ($sym === '' || strcasecmp($sym, 'RM') === 0 || $sym === '₹') {
-            $settings['currency_symbol'] = 'Rs';
+        if ($sym === '' || $sym === '₹' || strcasecmp($sym, 'Rs') === 0
+            || strcasecmp($sym, 'Rs.') === 0 || strcasecmp($sym, 'INR') === 0) {
+            $settings['currency_symbol'] = 'RM';
             if (!$done) {
                 $done = true;
-                $this->save_settings(['currency_symbol' => 'Rs']);
+                $this->save_settings(['currency_symbol' => 'RM']);
             }
             return;
         }

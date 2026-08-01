@@ -187,7 +187,8 @@ class Sk_User extends Sk_Base_Api {
         $limit  = min(50, max(1, (int)($this->input->get('limit') ?: 20)));
         $offset = max(0, (int)($this->input->get('offset') ?: 0));
         $result = $this->Sk_Royalty_model->get_transactions($this->user['user_id'], $limit, $offset);
-        $this->success(['rows' => $result['rows'], 'transactions' => $result['rows'], 'total' => $result['total']]);
+        $rows = sk_attach_api_dates($result['rows']);
+        $this->success(['rows' => $rows, 'transactions' => $rows, 'total' => $result['total']]);
     }
 
     public function wallet_transactions() {
@@ -196,7 +197,8 @@ class Sk_User extends Sk_Base_Api {
         $limit  = min(50, max(1, (int)($this->input->get('limit') ?: 20)));
         $offset = max(0, (int)($this->input->get('offset') ?: 0));
         $result = $this->Sk_Customer_wallet_model->get_transactions($this->user['user_id'], $limit, $offset);
-        $this->success(['rows' => $result['rows'], 'transactions' => $result['rows'], 'total' => $result['total']]);
+        $rows = sk_attach_api_dates($result['rows']);
+        $this->success(['rows' => $rows, 'transactions' => $rows, 'total' => $result['total']]);
     }
 
     public function wallet_topup() {

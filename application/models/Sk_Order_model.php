@@ -490,7 +490,7 @@ class Sk_Order_model extends CI_Model {
                 $royaltyRefundPts,
                 $royaltyRefundRm,
                 'ORD-' . $orderId . '-ROYALTY-REFUND',
-                'Royalty refund ' . $royaltyRefundPts . ' pts (Rs ' . number_format($royaltyRefundRm, 2) . ') for cancelled order #' . $orderId,
+                'Royalty refund ' . $royaltyRefundPts . ' pts (RM ' . number_format($royaltyRefundRm, 2) . ') for cancelled order #' . $orderId,
                 $orderId
             );
         }

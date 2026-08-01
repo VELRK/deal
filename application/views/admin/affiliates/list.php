@@ -2,7 +2,7 @@
 
 $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','rejected'=>'bg-danger','suspended'=>'bg-secondary'];
 
-$currency = $settings['currency_symbol'] ?? '₹';
+$currency = $settings['currency_symbol'] ?? 'RM';
 
 $is_vendor = !empty($is_vendor_scope);
 

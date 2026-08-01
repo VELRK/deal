@@ -68,15 +68,15 @@ class Sk_Royalty_model extends CI_Model {
             'show_on_cart'      => $canRedeem,
             'test_unlock'       => $testUnlock,
             'points_per_rm'     => $this->points_per_rm(),
-            'conversion_label'  => '500 points = Rs 100',
-            'earn_label'        => 'Rs 5000 purchase = 500 pts',
+            'conversion_label'  => '500 points = RM 100',
+            'earn_label'        => 'RM 5000 purchase = 500 pts',
             'hint'              => $canRedeem
-                ? ('You have ' . $points . ' royalty points (Rs ' . number_format($balanceRm, 2)
+                ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2)
                     . '). Apply on cart/checkout to pay the bill; remaining uses COD or online.'
-                    . ($testUnlock ? ' [TEST: Rs100 gate off]' : ''))
-                : ('Earn royalty on every paid order (Rs 5000 → 500 pts). Need Rs ' . number_format($minRedeemRm, 0)
+                    . ($testUnlock ? ' [TEST: RM100 gate off]' : ''))
+                : ('Earn royalty on every paid order (RM 5000 → 500 pts). Need RM ' . number_format($minRedeemRm, 0)
                     . '+ (' . $minRedeemPts . ' pts) balance to unlock. You have '
-                    . $points . ' pts (Rs ' . number_format($balanceRm, 2) . ').'),
+                    . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),
         ];
     }
 

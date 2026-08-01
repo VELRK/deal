@@ -82,7 +82,7 @@ $status_badges = [
             <small class="text-muted"><?= htmlspecialchars($v['email']) ?></small>
           </td>
           <td><?= number_format((float)$v['commission_rate'], 2) ?>%</td>
-          <td>₹<?= number_format((float)($v['wallet_balance'] ?? 0), 2) ?></td>
+          <td>RM<?= number_format((float)($v['wallet_balance'] ?? 0), 2) ?></td>
           <td>
             <span class="badge <?= $status_badges[$v['status']] ?? 'bg-secondary' ?>">
               <?= ucfirst($v['status']) ?>

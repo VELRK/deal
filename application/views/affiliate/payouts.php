@@ -1,5 +1,5 @@
 <?php
-$currency = $settings['currency_symbol'] ?? '₹';
+$currency = $settings['currency_symbol'] ?? 'RM';
 $s = $stats;
 $can_request = ($s['pending_commission'] ?? 0) >= $min_payout;
 ?>

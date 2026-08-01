@@ -1,7 +1,7 @@
 <?php
 $a = $affiliate;
 $s = $stats;
-$currency = $settings['currency_symbol'] ?? '₹';
+$currency = $settings['currency_symbol'] ?? 'RM';
 $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','rejected'=>'bg-danger','suspended'=>'bg-secondary'];
 ?>
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">

@@ -597,7 +597,7 @@ class Sk_Affiliate_model extends CI_Model {
         $available = (float)$aff['pending_commission'];
         if ($amount === null) $amount = $available;
         if ($amount < $min) {
-            return ['ok' => false, 'message' => "Minimum payout is ₹{$min}. Available: ₹{$available}"];
+            return ['ok' => false, 'message' => "Minimum payout is RM{$min}. Available: RM{$available}"];
         }
         if ($amount > $available) {
             return ['ok' => false, 'message' => 'Amount exceeds pending commission.'];

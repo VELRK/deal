@@ -195,7 +195,7 @@ function sk_mail_order_confirmation($order, $settings = []) {
     $to_name  = $order['customer_name']  ?? 'Customer';
     $subject  = 'Order Confirmed – #' . ($order['order_number'] ?? $order['id']);
 
-    $currency = $settings['currency_symbol'] ?? '₹';
+    $currency = $settings['currency_symbol'] ?? 'RM';
 
     // Build items HTML
     $items_html = '';
@@ -629,7 +629,7 @@ function sk_mail_affiliate_payout_paid(array $affiliate, array $payout, array $s
         return false;
     }
     $site_name = $settings['site_name'] ?? '2DEAL';
-    $currency  = $settings['currency_symbol'] ?? 'Rs';
+    $currency  = $settings['currency_symbol'] ?? 'RM';
     $amount    = number_format((float)($payout['amount'] ?? 0), 2);
     $ref       = htmlspecialchars($payout['payment_reference'] ?? '');
     $paidAt    = !empty($payout['paid_at']) ? date('d M Y, h:i A', strtotime($payout['paid_at'])) : date('d M Y, h:i A');

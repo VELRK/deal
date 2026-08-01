@@ -100,7 +100,7 @@
         <tr><td colspan="8" class="text-center text-muted py-4">No royalty records yet.</td></tr>
         <?php else: foreach ($rows as $r): ?>
         <tr>
-          <td class="small"><?= htmlspecialchars($r['created_at']) ?></td>
+          <td class="small"><?= sk_format_datetime($r['created_at']) ?></td>
           <td>
             <div class="fw-semibold"><?= htmlspecialchars($r['name'] ?? '-') ?></div>
             <div class="small text-muted"><?= htmlspecialchars($r['email'] ?? '') ?></div>

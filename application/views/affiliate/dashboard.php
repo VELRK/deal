@@ -1,4 +1,4 @@
-<?php $s = $stats; $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $s = $stats; $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 <h4 class="fw-bold mb-4"><i class="bi bi-speedometer2 text-success me-2"></i>Dashboard</h4>
 
 <div class="row g-3 mb-4">

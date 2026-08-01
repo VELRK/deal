@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
@@ -82,7 +82,7 @@ function sk_royalty_ensure_schema() {
         $CI->db->insert('settings', $row);
     }
 
-    // Legacy min was 100 pts (Rs 20) — raise to 500 pts (Rs 100) once
+    // Legacy min was 100 pts (RM 20) — raise to 500 pts (RM 100) once
     $minPts = $CI->db->where('key', 'royalty_min_redeem_points')->get('settings')->row_array();
     if ($minPts && (int)($minPts['value'] ?? 0) === 100) {
         $CI->db->where('key', 'royalty_min_redeem_points')->update('settings', ['value' => '500']);
@@ -307,7 +307,7 @@ function sk_royalty_backfill_from_orders(): void {
             $points,
             $Rs,
             $ref,
-            'Royalty earn ' . $points . ' pts (Rs ' . number_format($Rs, 2) . ') for order #' . $orderId,
+            'Royalty earn ' . $points . ' pts (RM ' . number_format($Rs, 2) . ') for order #' . $orderId,
             $orderId
         );
     }
@@ -415,7 +415,7 @@ function sk_royalty_credit_for_order(array $order): array {
             $flaggedPts,
             $flaggedRm,
             $ref,
-            'Royalty earn ' . $flaggedPts . ' pts (Rs ' . number_format($flaggedRm, 2) . ') for order #' . $orderId,
+            'Royalty earn ' . $flaggedPts . ' pts (RM ' . number_format($flaggedRm, 2) . ') for order #' . $orderId,
             $orderId
         );
         return [
@@ -447,7 +447,7 @@ function sk_royalty_credit_for_order(array $order): array {
         $points,
         $Rs,
         $ref,
-        'Royalty earn ' . $points . ' pts (Rs ' . number_format($Rs, 2) . ') for order #' . $orderId,
+        'Royalty earn ' . $points . ' pts (RM ' . number_format($Rs, 2) . ') for order #' . $orderId,
         $orderId
     );
     if (!$ok) {

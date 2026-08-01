@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 
 <div class="sk-page-header d-flex justify-content-between flex-wrap gap-2">
   <div>
@@ -16,7 +16,7 @@
   <div class="card-header fw-semibold">Add Funds</div>
   <div class="card-body">
     <form method="post" action="<?= site_url('admin/wallet/add_funds/'.$vendor['id']) ?>" class="row g-2 align-items-end">
-      <div class="col-md-3"><label class="form-label small">Amount (₹)</label><input type="number" step="0.01" name="amount" class="form-control" required min="0.01"></div>
+      <div class="col-md-3"><label class="form-label small">Amount (RM)</label><input type="number" step="0.01" name="amount" class="form-control" required min="0.01"></div>
       <div class="col-md-5"><label class="form-label small">Description</label><input type="text" name="description" class="form-control" placeholder="Manual credit"></div>
       <div class="col-md-2"><button type="submit" class="btn btn-success w-100">Add Funds</button></div>
     </form>
@@ -32,7 +32,7 @@
       <tbody>
         <?php foreach ($transactions as $t): ?>
         <tr>
-          <td class="small"><?= date('d M Y H:i', strtotime($t['created_at'])) ?></td>
+          <td class="small"><?= sk_format_datetime($t['created_at']) ?></td>
           <td><span class="badge <?= $t['type']==='credit'?'bg-success':'bg-danger' ?>"><?= ucfirst($t['type']) ?></span></td>
           <td class="fw-semibold"><?= $currency . number_format((float)$t['amount'], 2) ?></td>
           <td><?= $currency . number_format((float)$t['balance_after'], 2) ?></td>

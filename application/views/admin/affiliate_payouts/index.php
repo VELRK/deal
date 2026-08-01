@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; $is_vendor = !empty($is_vendor_scope); ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; $is_vendor = !empty($is_vendor_scope); ?>
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
   <div>
     <h5 class="sk-page-title mb-1"><i class="bi bi-cash-stack me-2 text-success"></i>Affiliate Payouts</h5>

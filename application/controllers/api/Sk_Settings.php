@@ -30,6 +30,11 @@ class Sk_Settings extends Sk_Base_Api {
         $map['tax_rate']            = isset($map['tax_rate']) ? (float)$map['tax_rate'] : 0;
         $map['shipping_charge']     = isset($map['shipping_charge']) ? (float)$map['shipping_charge'] : 50;
         $map['free_shipping_above'] = isset($map['free_shipping_above']) ? (float)$map['free_shipping_above'] : 999;
+        $map['currency_symbol']     = sk_currency_symbol($map);
+        $map['currency_code']       = strtoupper(trim((string)($map['currency_code'] ?? 'MYR'))) ?: 'MYR';
+        if (in_array($map['currency_code'], ['INR', 'RS', ''], true)) {
+            $map['currency_code'] = 'MYR';
+        }
 
         $map['meta_description'] = $map['meta_desc'] ?? '';
         if (!empty($map['seo_og_image']) && !preg_match('#^https?://#i', $map['seo_og_image'])) {

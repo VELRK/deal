@@ -75,7 +75,7 @@ $status_badges = [
     <div class="card shadow-sm mb-3">
       <div class="card-header fw-semibold">Wallet</div>
       <div class="card-body">
-        <div class="display-6 fw-bold text-success">₹<?= number_format((float)($wallet['balance'] ?? 0), 2) ?></div>
+        <div class="display-6 fw-bold text-success">RM<?= number_format((float)($wallet['balance'] ?? 0), 2) ?></div>
         <small class="text-muted">Available balance</small>
       </div>
     </div>

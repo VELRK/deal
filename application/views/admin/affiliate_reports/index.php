@@ -1,6 +1,6 @@
 <?php
 
-$currency = $settings['currency_symbol'] ?? '₹';
+$currency = $settings['currency_symbol'] ?? 'RM';
 
 $st = $stats;
 

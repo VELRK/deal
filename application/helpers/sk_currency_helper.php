@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * Application currency symbol (display). Default: Rs
+ * Application currency symbol (display). Default: RM (Malaysia).
  */
 if (!function_exists('sk_currency_symbol')) {
     function sk_currency_symbol(?array $settings = null): string {
@@ -17,15 +17,17 @@ if (!function_exists('sk_currency_symbol')) {
             }
         }
         $sym = trim((string)($settings['currency_symbol'] ?? ''));
-        if ($sym === '' || strcasecmp($sym, 'RM') === 0 || $sym === '₹') {
-            return 'Rs';
+        // Normalize legacy India symbols to RM
+        if ($sym === '' || $sym === '₹' || strcasecmp($sym, 'Rs') === 0
+            || strcasecmp($sym, 'Rs.') === 0 || strcasecmp($sym, 'INR') === 0) {
+            return 'RM';
         }
         return $sym;
     }
 }
 
 if (!function_exists('sk_money')) {
-    /** Format amount with currency symbol, e.g. Rs 1,234.00 */
+    /** Format amount with currency symbol, e.g. RM1,234.00 */
     function sk_money($amount, ?array $settings = null, int $decimals = 2): string {
         return sk_currency_symbol($settings) . number_format((float)$amount, $decimals);
     }

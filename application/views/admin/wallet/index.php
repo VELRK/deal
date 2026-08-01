@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-wallet2 me-2 text-success"></i>Vendor Wallets</h5>
@@ -23,7 +23,7 @@
           <td><?= htmlspecialchars($w['business_name']) ?></td>
           <td><?= htmlspecialchars($w['store_name'] ?? '—') ?></td>
           <td class="fw-semibold text-success"><?= $currency . number_format((float)$w['balance'], 2) ?></td>
-          <td class="small text-muted"><?= date('d M Y', strtotime($w['updated_at'])) ?></td>
+          <td class="small text-muted"><?= sk_format_date($w['updated_at']) ?></td>
           <td><a href="<?= site_url('admin/wallet/vendor/'.$w['vendor_id']) ?>" class="btn btn-sm btn-outline-primary">View</a></td>
         </tr>
         <?php endforeach; ?>

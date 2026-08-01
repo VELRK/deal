@@ -71,7 +71,7 @@ function sk_invoice_payment_method_label(array $order): string {
  */
 function sk_invoice_build(array $order, array $settings = [], ?array $sellerOverride = null): array {
     $CI =& get_instance();
-    $currency = $settings['currency_symbol'] ?? '₹';
+    $currency = $settings['currency_symbol'] ?? 'RM';
     $taxRate  = (float)($settings['tax_rate'] ?? 18);
 
     $seller = $sellerOverride ?: sk_invoice_resolve_seller($order, $settings);
@@ -496,7 +496,7 @@ function sk_invoice_email_body(array $invoice, array $order, array $settings = [
     $name = htmlspecialchars($order['customer_name'] ?? ($order['shipping_name'] ?? 'Customer'));
     $orderNo = htmlspecialchars($invoice['order_number'] ?? ($order['order_number'] ?? ''));
     $invoiceNo = htmlspecialchars($invoice['invoice_no'] ?? '');
-    $currency = htmlspecialchars($invoice['currency'] ?? ($settings['currency_symbol'] ?? 'Rs'));
+    $currency = htmlspecialchars($invoice['currency'] ?? ($settings['currency_symbol'] ?? 'RM'));
     $total = $currency . number_format((float)($invoice['total'] ?? $order['total'] ?? 0), 2);
     $date = htmlspecialchars($invoice['invoice_date'] ?? date('d M Y'));
     $payment = htmlspecialchars($invoice['payment_method'] ?? sk_invoice_payment_method_label($order));

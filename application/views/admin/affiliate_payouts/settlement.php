@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; $st = $stats; $is_vendor = !empty($is_vendor_scope); ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; $st = $stats; $is_vendor = !empty($is_vendor_scope); ?>
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
   <h5 class="sk-page-title"><i class="bi bi-file-earmark-bar-graph me-2"></i><?= $is_vendor ? 'Affiliate Settlement Report' : 'Settlement Report' ?></h5>
   <a href="<?= site_url('admin/affiliate-payouts/export?from='.$from.'&to='.$to) ?>" class="btn btn-outline-secondary btn-sm">Export CSV</a>

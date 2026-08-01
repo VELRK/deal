@@ -1,4 +1,4 @@
-<?php $currency = $settings['currency_symbol'] ?? '₹'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-bar-chart-line me-2 text-warning"></i>Reports</h5>
@@ -171,7 +171,7 @@ new Chart(document.getElementById('reportChart').getContext('2d'), {
     datasets: [{ label: 'Revenue', data: <?= json_encode($revs) ?>, backgroundColor: 'rgba(245,158,11,0.7)' }]
   },
   options: { responsive: true, plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v.toLocaleString() } }, x: { ticks: { maxTicksLimit: 15 } } }
+    scales: { y: { beginAtZero: true, ticks: { callback: v => 'RM' + v.toLocaleString() } }, x: { ticks: { maxTicksLimit: 15 } } }
   }
 });
 </script>

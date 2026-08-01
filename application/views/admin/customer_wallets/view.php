@@ -46,7 +46,7 @@
       <tbody>
         <?php foreach ($transactions as $t): ?>
         <tr>
-          <td class="small"><?= date('d M Y H:i', strtotime($t['created_at'])) ?></td>
+          <td class="small"><?= sk_format_datetime($t['created_at']) ?></td>
           <td><span class="badge bg-<?= $t['type']==='credit'?'success':'danger' ?>"><?= $t['type'] ?></span></td>
           <td class="fw-semibold"><?= $currency . number_format($t['amount'], 2) ?></td>
           <td><?= $currency . number_format($t['balance_after'], 2) ?></td>

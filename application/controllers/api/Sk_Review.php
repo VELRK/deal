@@ -44,7 +44,7 @@ class Sk_Review extends Sk_Base_Api {
                 'file_path'  => $path,
                 'url'        => (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0)
                     ? $path
-                    : base_url($path),
+                    : rtrim(base_url(), '/') . '/' . ltrim((string)$path, '/'),
             ];
             $map[$rid][] = $item;
         }
@@ -53,7 +53,7 @@ class Sk_Review extends Sk_Base_Api {
 
     public function get_by_product($product_id) {
         $this->_ensure_media_schema();
-        $key    = 'reviews_v2_' . (int)$product_id;
+        $key    = 'reviews_v3_' . (int)$product_id;
         $cached = $this->get_cache($key, 60);
         if ($cached !== null) return $this->success($cached);
 
@@ -77,6 +77,8 @@ class Sk_Review extends Sk_Base_Api {
                 return ($m['media_type'] ?? '') === 'video';
             }));
             $row['media'] = $media;
+            $row['created_at_iso'] = sk_api_datetime($row['created_at'] ?? null);
+            $row['created_at_formatted'] = sk_format_datetime($row['created_at'] ?? null);
         }
         unset($row);
 
@@ -175,6 +177,7 @@ class Sk_Review extends Sk_Base_Api {
         $uploaded = $this->_save_review_media($reviewId);
 
         // Bust list cache so media appears once approved (and pending admin sees fresh data)
+        $this->delete_cache('reviews_v3_' . $product_id);
         $this->delete_cache('reviews_v2_' . $product_id);
 
         $this->success([
@@ -208,7 +211,7 @@ class Sk_Review extends Sk_Base_Api {
                 'file_path'  => $path,
                 'sort_order' => $sort++,
             ]);
-            $saved[] = ['media_type' => 'image', 'file_path' => $path, 'url' => base_url($path)];
+            $saved[] = ['media_type' => 'image', 'file_path' => $path, 'url' => rtrim(base_url(), '/') . '/' . ltrim($path, '/')];
         }
 
         if (!empty($_FILES['video']['name']) && (int)($_FILES['video']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
@@ -220,7 +223,7 @@ class Sk_Review extends Sk_Base_Api {
                     'file_path'  => $path,
                     'sort_order' => $sort++,
                 ]);
-                $saved[] = ['media_type' => 'video', 'file_path' => $path, 'url' => base_url($path)];
+                $saved[] = ['media_type' => 'video', 'file_path' => $path, 'url' => rtrim(base_url(), '/') . '/' . ltrim($path, '/')];
             }
         }
 

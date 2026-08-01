@@ -40,7 +40,7 @@ function sk_invoice_pdf_sanitize(string $s): string {
     $map = [
         '–' => '-', '—' => '-', '−' => '-',
         '‘' => "'", '’' => "'", '“' => '"', '”' => '"',
-        '₹' => 'Rs.', '€' => 'EUR', '£' => 'GBP',
+        '₹' => 'RM', 'Rs' => 'RM', 'Rs.' => 'RM', '€' => 'EUR', '£' => 'GBP',
         '•' => '-', '…' => '...', "\xC2\xA0" => ' ',
     ];
     $s = strtr($s, $map);
@@ -99,7 +99,7 @@ function sk_invoice_build_pdf(array $invoice): string {
     $cRate = $L + 400;
     $cAmt  = $R - 4;
 
-    $cur = sk_invoice_pdf_sanitize((string)($invoice['currency'] ?? 'Rs'));
+    $cur = sk_invoice_pdf_sanitize((string)($invoice['currency'] ?? 'RM'));
     $seller = $invoice['seller'] ?? [];
     $buyer  = $invoice['buyer'] ?? [];
 
