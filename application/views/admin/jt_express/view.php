@@ -146,42 +146,104 @@ function jtAction(action) {
   if (msg) msg.textContent = 'Working…';
   var payload = {};
   if (action === 'cancel') payload.reason = 'Cancelled from JT Express module';
-  $.post(urls[action], payload, function(res) {
-    if (action === 'track' && res.success) {
-      var box = document.getElementById('jtTrackBox');
-      var empty = document.getElementById('jtTrackEmpty');
-      var list = document.getElementById('jtTrackList');
+
+  function applyTrackUi(res) {
+    var box = document.getElementById('jtTrackBox');
+    var empty = document.getElementById('jtTrackEmpty');
+    var list = document.getElementById('jtTrackList');
+    var tracks = res.tracks || [];
+    if (list) {
       list.innerHTML = '';
-      (res.tracks || []).forEach(function(ev) {
+      tracks.forEach(function(ev) {
         var li = document.createElement('li');
         li.className = 'border-bottom py-2';
         var time = ev.scanTime || ev.time || ev.acceptTime || '';
         var desc = ev.desc || ev.remark || ev.scanType || JSON.stringify(ev);
-        li.innerHTML = '<div class="fw-semibold">' + (time ? time + ' — ' : '') + desc + '</div>';
+        li.innerHTML = '<div class="fw-semibold">' + (time ? time + ' — ' : '') + $('<div>').text(desc).html() + '</div>';
         list.appendChild(li);
       });
-      if ((res.tracks || []).length) {
-        box.classList.remove('d-none');
-        empty.classList.add('d-none');
-      }
-      if (msg) msg.textContent = res.message || 'Tracking updated.';
-      if (res.bill_code) document.getElementById('jtAwb').textContent = res.bill_code;
-      if (res.courier_status) {
-        var c = document.getElementById('jtCourier');
-        if (c) c.textContent = res.courier_status;
-      }
-      if (res.status) {
-        var s = document.getElementById('jtOrderStatus');
-        if (s) s.textContent = res.status.charAt(0).toUpperCase() + res.status.slice(1);
-      }
-      setTimeout(function() { location.reload(); }, 1200);
+    }
+    if (tracks.length) {
+      if (box) box.classList.remove('d-none');
+      if (empty) empty.classList.add('d-none');
+    } else if (empty) {
+      empty.classList.remove('d-none');
+      empty.innerHTML = res.message
+        ? $('<div>').text(res.message).html()
+        : 'No scan events yet. AWB is valid — waiting for the first JT scan.';
+      if (box) box.classList.add('d-none');
+    }
+    if (msg) msg.textContent = res.message || (tracks.length ? 'Tracking updated.' : 'No scan events yet.');
+    if (res.bill_code) {
+      var awbEl = document.getElementById('jtAwb');
+      if (awbEl) awbEl.textContent = res.bill_code;
+    }
+    if (res.courier_status) {
+      var c = document.getElementById('jtCourier');
+      if (c) c.textContent = res.courier_status;
+    }
+    if (res.status) {
+      var s = document.getElementById('jtOrderStatus');
+      if (s) s.textContent = res.status.charAt(0).toUpperCase() + res.status.slice(1);
+    }
+  }
+
+  function handleJtRes(res) {
+    if (!res || typeof res !== 'object') {
+      alert('Invalid response from server.');
+      return;
+    }
+    if (res.login) {
+      alert(res.message || 'Session expired. Please log in again.');
+      window.location = res.login;
+      return;
+    }
+    if (action === 'track' && res.success) {
+      try { applyTrackUi(res); } catch (e) { console.error(e); }
+      // Empty tracks is still success — only soft-reload so list stays in sync with DB
+      setTimeout(function() { location.reload(); }, 900);
       return;
     }
     alert(res.message || (res.success ? 'Done.' : 'Request failed.'));
     if (res.success) location.reload();
-  }, 'json').fail(function() {
+  }
+
+  function parseMaybeJson(text) {
+    if (!text) return null;
+    try { return JSON.parse(text); } catch (e1) {
+      // Recover when PHP notices were printed before the JSON body
+      var i = text.indexOf('{');
+      var j = text.lastIndexOf('}');
+      if (i >= 0 && j > i) {
+        try { return JSON.parse(text.substring(i, j + 1)); } catch (e2) {}
+      }
+    }
+    return null;
+  }
+
+  $.ajax({
+    url: urls[action],
+    method: 'POST',
+    data: payload,
+    dataType: 'text',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+  }).done(function(text, _status, xhr) {
     if (msg) msg.textContent = '';
-    alert('Network error.');
+    var res = parseMaybeJson(text);
+    if (!res) {
+      alert('Bad response (HTTP ' + xhr.status + '). ' + String(text || '').slice(0, 180));
+      return;
+    }
+    handleJtRes(res);
+  }).fail(function(xhr) {
+    if (msg) msg.textContent = '';
+    var res = parseMaybeJson(xhr.responseText || '');
+    if (res) {
+      handleJtRes(res);
+      return;
+    }
+    var hint = (xhr.responseText || xhr.statusText || '').toString().replace(/\s+/g, ' ').slice(0, 180);
+    alert('Request failed (HTTP ' + (xhr.status || 0) + ').' + (hint ? ' ' + hint : ''));
   });
 }
 </script>

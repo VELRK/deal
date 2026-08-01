@@ -27,12 +27,12 @@ class Sk_Base extends CI_Controller {
         if ($this->session->userdata('sk_vendor_login')) {
             $vid = (int)$this->session->userdata('sk_vendor_id');
             if (!$vid) {
-                redirect('admin/vendor/login');
+                $this->_deny_admin('admin/vendor/login');
             }
             $vendor = $this->Sk_Vendor_model->get_by_id($vid, false);
             if (!$vendor || $vendor['status'] !== 'approved') {
                 $this->session->unset_userdata(['sk_vendor_login', 'sk_vendor_id', 'sk_vendor_name', 'sk_vendor_email']);
-                redirect('admin/vendor/login');
+                $this->_deny_admin('admin/vendor/login');
             }
             $this->admin = [
                 'id'         => 0,
@@ -46,13 +46,38 @@ class Sk_Base extends CI_Controller {
 
         $admin_id = $this->session->userdata('sk_admin_id');
         if (!$admin_id) {
-            redirect('admin/login');
+            $this->_deny_admin('admin/login');
         }
         $this->admin = $this->Sk_Admin_model->get_by_id($admin_id);
         if (!$this->admin) {
             $this->session->sess_destroy();
-            redirect('admin/login');
+            $this->_deny_admin('admin/login');
         }
+    }
+
+    /** Redirect for normal pages; JSON 401 for AJAX so jQuery does not show a fake "Network error". */
+    protected function _deny_admin(string $loginPath) {
+        if ($this->_is_ajax_request()) {
+            $this->json([
+                'success' => false,
+                'message' => 'Session expired. Please log in again.',
+                'login'   => site_url($loginPath),
+            ], 401);
+        }
+        redirect($loginPath);
+    }
+
+    protected function _is_ajax_request(): bool {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            return true;
+        }
+        // jQuery $.post / fetch Accept header often used for admin JSON APIs
+        $accept = (string)($_SERVER['HTTP_ACCEPT'] ?? '');
+        if (stripos($accept, 'application/json') !== false) {
+            return true;
+        }
+        return false;
     }
 
     protected function is_super_admin(): bool {
@@ -95,9 +120,24 @@ class Sk_Base extends CI_Controller {
     }
 
     protected function json($data, $status = 200) {
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
         http_response_code($status);
-        header('Content-Type: application/json');
-        echo json_encode($data);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+            $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+        }
+        $encoded = json_encode($data, $flags);
+        if ($encoded === false) {
+            $encoded = json_encode([
+                'success' => false,
+                'message' => 'Failed to encode JSON response.',
+            ]);
+        }
+        echo $encoded;
         exit;
     }
 

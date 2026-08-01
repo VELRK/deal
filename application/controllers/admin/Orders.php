@@ -236,7 +236,14 @@ class Orders extends Sk_Base {
         if (!empty($result['success'])) {
             $sync = sk_jt_sync_order_tracking((int)$id, $result);
             $tracks = $sync['tracks'] ?? $tracks;
-            $msgOut = $msg !== '' ? $msg : 'Tracking fetched.';
+            if ($tracks) {
+                $msgOut = $msg !== '' && strcasecmp($msg, 'success') !== 0
+                    ? $msg
+                    : 'Tracking fetched.';
+            } else {
+                $msgOut = 'AWB ' . ($billCode !== '' ? $billCode . ' ' : '')
+                    . 'is valid, but JT returned no scan events yet.';
+            }
             if (!empty($sync['status_changed'])) {
                 $msgOut .= ' Order status updated to ' . ($sync['status'] ?? '') . '.';
             }
@@ -249,7 +256,6 @@ class Orders extends Sk_Base {
                 'status_changed' => !empty($sync['status_changed']),
                 'previous_status'=> $sync['previous_status'] ?? null,
                 'courier_status' => $sync['courier_status'] ?? null,
-                'raw'            => $result['raw'] ?? null,
             ]);
         }
 

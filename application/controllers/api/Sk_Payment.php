@@ -27,61 +27,14 @@ class Sk_Payment extends Sk_Base_Api {
         }
 
         $settings   = $this->get_settings();
-        $key_id     = $settings['razorpay_key_id']     ?? config_item('razorpay_key_id');
-        $key_secret = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
+        $key_id     = trim((string)($settings['razorpay_key_id']     ?? config_item('razorpay_key_id') ?? ''));
+        $key_secret = trim((string)($settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret') ?? ''));
 
-        if (!$key_id || !$key_secret) {
-            return $this->error('Payment gateway not configured.', 503);
+        if ($key_id === '' || $key_secret === '') {
+            return $this->error('Payment gateway not configured. Please use Cash on Delivery or contact support.', 503);
         }
 
-        $amount_paise = (int)round($payAmount * 100);
-        $currency = strtoupper($settings['currency_code'] ?? 'MYR');
-        if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
-            $currency = 'MYR';
-        }
-
-        // Call Razorpay Orders API
-        $payload = json_encode([
-            'amount'          => $amount_paise,
-            'currency'        => $currency,
-            'receipt'         => $order['order_number'],
-            'payment_capture' => 1,
-        ]);
-
-        $ch = curl_init('https://api.razorpay.com/v1/orders');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
-            CURLOPT_USERPWD        => "$key_id:$key_secret",
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_SSL_VERIFYPEER => false, // Fix for local dev hangs
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT        => 30,
-        ]);
-        $response = curl_exec($ch);
-        if (curl_errno($ch)) {
-            log_message('error', 'CURL Error: ' . curl_error($ch));
-        }
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $rzp = json_decode($response, true);
-
-        if ($http_code !== 200 || empty($rzp['id'])) {
-            log_message('error', 'Razorpay create order failed: ' . $response);
-            return $this->error('Failed to create payment order. Please try again.');
-        }
-
-        // Save payment record
-        $this->Sk_Order_model->save_payment([
-            'order_id'          => $order_id,
-            'razorpay_order_id' => $rzp['id'],
-            'amount'            => $payAmount,
-            'currency'          => $currency,
-            'status'            => 'created',
-        ]);
-
+        // Validate contact BEFORE creating a Razorpay order (avoids orphan RZP orders)
         $this->load->helper('sk_isms');
         $user = $this->Sk_User_model->get_by_id($this->user['user_id']);
         $contact = sk_razorpay_contact($order['shipping_phone'] ?? '', $settings);
@@ -93,10 +46,80 @@ class Sk_Payment extends Sk_Base_Api {
         }
         if ($contact === '') {
             return $this->error(
-                'A valid Malaysian mobile number is required for Curlec online payment. Update your delivery address or profile phone (e.g. 0123456789).',
+                'A valid Malaysian mobile number is required for online payment. Update your delivery address or profile phone (e.g. 0123456789).',
                 422
             );
         }
+
+        $amount_paise = (int)round($payAmount * 100);
+        if ($amount_paise < 100) {
+            return $this->error('Order amount is too small for online payment (minimum RM 1.00).');
+        }
+
+        $currency = strtoupper(trim((string)($settings['currency_code'] ?? 'MYR')));
+        if (!in_array($currency, ['MYR', 'INR', 'USD', 'SGD'], true)) {
+            $currency = 'MYR';
+        }
+
+        // Call Razorpay Orders API
+        $payload = json_encode([
+            'amount'          => $amount_paise,
+            'currency'        => $currency,
+            'receipt'         => $order['order_number'],
+            'payment_capture' => 1,
+            'notes'           => [
+                'shop_order_id'     => (string)$order_id,
+                'shop_order_number' => (string)$order['order_number'],
+            ],
+        ]);
+
+        $ch = curl_init('https://api.razorpay.com/v1/orders');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_USERPWD        => "$key_id:$key_secret",
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+        $response  = curl_exec($ch);
+        $curlErr   = curl_error($ch);
+        $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $curlErr !== '') {
+            log_message('error', 'Razorpay CURL Error: ' . $curlErr);
+            return $this->error('Could not reach Razorpay. Please try again or use Cash on Delivery.', 502);
+        }
+
+        $rzp = json_decode($response, true);
+        if (!is_array($rzp)) {
+            log_message('error', 'Razorpay create order bad JSON: ' . $response);
+            return $this->error('Payment gateway returned an invalid response. Please try again.');
+        }
+
+        if ($http_code !== 200 || empty($rzp['id'])) {
+            $rzpMsg = $rzp['error']['description']
+                ?? $rzp['error']['reason']
+                ?? $rzp['message']
+                ?? null;
+            log_message('error', 'Razorpay create order failed HTTP ' . $http_code . ': ' . $response);
+            $hint = $rzpMsg
+                ? ('Razorpay: ' . $rzpMsg)
+                : 'Failed to create payment order. Check Razorpay keys / MYR currency enablement, or use Cash on Delivery.';
+            return $this->error($hint, 502);
+        }
+
+        // Save payment record
+        $this->Sk_Order_model->save_payment([
+            'order_id'          => $order_id,
+            'razorpay_order_id' => $rzp['id'],
+            'amount'            => $payAmount,
+            'currency'          => $currency,
+            'status'            => 'created',
+        ]);
 
         $email = sk_razorpay_prefill_email($user['email'] ?? '');
 
