@@ -20,7 +20,8 @@
       </div>
       <div class="col-md-2">
         <label class="form-label small">Discount % on wallet pay</label>
-        <input type="number" step="0.01" name="customer_wallet_discount_percent" class="form-control form-control-sm" value="<?= htmlspecialchars($discount_percent) ?>">
+        <input type="number" step="0.01" min="0" max="100" name="customer_wallet_discount_percent" class="form-control form-control-sm" value="<?= htmlspecialchars($discount_percent) ?>">
+        <small class="text-muted">0 = no extra discount</small>
       </div>
       <div class="col-md-2">
         <label class="form-label small">Points per RM</label>
@@ -81,7 +82,13 @@
 </div>
 <?php else: ?>
 <div class="alert alert-info py-2 small mb-3">
-  Add funds to customer wallets here. Customers get <strong><?= $discount_percent ?>%</strong> extra discount when paying with wallet at checkout. Withdrawals are not allowed.
+  Add funds to customer wallets here.
+  <?php if ((float)$discount_percent > 0): ?>
+    Customers get <strong><?= $discount_percent ?>%</strong> extra discount when paying with wallet at checkout.
+  <?php else: ?>
+    Wallet pay discount is currently <strong>off</strong> (0%).
+  <?php endif; ?>
+  Withdrawals are not allowed.
   <a href="<?= site_url('shopkart/royalty-report') ?>" class="ms-1">Royalty Points Report</a>
 </div>
 <?php endif; ?>

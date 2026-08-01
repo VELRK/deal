@@ -319,18 +319,28 @@ class Sk_Auth extends Sk_Base_Api {
         }
 
         $user = $this->_find_user_by_phone($normalized);
+        $nameInput = trim((string) ($data['name'] ?? ''));
+        if (mb_strlen($nameInput) > 100) {
+            $nameInput = mb_substr($nameInput, 0, 100);
+        }
 
         if (!$user) {
-            // New user — auto-register with phone
-            $placeholder_email = 'ph_' . preg_replace('/\D/', '', $normalized) . '@shopkart.app';
+            // New user — auto-register with phone (prefer provided name over placeholder)
+            $digits = preg_replace('/\D/', '', $normalized);
+            $displayName = $nameInput !== '' ? $nameInput : ('User ' . substr($digits, -4));
+            $placeholder_email = 'ph_' . $digits . '@shopkart.app';
             $user_id = $this->Sk_User_model->create([
-                'name'     => 'User ' . substr(preg_replace('/\D/', '', $normalized), -4),
+                'name'     => $displayName,
                 'email'    => $placeholder_email,
                 'password' => bin2hex(random_bytes(16)),
                 'phone'    => $normalized,
                 'status'   => 1,
             ]);
             $user = $this->Sk_User_model->get_by_id($user_id);
+        } elseif ($nameInput !== '' && preg_match('/^User\s+\d{2,6}$/', (string) ($user['name'] ?? ''))) {
+            // Upgrade placeholder "User 1982" when the client finally sends a real name
+            $this->Sk_User_model->update((int) $user['id'], ['name' => $nameInput]);
+            $user = $this->Sk_User_model->get_by_id($user['id']);
         }
 
         if (!$user['status']) return $this->error('Your account has been blocked.', 403);

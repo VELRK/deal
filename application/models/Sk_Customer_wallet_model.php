@@ -103,7 +103,12 @@ class Sk_Customer_wallet_model extends CI_Model {
 
     public function get_wallet_discount_percent(): float {
         $row = $this->db->where('key', 'customer_wallet_discount_percent')->get('settings')->row_array();
-        return (float)($row['value'] ?? 0);
+        $pct = (float) ($row['value'] ?? 0);
+        // 0 or invalid => no wallet-pay discount; clamp to 0–100
+        if (!is_finite($pct) || $pct <= 0) {
+            return 0.0;
+        }
+        return min(100.0, round($pct, 2));
     }
 
     public function is_enabled(): bool {

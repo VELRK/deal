@@ -167,9 +167,14 @@ class Sk_Order extends Sk_Base_Api {
 
         if ($uses_wallet && $wallet_enabled) {
             $walletPct = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
+            // get_wallet_discount_percent() already returns 0 when disabled / invalid
             if ($walletPct > 0) {
                 $wallet_discount = round(max(0, $subtotal - $discount) * $walletPct / 100, 2);
-                $discount += $wallet_discount;
+                if ($wallet_discount > 0) {
+                    $discount += $wallet_discount;
+                } else {
+                    $wallet_discount = 0;
+                }
             }
         }
 
