@@ -366,7 +366,7 @@ class Sk_Order extends Sk_Base_Api {
             sk_whatsapp_notify_order_status($order, $waStatus, $settings);
         }
 
-        $this->success(['order' => $order], 'Order placed successfully.', 201);
+        $this->success(['order' => $order], 'Order placed successfully.', 200);
     }
 
     public function index() {
