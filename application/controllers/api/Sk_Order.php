@@ -229,12 +229,14 @@ class Sk_Order extends Sk_Base_Api {
         // Fully covered by royalty and/or wallet → paid now (no COD/online remainder)
         $is_paid_now    = ($gateway_amount <= 0.009);
         // COD + fully paid (wallet/royalty) → Confirmed immediately.
-        // Razorpay with amount due stays Pending until payment verify succeeds.
+        // Unpaid Razorpay → payment_attempt until verify succeeds (no cancel on modal close).
         $is_cod         = strtolower((string)$payment_method) === 'cod';
         $confirm_now    = $is_paid_now || $is_cod;
+        $is_razorpay_due = !$confirm_now && strtolower((string)$payment_method) === 'razorpay';
 
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
+        $this->Sk_Order_model->ensure_payment_attempt_status();
         $this->load->helper(['sk_jt_express', 'sk_vendor_dashboard']);
         sk_jt_express_ensure_schema();
         sk_vendor_dashboard_ensure_schema();
@@ -256,7 +258,7 @@ class Sk_Order extends Sk_Base_Api {
             'royalty_used_rm'     => $royalty_used_rm,
             'payment_method'   => $payment_method,
             'payment_status'   => $is_paid_now ? 'paid' : 'pending',
-            'status'           => $confirm_now ? 'confirmed' : 'pending',
+            'status'           => $confirm_now ? 'confirmed' : ($is_razorpay_due ? 'payment_attempt' : 'pending'),
             'status_updated_at'=> $now,
             'confirmed_at'     => $confirm_now ? $now : null,
             'notes'            => trim(
@@ -353,16 +355,16 @@ class Sk_Order extends Sk_Base_Api {
             $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
         }
 
-        // Email tax invoice (COD/wallet immediately; Razorpay after payment verify)
+        // Email + WhatsApp only when order is paid now or COD/wallet.
+        // Unpaid Razorpay (payment_attempt): notify after payment/verify only.
         $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
         sk_invoice_ensure_vendor_schema();
         $settings = $this->get_settings();
         if (in_array($payment_method, ['cod', 'wallet'], true) || $is_paid_now) {
             sk_mail_order_invoice($order, $settings);
+            $waStatus = ($order['status'] ?? '') ?: 'confirmed';
+            sk_whatsapp_notify_order_status($order, $waStatus, $settings);
         }
-        // WhatsApp: placed / paid status
-        $waStatus = ($order['status'] ?? '') ?: (($order['payment_status'] ?? '') === 'paid' ? 'confirmed' : 'pending');
-        sk_whatsapp_notify_order_status($order, $waStatus, $settings);
 
         $this->success(['order' => $order], 'Order placed successfully.', 201);
     }

@@ -293,6 +293,10 @@ function sk_whatsapp_log(array $row): void {
  * Every attempt is stored in whatsapp_logs for the delivery report.
  */
 function sk_whatsapp_notify_order_status(array $order, string $status, array $settings = null): array {
+    // Unpaid Razorpay attempts must not trigger order-received / confirm templates.
+    if ($status === 'payment_attempt') {
+        return ['success' => false, 'message' => 'Skipped: payment attempt (notify after payment).', 'via' => 'none'];
+    }
     $CI =& get_instance();
     if ($settings === null) {
         $CI->load->model('Sk_Admin_model');
@@ -407,6 +411,7 @@ function sk_whatsapp_notify_order_status(array $order, string $status, array $se
 
 function sk_whatsapp_status_label(string $status): string {
     $map = [
+        'payment_attempt' => 'Payment Attempt',
         'pending'    => 'Order Received',
         'confirmed'  => 'Order Confirmed',
         'processing' => 'Ready to Pick Up',
@@ -415,7 +420,7 @@ function sk_whatsapp_status_label(string $status): string {
         'cancelled'  => 'Cancelled',
         'returned'   => 'Return Requested',
     ];
-    return $map[$status] ?? ucfirst($status);
+    return $map[$status] ?? ucfirst(str_replace('_', ' ', $status));
 }
 
 function sk_whatsapp_order_message(array $order, string $status, array $settings = []): string {

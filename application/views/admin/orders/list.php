@@ -12,8 +12,18 @@
              placeholder="Order number..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
       <select name="status" class="form-select form-select-sm" style="max-width:160px;">
         <option value="">All Statuses</option>
-        <?php foreach (['pending','confirmed','processing','shipped','delivered','cancelled'] as $s): ?>
-          <option value="<?= $s ?>" <?= ($filters['status']??'')===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
+        <?php
+        $status_opts = [
+          'payment_attempt' => 'Payment attempt',
+          'pending' => 'Pending',
+          'confirmed' => 'Confirmed',
+          'processing' => 'Processing',
+          'shipped' => 'Shipped',
+          'delivered' => 'Delivered',
+          'cancelled' => 'Cancelled',
+        ];
+        foreach ($status_opts as $s => $label): ?>
+          <option value="<?= $s ?>" <?= ($filters['status']??'')===$s?'selected':'' ?>><?= $label ?></option>
         <?php endforeach; ?>
       </select>
       <select name="payment_status" class="form-select form-select-sm" style="max-width:160px;">
@@ -60,7 +70,7 @@
               <?php endif; ?>
             </td>
             <td class="fw-semibold"><?= $currency . number_format($o['total'],2) ?></td>
-            <td><span class="badge badge-<?= $o['status'] ?>"><?= ucfirst($o['status']) ?></span></td>
+            <td><span class="badge badge-<?= $o['status'] === 'payment_attempt' ? 'pending' : $o['status'] ?>"><?= $o['status'] === 'payment_attempt' ? 'Payment attempt' : ucfirst($o['status']) ?></span></td>
             <td><span class="badge badge-<?= $o['payment_status'] ?>"><?= ucfirst($o['payment_status']) ?></span></td>
             <td><?= sk_format_datetime($o['created_at'], 'd M y, h:i A') ?></td>
             <td class="d-flex gap-1">

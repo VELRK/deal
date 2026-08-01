@@ -200,7 +200,7 @@ class Sk_Order_model extends CI_Model {
                 ->where('o.jt_bill_code IS NULL', null, false)
                 ->or_where('o.jt_bill_code', '')
                 ->group_end();
-            $this->db->where_in('o.status', ['confirmed', 'processing', 'shipped', 'pending']);
+            $this->db->where_in('o.status', ['confirmed', 'processing', 'shipped', 'pending', 'payment_attempt']);
         }
         if (!empty($filters['search'])) {
             $q = $filters['search'];
@@ -216,7 +216,9 @@ class Sk_Order_model extends CI_Model {
 
     // Stats
     public function total_orders()   { return $this->db->count_all('orders'); }
-    public function pending_orders() { return $this->db->where('status', 'pending')->count_all_results('orders'); }
+    public function pending_orders() {
+        return $this->db->where_in('status', ['pending', 'payment_attempt'])->count_all_results('orders');
+    }
     public function total_revenue()  {
         $r = $this->db->select_sum('total')->where('payment_status', 'paid')->get('orders')->row();
         return $r->total ?? 0;
@@ -329,9 +331,50 @@ class Sk_Order_model extends CI_Model {
         ];
     }
 
+    /**
+     * Allow unpaid Razorpay checkout rows to use status=payment_attempt
+     * (VARCHAR or ENUM extended at runtime).
+     */
+    public function ensure_payment_attempt_status(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        $row = $this->db->query(
+            "SELECT DATA_TYPE, COLUMN_TYPE FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'status'"
+        )->row_array();
+        if (!$row) {
+            return;
+        }
+        $dataType = strtolower((string)($row['DATA_TYPE'] ?? ''));
+        $colType  = (string)($row['COLUMN_TYPE'] ?? '');
+        if ($dataType === 'enum') {
+            if (stripos($colType, "'payment_attempt'") === false) {
+                // Prefer VARCHAR so future statuses need no ALTER ENUM.
+                $this->db->query(
+                    "ALTER TABLE `orders` MODIFY COLUMN `status` VARCHAR(32) NOT NULL DEFAULT 'pending'"
+                );
+            }
+            return;
+        }
+        if ($dataType === 'varchar' || $dataType === 'char') {
+            $len = 32;
+            if (preg_match('/\((\d+)\)/', $colType, $m)) {
+                $len = (int)$m[1];
+            }
+            if ($len < 20) {
+                $this->db->query(
+                    "ALTER TABLE `orders` MODIFY COLUMN `status` VARCHAR(32) NOT NULL DEFAULT 'pending'"
+                );
+            }
+        }
+    }
+
     /** Statuses customers may cancel (before shipment). */
     public function customer_cancellable_statuses(): array {
-        return ['pending', 'confirmed', 'processing'];
+        return ['payment_attempt', 'pending', 'confirmed', 'processing'];
     }
 
     public function can_customer_cancel(array $order): ?string {

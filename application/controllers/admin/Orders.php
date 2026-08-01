@@ -64,7 +64,8 @@ class Orders extends Sk_Base {
     }
 
     public function update_status($id) {
-        $allowed = ['pending','confirmed','processing','shipped','delivered','cancelled','returned'];
+        $this->Sk_Order_model->ensure_payment_attempt_status();
+        $allowed = ['payment_attempt','pending','confirmed','processing','shipped','delivered','cancelled','returned'];
         $status  = $this->input->post('status', TRUE);
         if (!in_array($status, $allowed)) return $this->json(['success' => false, 'message' => 'Invalid status.']);
 

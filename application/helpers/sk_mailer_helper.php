@@ -328,6 +328,7 @@ function sk_mail_order_status($order, $new_status, $settings = []) {
     $to_name  = $order['customer_name']  ?? 'Customer';
 
     $status_labels = [
+        'payment_attempt' => ['label' => 'Payment Attempt',  'color' => '#ea580c', 'icon' => '💳'],
         'pending'    => ['label' => 'Order Received',     'color' => '#f59e0b', 'icon' => '⏳'],
         'confirmed'  => ['label' => 'Order Confirmed',    'color' => '#3b82f6', 'icon' => '✅'],
         'processing' => ['label' => 'Processing',         'color' => '#8b5cf6', 'icon' => '🔧'],

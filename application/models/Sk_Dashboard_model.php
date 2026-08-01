@@ -10,7 +10,7 @@ class Sk_Dashboard_model extends CI_Model {
             'pending_vendors'  => $this->db->where('status', 'pending')->where('deleted_at IS NULL', null, false)->count_all_results('vendors'),
             'total_products'   => $this->db->count_all('products'),
             'total_orders'     => $this->db->count_all('orders'),
-            'pending_orders'   => $this->db->where('status', 'pending')->count_all_results('orders'),
+            'pending_orders'   => $this->db->where_in('status', ['pending', 'payment_attempt'])->count_all_results('orders'),
             'total_customers'  => $this->db->count_all('users'),
             'total_revenue'    => (float)($this->db->select_sum('total')->where('payment_status', 'paid')->get('orders')->row()->total ?? 0),
             'monthly_revenue'  => (float)($this->db->select_sum('total')
@@ -56,7 +56,7 @@ class Sk_Dashboard_model extends CI_Model {
                  ->join('orders o', 'o.id = oi.order_id')
                  ->join('products p', 'p.id = oi.product_id', 'left');
         $vendorScope();
-        $pending = (int)($this->db->where('o.status', 'pending')->get()->row()->cnt ?? 0);
+        $pending = (int)($this->db->where_in('o.status', ['pending', 'payment_attempt'])->get()->row()->cnt ?? 0);
 
         $this->db->select_sum('oi.subtotal', 'total')
                  ->from('order_items oi')

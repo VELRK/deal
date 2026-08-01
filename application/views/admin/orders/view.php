@@ -125,8 +125,10 @@
       ['key' => 'delivered',  'label' => 'Delivered',        'icon' => 'bi-house-check',   'time' => $order['delivered_at'] ?? null],
     ];
     $step_keys   = array_column($status_steps, 'key');
-    $current_idx = array_search($order['status'], $step_keys);
+    $progress_status = ($order['status'] === 'payment_attempt') ? 'pending' : $order['status'];
+    $current_idx = array_search($progress_status, $step_keys);
     $is_terminal = in_array($order['status'], ['cancelled', 'returned']);
+    $is_payment_attempt = ($order['status'] === 'payment_attempt');
     ?>
     <div class="card sk-table-card shadow-sm mb-3">
       <div class="card-header bg-white border-0 py-3 fw-semibold">
@@ -138,6 +140,12 @@
             style="background:<?= $order['status']==='cancelled'?'#fee2e2':'#ffedd5' ?>;color:<?= $order['status']==='cancelled'?'#991b1b':'#9a3412' ?>;">
             <i class="bi <?= $order['status']==='cancelled'?'bi-x-circle':'bi-arrow-counterclockwise' ?> fs-5"></i>
             <span class="fw-semibold"><?= $order['status']==='cancelled' ? 'Order Cancelled' : 'Return Requested' ?></span>
+          </div>
+        <?php elseif ($is_payment_attempt): ?>
+          <div class="d-flex align-items-center gap-2 p-2 rounded mb-2"
+            style="background:#fff7ed;color:#9a3412;">
+            <i class="bi bi-credit-card fs-5"></i>
+            <span class="fw-semibold">Payment attempt — awaiting online payment</span>
           </div>
         <?php else: ?>
           <div class="d-flex align-items-center w-100">
@@ -180,8 +188,19 @@
         <div class="mb-3">
           <label class="form-label">Order Status</label>
           <select id="orderStatus" class="form-select">
-            <?php foreach (['pending','confirmed','processing','shipped','delivered','cancelled','returned'] as $s): ?>
-              <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= $s === 'processing' ? 'Ready to Pick Up (Processing)' : ucfirst($s) ?></option>
+            <?php
+            $admin_statuses = [
+              'payment_attempt' => 'Payment attempt',
+              'pending' => 'Pending',
+              'confirmed' => 'Confirmed',
+              'processing' => 'Ready to Pick Up (Processing)',
+              'shipped' => 'Shipped',
+              'delivered' => 'Delivered',
+              'cancelled' => 'Cancelled',
+              'returned' => 'Returned',
+            ];
+            foreach ($admin_statuses as $s => $label): ?>
+              <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= $label ?></option>
             <?php endforeach; ?>
           </select>
         </div>

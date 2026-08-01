@@ -46,11 +46,11 @@
               <input type="number" name="tax_rate" class="form-control" step="0.01" value="<?= $settings['tax_rate'] ?? '18' ?>">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Shipping Charge (₹)</label>
+              <label class="form-label">Shipping Charge (RM)</label>
               <input type="number" name="shipping_charge" class="form-control" value="<?= $settings['shipping_charge'] ?? '50' ?>">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Free Shipping Above (₹)</label>
+              <label class="form-label">Free Shipping Above (RM)</label>
               <input type="number" name="free_shipping_above" class="form-control" value="<?= $settings['free_shipping_above'] ?? '999' ?>">
             </div>
             <div class="col-12">
