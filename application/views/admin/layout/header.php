@@ -74,7 +74,7 @@ $body_class = trim(
 <?php elseif (!empty($vendor_logged_in)): ?>
 <div class="alert alert-primary rounded-0 mb-0 py-2 text-center sk-panel-banner">
   <i class="bi bi-shop me-1"></i>
-  Vendor panel — signed in as <strong><?= htmlspecialchars($admin['name'] ?? 'Vendor') ?></strong>
+  Vendor panel — signed in as <strong><?= htmlspecialchars($admin['shop_name'] ?? $admin['name'] ?? 'Default Store') ?></strong>
 </div>
 <?php endif; ?>
 

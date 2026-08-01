@@ -47,10 +47,16 @@ class Vendor_login extends CI_Controller {
             redirect('admin/vendor/login');
         }
 
+        $store = $this->db->select('store_name')->where('vendor_id', (int)$vendor['id'])->get('vendor_stores')->row_array();
+        $shopName = trim((string)($store['store_name'] ?? ''));
+        if ($shopName === '') {
+            $shopName = 'Default Store';
+        }
+
         $this->session->set_userdata([
             'sk_vendor_login' => true,
             'sk_vendor_id'    => (int)$vendor['id'],
-            'sk_vendor_name'  => $vendor['business_name'] ?: $vendor['owner_name'],
+            'sk_vendor_name'  => $shopName,
             'sk_vendor_email' => $vendor['email'],
         ]);
 

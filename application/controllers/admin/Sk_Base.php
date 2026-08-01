@@ -34,9 +34,11 @@ class Sk_Base extends CI_Controller {
                 $this->session->unset_userdata(['sk_vendor_login', 'sk_vendor_id', 'sk_vendor_name', 'sk_vendor_email']);
                 $this->_deny_admin('admin/vendor/login');
             }
+            $shopName = $this->_vendor_shop_display_name($vid);
             $this->admin = [
                 'id'         => 0,
-                'name'       => $vendor['business_name'] ?: $vendor['owner_name'],
+                'name'       => $shopName,
+                'shop_name'  => $shopName,
                 'owner_name' => $vendor['owner_name'],
                 'email'      => $vendor['email'],
                 'role'       => 'vendor',
@@ -78,6 +80,13 @@ class Sk_Base extends CI_Controller {
             return true;
         }
         return false;
+    }
+
+    /** Shop/store name for vendor UI; falls back to "Default Store". */
+    protected function _vendor_shop_display_name(int $vendor_id): string {
+        $store = $this->db->select('store_name')->where('vendor_id', $vendor_id)->get('vendor_stores')->row_array();
+        $name = trim((string)($store['store_name'] ?? ''));
+        return $name !== '' ? $name : 'Default Store';
     }
 
     protected function is_super_admin(): bool {
