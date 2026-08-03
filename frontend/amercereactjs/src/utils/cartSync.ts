@@ -54,7 +54,9 @@ const removedLineKeys = new Set<string>(loadTombstones());
 
 function loadTombstones(): string[] {
   try {
-    const raw = sessionStorage.getItem(TOMBSTONE_STORAGE_KEY);
+    const raw =
+      sessionStorage.getItem(TOMBSTONE_STORAGE_KEY) ||
+      localStorage.getItem(TOMBSTONE_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.map(String) : [];
@@ -65,10 +67,19 @@ function loadTombstones(): string[] {
 
 function persistTombstones(): void {
   try {
-    sessionStorage.setItem(
-      TOMBSTONE_STORAGE_KEY,
-      JSON.stringify([...removedLineKeys]),
-    );
+    const json = JSON.stringify([...removedLineKeys]);
+    sessionStorage.setItem(TOMBSTONE_STORAGE_KEY, json);
+    localStorage.setItem(TOMBSTONE_STORAGE_KEY, json);
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearTombstones(): void {
+  removedLineKeys.clear();
+  try {
+    sessionStorage.removeItem(TOMBSTONE_STORAGE_KEY);
+    localStorage.removeItem(TOMBSTONE_STORAGE_KEY);
   } catch {
     /* ignore */
   }
@@ -110,11 +121,6 @@ function forgetRemovedLine(productId: ProductId, variantId?: number | null): voi
   persistTombstones();
 }
 
-function clearTombstones(): void {
-  removedLineKeys.clear();
-  persistTombstones();
-}
-
 function filterRemovedServerItems(items: CartItem[]): CartItem[] {
   if (removedLineKeys.size === 0) return items;
   return items.filter((item) => {
@@ -138,6 +144,8 @@ async function flushTombstonesToServer(): Promise<void> {
         ...(variantId != null ? { variant_id: variantId } : {}),
       })
       .catch(() => null);
+    // Second pass without variant — covers NULL vs default-variant mismatches.
+    await cartAPI.remove({ product_id: productId }).catch(() => null);
   }
 }
 
@@ -179,8 +187,9 @@ export async function addLineToCart(
 /**
  * Remove a line from local cart by index (preferred) or loose id match.
  * Always updates Zustand first so the badge/drawer drop immediately.
- * Guest / after-logout: local-only (API session cart is empty; applying it
- * would wipe or ignore the remove). Removals are tombstoned and flushed on login.
+ * Guest / after-logout: still call API to clear session rows, but never apply
+ * the response (empty guest session after logout would wipe remaining lines).
+ * Removals are tombstoned until the server cart no longer contains them.
  */
 export function removeLineFromCart(
   id: ProductId,
@@ -218,16 +227,18 @@ export function removeLineFromCart(
   rememberRemovedLine(pid, vid ?? null);
   useStore.getState().setCartProducts(next);
 
-  // Guests: local-only. Session API is empty after logout and must not run.
-  if (!useAuthStore.getState().isLoggedIn) return;
-
+  const loggedIn = useAuthStore.getState().isLoggedIn;
   const epochAtRemove = getLocalCartEpoch();
+  const removePayload = {
+    product_id: pid,
+    ...(vid != null && !Number.isNaN(vid) ? { variant_id: vid } : {}),
+  };
+
   void (async () => {
     try {
-      const res = await cartAPI.remove({
-        product_id: pid,
-        ...(vid != null && !Number.isNaN(vid) ? { variant_id: vid } : {}),
-      });
+      const res = await cartAPI.remove(removePayload);
+      // After logout the session cart is empty — never replace local from it.
+      if (!loggedIn || !useAuthStore.getState().isLoggedIn) return;
       if (getLocalCartEpoch() !== epochAtRemove) return;
 
       const items = res.data?.data?.items;
@@ -238,6 +249,8 @@ export function removeLineFromCart(
       if (filtered.length !== localNow.length) return;
 
       applyServerCartItems(filtered);
+      // Only drop tombstones once the server cart no longer has them.
+      if (filtered.length === items.length) clearTombstones();
     } catch {
       /* local already updated */
     }
@@ -298,8 +311,9 @@ export async function syncCartFromServer(): Promise<void> {
     const filtered = filterRemovedServerItems(items);
     applyServerCartItems(filtered);
 
-    // Server now matches removals — clear tombstones.
-    if (filtered.length === useStore.getState().cartProducts.length) {
+    // Only clear tombstones when the *server* no longer has those lines.
+    // Clearing after a local-only filter let the next focus sync resurrect items.
+    if (filtered.length === items.length) {
       clearTombstones();
     }
   } catch {

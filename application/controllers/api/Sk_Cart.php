@@ -257,6 +257,10 @@ class Sk_Cart extends Sk_Base_Api {
             $resolvedVid = $variant ? (int)$variant['id'] : null;
             $this->_apply_cart_filters($key, $product_id, $resolvedVid);
             $this->db->delete('cart');
+            // Fallback: default-variant resolve can miss NULL / other variant rows.
+            if ((int)$this->db->affected_rows() < 1) {
+                $this->db->where(array_filter($key))->where('product_id', $product_id)->delete('cart');
+            }
         } else {
             // Product removed from catalog — drop matching cart line(s)
             $this->db->where(array_filter($key))->where('product_id', $product_id);
@@ -264,6 +268,9 @@ class Sk_Cart extends Sk_Base_Api {
                 $this->db->where('variant_id', $variant_id);
             }
             $this->db->delete('cart');
+            if ((int)$this->db->affected_rows() < 1) {
+                $this->db->where(array_filter($key))->where('product_id', $product_id)->delete('cart');
+            }
         }
 
         $items = $this->_get_cart_items($key);
