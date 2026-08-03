@@ -104,10 +104,11 @@ function sk_isms_get_test_config(array $settings = null) {
     ];
 }
 
-function sk_isms_is_test_phone(array $settings, $normalized_phone) {
-    if ($normalized_phone === '') {
-        return false;
-    }
+/**
+ * Known spellings of the developer test mobile (extra trailing 0 was creating duplicate users).
+ * @return string[]
+ */
+function sk_isms_test_phone_aliases(array $settings) {
     $CI =& get_instance();
     $CI->load->library('isms', $settings);
     $test = sk_isms_get_test_config($settings);
@@ -116,9 +117,24 @@ function sk_isms_is_test_phone(array $settings, $normalized_phone) {
         $CI->isms->normalize_phone('0180000000'),
         $CI->isms->normalize_phone('60180000000'),
         $CI->isms->normalize_phone('601800000000'),
+        '60180000000',
+        '601800000000',
     ];
-    $aliases = array_values(array_unique(array_filter($aliases)));
-    return in_array($normalized_phone, $aliases, true);
+    return array_values(array_unique(array_filter($aliases)));
+}
+
+/** Canonical test phone stored in settings (default 60180000000). */
+function sk_isms_canonical_test_phone(array $settings) {
+    $test = sk_isms_get_test_config($settings);
+    $phone = preg_replace('/\D/', '', (string) ($test['phone'] ?? ''));
+    return $phone !== '' ? $phone : '60180000000';
+}
+
+function sk_isms_is_test_phone(array $settings, $normalized_phone) {
+    if ($normalized_phone === '') {
+        return false;
+    }
+    return in_array($normalized_phone, sk_isms_test_phone_aliases($settings), true);
 }
 
 /**

@@ -245,6 +245,7 @@ class Sk_Auth extends Sk_Base_Api {
         }
 
         if (sk_isms_is_test_phone($settings, $normalized)) {
+            $normalized = sk_isms_canonical_test_phone($settings);
             $test = sk_isms_get_test_config($settings);
             $payload = ['phone' => $normalized, 'test_mode' => true];
             $msg = 'OTP sent to +' . $normalized . '.';
@@ -311,6 +312,8 @@ class Sk_Auth extends Sk_Base_Api {
             if (!in_array($otp, $validCodes, true)) {
                 return $this->error('Invalid OTP. Please try again.', 401);
             }
+            // Always use one canonical form so app/web do not create duplicate users/carts
+            $normalized = sk_isms_canonical_test_phone($settings);
         } else {
             if (!sk_isms_verify_session_otp($normalized, $otp)) {
                 return $this->error('Invalid or expired OTP. Please try again.', 401);
@@ -318,7 +321,7 @@ class Sk_Auth extends Sk_Base_Api {
             sk_isms_clear_session($normalized);
         }
 
-        $user = $this->_find_user_by_phone($normalized);
+        $user = $this->_find_user_by_phone($normalized, $settings);
         $nameInput = trim((string) ($data['name'] ?? ''));
         if (mb_strlen($nameInput) > 100) {
             $nameInput = mb_substr($nameInput, 0, 100);
@@ -345,6 +348,13 @@ class Sk_Auth extends Sk_Base_Api {
 
         if (!$user['status']) return $this->error('Your account has been blocked.', 403);
         if (!empty($user['deleted_at'])) return $this->error('This account has been deleted.', 403);
+
+        // Keep DB phone on the canonical test number when aliases were used historically
+        if (sk_isms_is_test_phone($settings, $normalized)
+            && (string) ($user['phone'] ?? '') !== $normalized) {
+            $this->Sk_User_model->update((int) $user['id'], ['phone' => $normalized]);
+            $user['phone'] = $normalized;
+        }
 
         $this->Sk_User_model->update_last_login($user['id']);
         $token = $this->sk_jwt->encode(['user_id' => $user['id'], 'email' => $user['email']]);
@@ -444,12 +454,28 @@ class Sk_Auth extends Sk_Base_Api {
         return $this->success($payload, $msg);
     }
 
-    private function _find_user_by_phone($normalized) {
-        $user = $this->Sk_User_model->get_by_phone($normalized);
-        if ($user) {
-            return $user;
+    private function _find_user_by_phone($normalized, array $settings = null) {
+        $candidates = [preg_replace('/\D/', '', (string) $normalized)];
+        if ($settings && sk_isms_is_test_phone($settings, $normalized)) {
+            $candidates = array_merge($candidates, sk_isms_test_phone_aliases($settings));
         }
-        $digits = preg_replace('/\D/', '', $normalized);
-        return $this->Sk_User_model->get_by_phone($digits);
+        $candidates = array_values(array_unique(array_filter($candidates)));
+
+        $found = [];
+        foreach ($candidates as $phone) {
+            $user = $this->Sk_User_model->get_by_phone($phone);
+            if ($user && empty($user['deleted_at'])) {
+                $found[(int) $user['id']] = $user;
+            }
+        }
+        if (!$found) {
+            return null;
+        }
+
+        // Prefer the oldest account (keeps cart/orders when duplicates exist)
+        uasort($found, static function ($a, $b) {
+            return ((int) $a['id']) <=> ((int) $b['id']);
+        });
+        return reset($found) ?: null;
     }
 }
