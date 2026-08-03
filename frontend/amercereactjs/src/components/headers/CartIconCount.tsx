@@ -5,8 +5,10 @@ export default function CartIconCount({
 }: {
   className?: string;
 }) {
-  // Subscribe to length directly — avoid object snapshot equality missing updates.
-  const count = useStore((s) => s.cartProducts.length);
+  const cartProducts = useStore((s) => s.cartProducts);
+  const count = cartProducts.length;
 
-  return <span className={className}> {count} </span>;
+  if (count <= 0) return null;
+
+  return <span className={className}>{count}</span>;
 }

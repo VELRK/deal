@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, useState, memo, useEffect } from "react";
-import { useContextElement, type CartProduct } from "@/context/Context";
+import { useStore, type CartProduct } from "@/context/store";
 import { useAuthStore } from "@/store/authStore";
 import type { ProductId } from "@/context/store";
 import { formatPrice } from "@/utils/formatPrice";
@@ -11,8 +11,9 @@ import { saveUseRoyalty } from "@/utils/royaltyStorage";
 import { removeLineFromCart } from "@/utils/cartSync";
 
 export default function ShoppingCart() {
-  const { cartProducts, updateQuantity, totalPrice } =
-    useContextElement();
+  const cartProducts = useStore((s) => s.cartProducts);
+  const updateQuantity = useStore((s) => s.updateQuantity);
+  const totalPrice = useStore((s) => s.totalPrice);
   const { isLoggedIn } = useAuthStore();
 
   /* ── Promo code ── */

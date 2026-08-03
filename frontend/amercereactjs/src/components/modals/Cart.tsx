@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useContextElement, type CartProduct } from "@/context/Context";
+import { useStore, type CartProduct } from "@/context/store";
 import type { ProductId } from "@/context/store";
 import { formatPrice } from "@/utils/formatPrice";
 import { useModalStore } from "@/store/modalStore";
@@ -10,7 +10,10 @@ import { removeLineFromCart } from "@/utils/cartSync";
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { cartProducts, updateQuantity, totalPrice } = useContextElement();
+  // Subscribe to cart slices directly so remove always re-renders drawer + totals.
+  const cartProducts = useStore((s) => s.cartProducts);
+  const updateQuantity = useStore((s) => s.updateQuantity);
+  const totalPrice = useStore((s) => s.totalPrice);
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "cart";
 
