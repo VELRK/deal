@@ -21,8 +21,8 @@ export default function Cart() {
     removeLineFromCart(id, variantId, index);
   };
 
-  const setQty = (id: ProductId, qty: number, variantId?: number) => {
-    if (qty < 1) removeLine(id, variantId);
+  const setQty = (id: ProductId, qty: number, variantId?: number, index?: number) => {
+    if (qty < 1) removeLine(id, variantId, index);
     else {
       updateQuantity(id, qty, variantId);
       cartAPI
@@ -89,7 +89,7 @@ export default function Cart() {
                   <CartMiniLine
                     item={item}
                     onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
-                    onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId)}
+                    onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
                     onProductClick={() => goTo(`/product-detail/${item.id}`)}
                   />
                   {idx < cartProducts.length - 1 && (

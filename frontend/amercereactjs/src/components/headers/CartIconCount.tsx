@@ -5,10 +5,13 @@ export default function CartIconCount({
 }: {
   className?: string;
 }) {
-  const cartProducts = useStore((s) => s.cartProducts);
-  const count = cartProducts.length;
+  const count = useStore((s) => s.cartProducts.length);
 
   if (count <= 0) return null;
 
-  return <span className={className}>{count}</span>;
+  return (
+    <span className={className} data-cart-count={count}>
+      {count}
+    </span>
+  );
 }

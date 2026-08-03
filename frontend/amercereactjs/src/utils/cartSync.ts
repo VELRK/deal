@@ -7,6 +7,8 @@ import {
 } from "@/context/store";
 import { useAuthStore } from "@/store/authStore";
 
+const TOMBSTONE_STORAGE_KEY = "sk_cart_removed";
+
 function mapApiItemToCartProduct(item: CartItem): CartProduct {
   const price = Number(item.effective_price ?? item.sale_price ?? item.price ?? 0);
   const variantId =
@@ -47,15 +49,45 @@ export function isSameCartLine(
 /** Monotonic clock bumped on every local cart edit (add/remove). */
 let localCartEpoch = 0;
 
-/** Lines the user removed on web — filter these out of server pulls until login merge. */
-const removedLineKeys = new Set<string>();
+/** Lines the user removed on web — persist so login sync cannot resurrect them. */
+const removedLineKeys = new Set<string>(loadTombstones());
+
+function loadTombstones(): string[] {
+  try {
+    const raw = sessionStorage.getItem(TOMBSTONE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistTombstones(): void {
+  try {
+    sessionStorage.setItem(
+      TOMBSTONE_STORAGE_KEY,
+      JSON.stringify([...removedLineKeys]),
+    );
+  } catch {
+    /* ignore */
+  }
+}
 
 function lineKey(productId: ProductId, variantId?: number | null): string {
   const vid =
-    variantId != null && !Number.isNaN(Number(variantId))
+    variantId != null && String(variantId) !== "" && !Number.isNaN(Number(variantId))
       ? String(Number(variantId))
       : "";
   return `${String(productId)}:${vid}`;
+}
+
+function parseLineKey(key: string): { productId: number; variantId?: number } {
+  const [pid, vid = ""] = key.split(":");
+  return {
+    productId: Number(pid),
+    ...(vid ? { variantId: Number(vid) } : {}),
+  };
 }
 
 function bumpLocalCartEpoch(): number {
@@ -67,16 +99,46 @@ export function getLocalCartEpoch(): number {
   return localCartEpoch;
 }
 
+function rememberRemovedLine(productId: ProductId, variantId?: number | null): void {
+  removedLineKeys.add(lineKey(productId, variantId ?? null));
+  persistTombstones();
+}
+
+function forgetRemovedLine(productId: ProductId, variantId?: number | null): void {
+  removedLineKeys.delete(lineKey(productId, variantId));
+  if (variantId == null) removedLineKeys.delete(lineKey(productId, null));
+  persistTombstones();
+}
+
+function clearTombstones(): void {
+  removedLineKeys.clear();
+  persistTombstones();
+}
+
 function filterRemovedServerItems(items: CartItem[]): CartItem[] {
   if (removedLineKeys.size === 0) return items;
   return items.filter((item) => {
     const pid = item.product_id;
     const vid = item.variant_id != null ? Number(item.variant_id) : null;
     if (removedLineKeys.has(lineKey(pid, vid))) return false;
-    // Also drop if we tombstoned the product with no variant (removed all variants)
     if (removedLineKeys.has(lineKey(pid, null))) return false;
     return true;
   });
+}
+
+/** Push pending web-removes to the authenticated user cart. */
+async function flushTombstonesToServer(): Promise<void> {
+  const keys = [...removedLineKeys];
+  for (const key of keys) {
+    const { productId, variantId } = parseLineKey(key);
+    if (!productId) continue;
+    await cartAPI
+      .remove({
+        product_id: productId,
+        ...(variantId != null ? { variant_id: variantId } : {}),
+      })
+      .catch(() => null);
+  }
 }
 
 /**
@@ -93,9 +155,7 @@ export async function addLineToCart(
 
   useStore.getState().addProductToCart(item, quantity);
   bumpLocalCartEpoch();
-  // Re-adding clears the tombstone so sync can keep it.
-  removedLineKeys.delete(lineKey(item.id, variantId));
-  if (variantId == null) removedLineKeys.delete(lineKey(item.id, null));
+  forgetRemovedLine(item.id, variantId);
 
   try {
     const res = await cartAPI.add({
@@ -107,12 +167,11 @@ export async function addLineToCart(
     });
     const items = res.data?.data?.items;
     if (Array.isArray(items)) {
-      applyServerCartItems(items);
+      applyServerCartItems(filterRemovedServerItems(items));
       bumpLocalCartEpoch();
     }
     return true;
   } catch {
-    /* keep optimistic local line if API fails */
     return false;
   }
 }
@@ -120,8 +179,8 @@ export async function addLineToCart(
 /**
  * Remove a line from local cart by index (preferred) or loose id match.
  * Always updates Zustand first so the badge/drawer drop immediately.
- * Then best-effort API delete; when logged in, apply server items only if
- * they are not larger than the local cart (avoids resurrecting removed lines).
+ * Guest / after-logout: local-only (API session cart is empty; applying it
+ * would wipe or ignore the remove). Removals are tombstoned and flushed on login.
  */
 export function removeLineFromCart(
   id: ProductId,
@@ -133,7 +192,6 @@ export function removeLineFromCart(
   let next: CartProduct[];
 
   if (typeof index === "number" && index >= 0 && index < prev.length) {
-    // Trust the visible row index — id check was too brittle with mixed types.
     removed = prev[index];
     next = prev.filter((_, i) => i !== index);
   } else {
@@ -141,8 +199,12 @@ export function removeLineFromCart(
     next = prev.filter((p) => !isSameCartLine(p, id, variantId));
   }
 
-  const epochAtRemove = bumpLocalCartEpoch();
-  useStore.getState().setCartProducts(next);
+  // Fallback: drop by product id if variant match failed
+  if (next.length === prev.length) {
+    removed = prev.find((p) => String(p.id) === String(id));
+    next = prev.filter((p) => String(p.id) !== String(id));
+  }
+  if (next.length === prev.length) return;
 
   const pid = Number(removed?.id ?? id);
   const vid =
@@ -152,28 +214,27 @@ export function removeLineFromCart(
         ? Number(variantId)
         : undefined;
 
-  removedLineKeys.add(lineKey(pid, vid ?? null));
+  bumpLocalCartEpoch();
+  rememberRemovedLine(pid, vid ?? null);
+  useStore.getState().setCartProducts(next);
 
+  // Guests: local-only. Session API is empty after logout and must not run.
+  if (!useAuthStore.getState().isLoggedIn) return;
+
+  const epochAtRemove = getLocalCartEpoch();
   void (async () => {
     try {
       const res = await cartAPI.remove({
         product_id: pid,
         ...(vid != null && !Number.isNaN(vid) ? { variant_id: vid } : {}),
       });
-      // A newer local edit won — do not clobber.
       if (getLocalCartEpoch() !== epochAtRemove) return;
-
-      // Guest session after logout is often empty while local still has the
-      // former user cart. Never replace local from the remove response —
-      // local already dropped the one line; applying [] would wipe the rest.
-      if (!useAuthStore.getState().isLoggedIn) return;
 
       const items = res.data?.data?.items;
       if (!Array.isArray(items)) return;
 
       const filtered = filterRemovedServerItems(items);
       const localNow = useStore.getState().cartProducts;
-      // Only sync prices/stock when server matches local size (successful delete).
       if (filtered.length !== localNow.length) return;
 
       applyServerCartItems(filtered);
@@ -184,13 +245,8 @@ export function removeLineFromCart(
 }
 
 /**
- * After login/register: merge guest session cart (sk_sid) into the user cart,
- * then replace local Zustand with the server cart.
- *
- * Logout flow (do not clear sk_sid or local cart):
- * 1) Logged-in cart stays on user_id in DB; local badge still shows it.
- * 2) Guest adds after logout go to X-Session-ID (sk_sid).
- * 3) On login, merge(sk_sid) moves guest lines into user_id, then we pull.
+ * After login/register: flush web-removes to user cart, merge guest session,
+ * then pull server cart.
  */
 export async function syncCartFromServer(): Promise<void> {
   const epochAtStart = getLocalCartEpoch();
@@ -198,22 +254,26 @@ export async function syncCartFromServer(): Promise<void> {
     const sid = localStorage.getItem("sk_sid") || undefined;
     await cartAPI.merge(sid ? { session_id: sid } : {}).catch(() => null);
 
-    // Abort if user logged out while this sync was in flight.
     if (!useAuthStore.getState().isLoggedIn) return;
+
+    // Apply removals done while logged out / guest against the user cart.
+    if (removedLineKeys.size > 0) {
+      await flushTombstonesToServer();
+    }
 
     let res = await cartAPI.products();
     let items: CartItem[] = res.data?.data?.items ?? [];
 
-    // Re-read AFTER awaits — a remove/add may have happened during the request.
     let local = useStore.getState().cartProducts;
     const mutatedDuringSync = getLocalCartEpoch() !== epochAtStart;
 
-    // Web-only cart (never reached API) would otherwise be wiped on refresh.
-    // Skip re-push if the user edited the cart while this sync was in flight.
     if (items.length === 0 && local.length > 0 && !mutatedDuringSync) {
       for (const p of local) {
         const vid =
           p.selectedVariantId != null ? Number(p.selectedVariantId) : undefined;
+        // Skip lines the user already removed
+        if (removedLineKeys.has(lineKey(p.id, vid ?? null))) continue;
+        if (removedLineKeys.has(lineKey(p.id, null))) continue;
         await cartAPI
           .add({
             product_id: Number(p.id),
@@ -231,18 +291,17 @@ export async function syncCartFromServer(): Promise<void> {
     if (!useAuthStore.getState().isLoggedIn) return;
 
     local = useStore.getState().cartProducts;
-    // Local remove/add won the race against this in-flight pull — keep local.
     if (getLocalCartEpoch() !== epochAtStart && local.length < items.length) {
       return;
     }
 
     const filtered = filterRemovedServerItems(items);
-    // If tombstones left us shorter than local, keep local (guest leftovers).
-    if (filtered.length < local.length && getLocalCartEpoch() !== epochAtStart) {
-      return;
-    }
-
     applyServerCartItems(filtered);
+
+    // Server now matches removals — clear tombstones.
+    if (filtered.length === useStore.getState().cartProducts.length) {
+      clearTombstones();
+    }
   } catch {
     /* keep local cart on network failure */
   }
@@ -250,6 +309,5 @@ export async function syncCartFromServer(): Promise<void> {
 
 /** Call immediately after login()/register sets the JWT. */
 export async function afterLoginCartSync(): Promise<void> {
-  removedLineKeys.clear();
   await syncCartFromServer();
 }
