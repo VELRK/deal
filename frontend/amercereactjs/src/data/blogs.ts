@@ -289,7 +289,7 @@ export const blogHeadphonePosts: BlogPost[] = [
     alt: "Image",
     date: "13 August",
     title: "ANC Technology Explained How It Works",
-    desc: "Demystify ANC technology and understand how our Indian Ladies Fashion headphones block out the world for pure pleasure.",
+    desc: "Demystify ANC technology and understand how our 2Deal headphones block out the world for pure pleasure.",
   },
   {
     id: "38",

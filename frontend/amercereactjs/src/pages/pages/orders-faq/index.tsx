@@ -6,8 +6,8 @@ const PageOrdersFaq = () => {
   return (
     <>
       <PageMeta
-        title="Orders FAQs | Indian Ladies Fashion"
-        description="Find answers to frequently asked questions about Indian Ladies Fashion orders, custom tailoring measurements, Aari embroidery timetables, bulk orders, and return policies."
+        title="Orders FAQs | 2Deal"
+        description="Find answers to frequently asked questions about 2Deal orders, custom tailoring measurements, Aari embroidery timetables, bulk orders, and return policies."
       />
       <PageTitle />
       <OrdersFaqContent />

@@ -188,7 +188,7 @@ export default function Footer4() {
       </div>
       <div className="footer-hero-text">
         <div className="container-full">
-          <span className="text-white fw-semibold">Indian Ladies Fashion STORE</span>
+          <span className="text-white fw-semibold">2Deal STORE</span>
         </div>
       </div>
       <div className="footer-bottom position-relative">
@@ -196,7 +196,7 @@ export default function Footer4() {
         <div className="container-full">
           <div className="inner-bottom lg-justify-content-center">
             <p className="text-nocopy cl-text-3">
-              ©2026 Indian Ladies Fashion. All Rights Reserved.
+              ©2026 2Deal. All Rights Reserved.
             </p>
             <ul className="tf-list payment-list">
               <li>

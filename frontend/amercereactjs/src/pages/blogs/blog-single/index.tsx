@@ -89,7 +89,7 @@ export default function BlogSingleDynamicPage() {
                       <span className="br-line type-vertical" />
                       <div className="meta-item d-flex align-items-center gap-1">
                         <i className="icon icon-User" />
-                        <span className="text-body-1 cl-text-2">by {blog.author || "Indian Ladies Fashion"}</span>
+                        <span className="text-body-1 cl-text-2">by {blog.author || "2Deal"}</span>
                       </div>
                     </div>
                   </div>

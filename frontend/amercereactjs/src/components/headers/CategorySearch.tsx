@@ -8,8 +8,7 @@ export default function CategorySearch({
 }) {
   const navigate = useNavigate();
   const { categories } = useCategories();
-  const [isOpen, setIsOpen]     = useState(false);
-  const [selected, setSelected] = useState<ApiCategory | null>(null);
+  const [selectedSlug, setSelectedSlug] = useState<string>("");
   const [query, setQuery]       = useState("");
 
   function handleSubmit(e: React.FormEvent) {
@@ -19,36 +18,44 @@ export default function CategorySearch({
 
     const params = new URLSearchParams();
     params.set("q", q);
-    if (selected?.slug) params.set("category_slug", selected.slug);
+    if (selectedSlug) params.set("category_slug", selectedSlug);
     navigate(`/shop-default?${params.toString()}`);
-    setIsOpen(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className={parentClass}>
-      <div className="select-category">
-        <div
-          className={`tf-select-custom ${isOpen ? "active" : ""}`}
-          onClick={() => setIsOpen(!isOpen)}
+      <div className="select-category" style={{ position: "relative" }}>
+        <select
+          className="tf-select-custom"
+          value={selectedSlug}
+          onChange={(e) => setSelectedSlug(e.target.value)}
+          style={{
+            appearance: "none",
+            WebkitAppearance: "none",
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            cursor: "pointer",
+            width: "100%",
+            height: "100%",
+            padding: "0 30px 0 15px",
+            fontSize: "14px",
+            fontWeight: 500,
+            color: "var(--main-color)",
+          }}
         >
-          {selected?.name ?? "All Categories"}
-        </div>
-        <ul className="select-options" style={{ display: isOpen ? "block" : "none" }}>
-          <div className="header-select-option">
-            <span>Select Category</span>
-            <span className="close-option" onClick={() => setIsOpen(false)}>
-              <i className="icon-X2" />
-            </span>
-          </div>
-          <li onClick={() => { setSelected(null); setIsOpen(false); }}>
-            All Categories
-          </li>
+          <option value="">All Categories</option>
           {categories.map((cat) => (
-            <li key={cat.id} onClick={() => { setSelected(cat); setIsOpen(false); }}>
-              {cat.name}
-            </li>
+            <optgroup label={cat.name} key={cat.id}>
+              <option value={cat.slug}>{cat.name} (All)</option>
+              {cat.children?.map((sub) => (
+                <option key={sub.id} value={sub.slug}>
+                  {sub.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
-        </ul>
+        </select>
       </div>
       <span className="br-line type-vertical" />
       <fieldset className="fieldset-search">

@@ -22,7 +22,7 @@ export default function AccountSetting() {
     return d.startsWith(MY_COUNTRY_CODE) ? "0" + d.slice(MY_COUNTRY_CODE.length) : d;
   });
   const currentEmail = user?.email ?? "";
-  const isPhoneOnly = currentEmail.startsWith("ph_") || currentEmail.includes("@Indian Ladies Fashion.app");
+  const isPhoneOnly = currentEmail.startsWith("ph_") || currentEmail.includes("@2Deal.app");
   const [email, setEmail] = useState(isPhoneOnly ? "" : currentEmail);
 
   const [saving, setSaving] = useState(false);
@@ -213,17 +213,17 @@ export default function AccountSetting() {
 
               <div className="col-12 mb-4">
                 <label className="form-label-custom">Phone Number</label>
-              <div className="d-flex align-items-center form-input-custom" style={{ padding: 0, overflow: "hidden" }}>
-                <span className="px-3 fw-medium" style={{ backgroundColor: "#f8fafc", borderRight: "1px solid #e2e8f0", alignSelf: "stretch", display: "flex", alignItems: "center" }}>+{MY_COUNTRY_CODE}</span>
-                <input
-                  className="form-input-custom"
-                  type="tel"
-                  value={formatMalaysiaDisplay(phone)}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
-                  placeholder="12-345 6789"
-                  style={{ border: "none", borderRadius: 0 }}
-                />
-              </div>
+                <div className="d-flex align-items-center form-input-custom" style={{ padding: 0, overflow: "hidden" }}>
+                  <span className="px-3 fw-medium" style={{ backgroundColor: "#f8fafc", borderRight: "1px solid #e2e8f0", alignSelf: "stretch", display: "flex", alignItems: "center" }}>+{MY_COUNTRY_CODE}</span>
+                  <input
+                    className="form-input-custom"
+                    type="tel"
+                    value={formatMalaysiaDisplay(phone)}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                    placeholder="12-345 6789"
+                    style={{ border: "none", borderRadius: 0 }}
+                  />
+                </div>
               </div>
 
               <div className="col-12 mb-4">

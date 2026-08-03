@@ -12,11 +12,9 @@ function Offers() {
   return (
     <div className="flat-spacing">
       <div className="container">
-        <div className="d-flex justify-content-center align-items-center position-relative" style={{ marginBottom: "2.5rem" }}>
-          <a href="#popular" role="tab" aria-selected className="tf-btn-tab py-4 active">
-            <h2 style={{ fontSize: "36px", color: "#54101d", fontFamily: "serif", fontWeight: "normal", margin: 0 }}>Offer Collections</h2>          </a>
-          <a href="/shop-default" className="text-decoration-underline position-absolute end-0" style={{ color: "#3ec1bc", fontWeight: "500", fontSize: "14px" }}>
-            View All
+        <div className="d-flex justify-content-center align-items-center" style={{ marginBottom: "2.5rem" }}>
+          <a href="#popular" role="tab" aria-selected className="tf-btn-tab active text-center">
+            <h2 style={{ fontSize: "clamp(28px, 6vw, 36px)", color: "#54101d", fontFamily: "serif", fontWeight: "normal", margin: 0 }}>Offer Collections</h2>
           </a>
         </div>
 

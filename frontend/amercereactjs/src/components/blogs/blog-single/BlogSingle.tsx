@@ -270,7 +270,7 @@ export default function BlogSingle({
                             />
                           </div>
                           <div className="info_author">
-                            <h6 className="author__name">Reply From Indian Ladies Fashion</h6>
+                            <h6 className="author__name">Reply From 2Deal</h6>
                             <p className="author_date text-caption-01 cl-text-3">
                               1 days ago
                             </p>

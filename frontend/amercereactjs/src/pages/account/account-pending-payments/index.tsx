@@ -27,7 +27,7 @@ export default function AccountPendingPaymentsPage() {
   return (
     <>
       <PageMeta
-        title="Pending Payments | Indian Ladies Fashion"
+        title="Pending Payments | 2Deal"
         description="View and clear your pending payments and checkout invoices."
       />
       <AccountSection title="Pending Payments">

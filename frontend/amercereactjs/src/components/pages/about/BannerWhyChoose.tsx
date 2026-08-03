@@ -36,7 +36,7 @@
                     data-bs-parent="#accordion-v2"
                   >
                     <p className="faq-content cl-text-2">
-                      Welcome to Indian Ladies Fashion Store, your premier destination for
+                      Welcome to 2Deal Store, your premier destination for
                       fashion-forward clothing accessories. We pride ourselves
                       on offering a curated selection of rare beautiful items
                       sourced both locally and globally. Our mission is to bring
@@ -63,7 +63,7 @@
                     data-bs-parent="#accordion-v2"
                   >
                     <p className="faq-content cl-text-2">
-                      Welcome to Indian Ladies Fashion Store, your premier destination for
+                      Welcome to 2Deal Store, your premier destination for
                       fashion-forward clothing accessories. We pride ourselves
                       on offering a curated selection of rare beautiful items
                       sourced both locally and globally. Our mission is to bring
@@ -90,7 +90,7 @@
                     data-bs-parent="#accordion-v2"
                   >
                     <p className="faq-content cl-text-2">
-                      Welcome to Indian Ladies Fashion Store, your premier destination for
+                      Welcome to 2Deal Store, your premier destination for
                       fashion-forward clothing accessories. We pride ourselves
                       on offering a curated selection of rare beautiful items
                       sourced both locally and globally. Our mission is to bring
@@ -117,7 +117,7 @@
                     data-bs-parent="#accordion-v2"
                   >
                     <p className="faq-content cl-text-2">
-                      Welcome to Indian Ladies Fashion Store, your premier destination for
+                      Welcome to 2Deal Store, your premier destination for
                       fashion-forward clothing accessories. We pride ourselves
                       on offering a curated selection of rare beautiful items
                       sourced both locally and globally. Our mission is to bring

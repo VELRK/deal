@@ -189,7 +189,7 @@ export default function Footer2() {
         <div className="container">
           <div className="inner-bottom">
             <p className="text-nocopy cl-text-2">
-              ©2026 Indian Ladies Fashion. All Rights Reserved.
+              ©2026 2Deal. All Rights Reserved.
             </p>
             <ul className="tf-list payment-list">
               <li>

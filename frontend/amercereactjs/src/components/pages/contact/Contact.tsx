@@ -77,7 +77,7 @@ function Contact() {
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 1.5px;
-          color: #c11069;
+          color: #3ec1bc;
           text-transform: uppercase;
           margin-bottom: 6px;
         }
@@ -141,7 +141,7 @@ function Contact() {
           color: #1a1a1a;
           margin-bottom: 6px;
         }
-        .contact-label .req { color: #c11069; margin-left: 2px; }
+        .contact-label .req { color: #3ec1bc; margin-left: 2px; }
 
         .contact-input,
         .contact-textarea {
@@ -161,8 +161,8 @@ function Contact() {
         .contact-textarea::placeholder { color: #b0b0b0; }
         .contact-input:focus,
         .contact-textarea:focus {
-          border-color: #c11069;
-          box-shadow: 0 0 0 3px rgba(193,16,105,0.09);
+          border-color: #3ec1bc;
+          box-shadow: 0 0 0 3px rgba(62,193,188,0.09);
         }
         .contact-textarea { resize: none; line-height: 1.6; }
 
@@ -179,7 +179,7 @@ function Contact() {
           height: 15px;
           min-width: 15px;
           margin-top: 2px;
-          accent-color: #c11069;
+          accent-color: #3ec1bc;
           cursor: pointer;
         }
         .contact-consent-text {
@@ -187,7 +187,7 @@ function Contact() {
           color: #555;
           line-height: 1.5;
         }
-        .contact-consent-text .req { color: #c11069; margin-left: 2px; }
+        .contact-consent-text .req { color: #3ec1bc; margin-left: 2px; }
 
         .contact-privacy {
           font-size: 12.5px;
@@ -218,7 +218,7 @@ function Contact() {
           transition: background 0.2s, transform 0.1s;
           font-family: inherit;
         }
-        .contact-submit:hover:not(:disabled) { background: #c11069; }
+        .contact-submit:hover:not(:disabled) { background: #3ec1bc; }
         .contact-submit:active:not(:disabled) { transform: scale(0.99); }
         .contact-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -262,7 +262,7 @@ function Contact() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #c11069;
+          color: #3ec1bc;
         }
         .contact-icon-box svg {
           width: 20px;
@@ -397,7 +397,7 @@ function Contact() {
                   onChange={(e) => setC1(e.target.checked)}
                 />
                 <span className="contact-consent-text">
-                  I agree to receive communication messages from Indian Ladies Fashion.
+                  I agree to receive communication messages from 2Deal.
                   <span className="req">*</span>
                 </span>
               </label>
@@ -408,13 +408,13 @@ function Contact() {
                   onChange={(e) => setC2(e.target.checked)}
                 />
                 <span className="contact-consent-text">
-                  I consent to Indian Ladies Fashion storing my submitted data.
+                  I consent to 2Deal storing my submitted data.
                   <span className="req">*</span>
                 </span>
               </label>
 
               <p className="contact-privacy">
-                Indian Ladies Fashion is committed to protecting your privacy per our{" "}
+                2Deal is committed to protecting your privacy per our{" "}
                 <a href="#">Privacy Policy</a>. We may occasionally contact you about
                 our products and services.
               </p>
@@ -447,8 +447,8 @@ function Contact() {
 
               <div className="contact-map">
                 <iframe
-                  title="Indian Ladies Fashion Location"
-                  src="https://maps.google.com/maps?ll=11.0779,77.0130&z=15&output=embed&t=m&q=Saravanampatti+Coimbatore+Tamil+Nadu+641035"
+                  title="2Deal Location"
+                  src="https://maps.google.com/maps?q=Kawasan%20Industri%20Taman%20Bukit%20Maluri,%2052100%20Kepong%20Kuala%20Lumpur,%20Malaysia&t=m&z=15&output=embed"
                   allowFullScreen
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
@@ -463,7 +463,7 @@ function Contact() {
                   </div>
                   <div>
                     <div className="contact-info-label">Email us</div>
-                    <div className="contact-info-val">info@indianladiesfashion.in</div>
+                    <div className="contact-info-val">golden2deal@gmail.com</div>
                   </div>
                 </div>
 
@@ -474,7 +474,7 @@ function Contact() {
                   </div>
                   <div>
                     <div className="contact-info-label">Call us</div>
-                    <div className="contact-info-val">+91 95972 20129</div>
+                    <div className="contact-info-val">[Your Phone Number]</div>
                   </div>
                 </div>
 
@@ -486,8 +486,10 @@ function Contact() {
                   <div>
                     <div className="contact-info-label">Headquarters</div>
                     <div className="contact-info-val">
-                      Indian Ladies Fashion, Saravanampatti<br />
-                      Coimbatore – 641035, Tamil Nadu
+                      GOLDEN 2 DEAL (M) SDN. BHD.<br />
+                      Lot No. 2A/9 Anzen Business Park, No. 3-9, Jalan 4/37A,<br />
+                      Kawasan Industri Taman Bukit Maluri,<br />
+                      52100 Kepong Kuala Lumpur, Malaysia
                     </div>
                   </div>
                 </div>

@@ -4,7 +4,7 @@ function AboutContent() {
       {/* Self-contained Premium Styles */}
       <style>{`
         .bg-light-pink-subtle {
-          background-color: #fdfafb;
+          background-color: #ffffff;
           padding: 60px 0;
           font-family: 'Inter', sans-serif;
         }
@@ -20,8 +20,8 @@ function AboutContent() {
           background: #ffffff;
           border-radius: 20px;
           overflow: hidden;
-          box-shadow: 0 6px 24px rgba(193, 16, 105, 0.03);
-          border: 1px solid rgba(193, 16, 105, 0.05);
+          box-shadow: 0 6px 24px rgba(62, 193, 188, 0.03);
+          border: 1px solid rgba(62, 193, 188, 0.05);
           margin-bottom: 50px;
         }
 
@@ -43,13 +43,14 @@ function AboutContent() {
           }
           .about-hero-image-wrap {
             min-height: 250px;
+            display: none; /* Hide on mobile to focus on text */
           }
         }
 
         .about-subtitle {
           font-size: 14px;
           font-weight: 700;
-          color: #c11069;
+          color: #3ec1bc;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           margin-bottom: 12px;
@@ -91,7 +92,7 @@ function AboutContent() {
           position: absolute;
           width: 50px;
           height: 3px;
-          background-color: #c11069;
+          background-color: #3ec1bc;
           bottom: 0;
           left: 50%;
           transform: translateX(-50%);
@@ -124,33 +125,31 @@ function AboutContent() {
           box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02);
           border: 1px solid rgba(0, 0, 0, 0.03);
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-          text-align: center;
         }
 
         .specialty-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 10px 28px rgba(193, 16, 105, 0.06);
-          border-color: rgba(193, 16, 105, 0.1);
+          box-shadow: 0 10px 28px rgba(62, 193, 188, 0.06);
+          border-color: rgba(62, 193, 188, 0.1);
         }
 
         .specialty-icon-box {
-          width: 60px;
-          height: 60px;
-          background: #faf0f2;
-          border-radius: 50%;
+          width: 50px;
+          height: 50px;
+          background: rgba(62, 193, 188, 0.08);
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 28px;
-          margin: 0 auto 20px auto;
-          color: #c11069;
+          font-size: 24px;
+          margin-bottom: 20px;
+          color: #3ec1bc;
           transition: all 0.3s ease;
         }
 
         .specialty-card:hover .specialty-icon-box {
-          background: #c11069;
+          background: #3ec1bc;
           color: #ffffff;
-          transform: scale(1.08);
         }
 
         .specialty-title {
@@ -167,41 +166,7 @@ function AboutContent() {
           margin-bottom: 0;
         }
 
-        /* Philosophy Callout Block */
-        .philosophy-banner {
-          background: linear-gradient(135deg, #c11069 0%, #920b4e 100%);
-          border-radius: 20px;
-          padding: 48px;
-          color: #ffffff;
-          text-align: center;
-          box-shadow: 0 10px 30px rgba(193, 16, 105, 0.15);
-          margin-bottom: 60px;
-        }
-
-        .philosophy-banner-title {
-          font-size: 24px;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 16px;
-        }
-
-        .philosophy-banner-text {
-          font-size: 16px;
-          line-height: 1.8;
-          max-width: 800px;
-          margin: 0 auto;
-          opacity: 0.95;
-        }
-
-        .philosophy-callout {
-          font-size: 18px;
-          font-weight: 500;
-          border-top: 1px dashed rgba(255, 255, 255, 0.2);
-          padding-top: 20px;
-          margin-top: 20px;
-        }
-
-        /* Twin Lists (Philosophy vs Why Choose Us) */
+        /* Twin Lists */
         .twin-sections {
           background: #ffffff;
           border-radius: 20px;
@@ -223,14 +188,14 @@ function AboutContent() {
           color: #111111;
           margin-bottom: 24px;
           padding-bottom: 12px;
-          border-bottom: 2px solid rgba(193, 16, 105, 0.08);
+          border-bottom: 2px solid rgba(62, 193, 188, 0.08);
           display: flex;
           align-items: center;
           gap: 10px;
         }
 
         .twin-column-title-icon {
-          color: #c11069;
+          color: #3ec1bc;
           font-size: 22px;
         }
 
@@ -255,8 +220,38 @@ function AboutContent() {
           content: "✦";
           position: absolute;
           left: 0;
-          color: #c11069;
+          color: #3ec1bc;
           font-weight: bold;
+        }
+
+        /* Products Overview Grid */
+        .products-overview {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .product-badge {
+          background: rgba(62, 193, 188, 0.08);
+          color: #3ec1bc;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+          border: 1px solid rgba(62, 193, 188, 0.1);
+        }
+
+        /* Policy Alert */
+        .policy-alert {
+          background: #ffffff;
+          border-left: 4px solid #3ec1bc;
+          padding: 20px;
+          border-radius: 0 12px 12px 0;
+          font-size: 14px;
+          color: #555555;
+          margin-top: 40px;
+          line-height: 1.6;
         }
 
         /* Store Location Card */
@@ -264,16 +259,16 @@ function AboutContent() {
           background: #ffffff;
           border-radius: 20px;
           padding: 40px;
-          box-shadow: 0 6px 24px rgba(193, 16, 105, 0.03);
-          border: 1px solid rgba(193, 16, 105, 0.05);
+          box-shadow: 0 6px 24px rgba(62, 193, 188, 0.03);
+          border: 1px solid rgba(62, 193, 188, 0.05);
           text-align: center;
         }
 
         .store-icon-wrapper {
           width: 50px;
           height: 50px;
-          background: #faf0f2;
-          color: #c11069;
+          background: rgba(62, 193, 188, 0.08);
+          color: #3ec1bc;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -297,26 +292,34 @@ function AboutContent() {
           margin: 0 auto 24px auto;
         }
 
-        .store-phone-box {
-          font-size: 16px;
-          color: #111111;
-          font-weight: 600;
-          display: inline-block;
-          background: #faf0f2;
-          padding: 10px 24px;
-          border-radius: 30px;
-          border: 1px solid rgba(193, 16, 105, 0.1);
+        .store-contact-row {
+          display: flex;
+          justify-content: center;
+          gap: 15px;
+          flex-wrap: wrap;
         }
 
-        .store-phone-link {
-          color: #c11069;
+        .store-contact-box {
+          font-size: 15px;
+          color: #111111;
+          font-weight: 600;
+          background: rgba(62, 193, 188, 0.08);
+          padding: 10px 24px;
+          border-radius: 30px;
+          border: 1px solid rgba(62, 193, 188, 0.1);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .store-contact-link {
+          color: #3ec1bc;
           text-decoration: none;
-          margin-left: 6px;
           transition: color 0.2s;
         }
 
-        .store-phone-link:hover {
-          color: #920b4e;
+        .store-contact-link:hover {
+          color: #3ec1bc;
           text-decoration: underline;
         }
       `}</style>
@@ -324,158 +327,156 @@ function AboutContent() {
       <div className="about-container">
         {/* Intro Hero Section */}
         <div className="about-hero-card">
-          <div className="row g-0 align-items-stretch">
-            <div className="col-lg-5 col-md-12 d-none d-lg-block">
-              <div className="about-hero-image-wrap" />
-            </div>
-            <div className="col-lg-7 col-md-12">
+          <div className="row g-0 align-items-center">
+            <div className="col-lg-12">
               <div className="about-hero-content">
-                <span className="about-subtitle">Welcome to our boutique</span>
-                <h2 className="about-hero-title">Indian Ladies Fashion</h2>
+                <span className="about-subtitle">Who We Are</span>
+                <h2 className="about-hero-title">Welcome to Golden2Deal (M) Sdn Bhd</h2>
                 <div className="about-hero-text">
                   <p>
-                    We are your premier destination for elegant ethnic fashion, customized tailoring, and timeless handcrafted designs in Coimbatore.
+                    We are driven by a simple mission: to deliver quality products with unmatched service. Since our inception, we have grown into a trusted name in the market by putting our customers first and maintaining the highest standards in everything we do.
                   </p>
                   <p>
-                    Located opposite the SNS Tech Arch on Sathy Main Road, Saravanampatti, we bring together traditional craftsmanship and modern styling to create outfits that celebrate every woman’s individuality.
+                    Our team is built on integrity, commitment, and innovation. We believe in long-term relationships and work closely with our clients and partners to ensure satisfaction at every step. At Pathi, it’s not just about selling—it’s about delivering value.
                   </p>
+                </div>
+                
+                <h4 className="mt-4 mb-3 fs-5 fw-bold text-dark">Our Products</h4>
+                <div className="products-overview">
+                  <span className="product-badge">Incense Sticks</span>
+                  <span className="product-badge">Dhoop Sticks</span>
+                  <span className="product-badge">Sambrani Cones</span>
+                  <span className="product-badge">Soaps</span>
+                  <span className="product-badge">Food Products</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Specialties Section */}
+        {/* E-Commerce App Features Section */}
         <div className="section-heading-custom">
-          <h3 className="section-heading-title">What We Specialize In</h3>
+          <h3 className="section-heading-title">E-Commerce Experience</h3>
         </div>
 
         <div className="specialty-grid">
-          {/* Saree collections */}
+          {/* UI */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">🛍️</div>
-            <h4 className="specialty-title">Premium Saree Collections</h4>
+            <div className="specialty-icon-box">🔧</div>
+            <h4 className="specialty-title">User Interface (UI)</h4>
             <p className="specialty-desc">
-              Explore our handpicked curation of elegant festive and casual sarees representing fine craftsmanship.
+              Shows featured products, offers, and categories. Users can search for products and filter by price, category, brand, etc.
             </p>
           </div>
 
-          {/* Customized blouse */}
+          {/* Cart */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">✂️</div>
-            <h4 className="specialty-title">Customized Blouse Stitching</h4>
+            <div className="specialty-icon-box">🛒</div>
+            <h4 className="specialty-title">Shopping Cart</h4>
             <p className="specialty-desc">
-              Flawless tailors design blouses customized according to your exact fit and style choices.
+              Users can add products to a virtual shopping cart. They can review their cart, update quantities, or remove items before checkout.
             </p>
           </div>
 
-          {/* Designer salwar */}
+          {/* Checkout */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">🧵</div>
-            <h4 className="specialty-title">Designer Salwar Tailoring</h4>
+            <div className="specialty-icon-box">💳</div>
+            <h4 className="specialty-title">Checkout Process</h4>
             <p className="specialty-desc">
-              Stitching elegant salwar suits, anarkalis, and ethnic wear tailored precisely to your measurements.
+              Users enter their shipping address and payment details. The app may offer various payment methods: credit/debit card, PayPal, UPI, etc.
             </p>
           </div>
 
-          {/* Bespoke Aari embroidery */}
+          {/* Auth */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">🪡</div>
-            <h4 className="specialty-title">Bespoke Aari Embroidery</h4>
+            <div className="specialty-icon-box">🔐</div>
+            <h4 className="specialty-title">Authentication &amp; Accounts</h4>
             <p className="specialty-desc">
-              Timeless, handcrafted bridal and occasion embroidery customized for blouses and ethnic wear.
+              Users can sign up or log in to track orders and save preferences. Some apps also offer a guest checkout.
             </p>
           </div>
 
-          {/* Traditional & Festive */}
+          {/* Orders */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">✨</div>
-            <h4 className="specialty-title">Traditional &amp; Festive Wear</h4>
+            <div className="specialty-icon-box">🚚</div>
+            <h4 className="specialty-title">Order Processing</h4>
             <p className="specialty-desc">
-              Made-to-order ethnic wear, carefully crafted to elevate your presence on your special celebrations.
+              Once payment is confirmed, the order goes to the backend system. The seller is notified to pack and ship the order.
             </p>
           </div>
 
-          {/* Consultations */}
+          {/* Delivery */}
           <div className="specialty-card">
-            <div className="specialty-icon-box">📞</div>
-            <h4 className="specialty-title">Personalized Consultations</h4>
+            <div className="specialty-icon-box">📦</div>
+            <h4 className="specialty-title">Delivery &amp; Notifications</h4>
             <p className="specialty-desc">
-              Collaborate directly with our design experts to map out design details and pick the perfect matching fits.
+              Users get notified via email, SMS, or in-app alerts. The app can integrate with logistics APIs to track shipping.
             </p>
           </div>
         </div>
 
-        {/* Philosophy Callout Banner */}
-        <div className="philosophy-banner">
-          <h4 className="philosophy-banner-title">Our Style Philosophy</h4>
-          <p className="philosophy-banner-text">
-            Our boutique is built on a passion for detail, comfort, and perfect fitting. Every design is thoughtfully tailored to reflect grace, confidence, and contemporary elegance while preserving the beauty of Indian tradition.
-          </p>
-          <div className="philosophy-callout">
-            "We believe fashion is personal. That is why our tailoring and embroidery services are carefully customized to suit each customer’s preferences, measurements, and occasion needs."
-          </div>
-        </div>
-
-        {/* Twin Columns: Philosophy details vs Why Choose Us */}
+        {/* Twin Columns: Why Choose Us & Privacy */}
         <div className="twin-sections">
           <div className="row g-4">
-            {/* Style Elements */}
-            <div className="col-md-6">
-              <h4 className="twin-column-title">
-                <span className="twin-column-title-icon">🎨</span>
-                Style Philosophy
-              </h4>
-              <p className="text-muted small mb-3">
-                Whether you are looking for a silk saree, a fitted designer blouse, or custom bridal embroidery:
-              </p>
-              <ul className="premium-list">
-                <li>Traditional silhouettes that respect classic legacy</li>
-                <li>Modern fits designed for today's comfort and ease</li>
-                <li>Handcrafted detailing made with exquisite care</li>
-                <li>Premium quality fabrics sourced with attention</li>
-                <li>Elegant finishing to complete your signature look</li>
-              </ul>
-            </div>
-
             {/* Why Choose Us */}
             <div className="col-md-6">
               <h4 className="twin-column-title">
                 <span className="twin-column-title-icon">✓</span>
-                Why Choose Us
+                Why Choose Us?
               </h4>
-              <p className="text-muted small mb-3">
-                Experience fashion designed with tradition and stitched with precision:
-              </p>
               <ul className="premium-list">
-                <li>Skilled tailoring and design expertise</li>
-                <li>Customized fitting solutions for all silhouettes</li>
-                <li>Exclusive and precise Aari embroidery work</li>
-                <li>Carefully curated saree and ready-made collections</li>
-                <li>Premium quality fabric selections</li>
-                <li>Friendly and helpful customer support desk</li>
-                <li>Elegant, high-quality, and affordable fashion choices</li>
+                <li>Trusted quality and genuine products</li>
+                <li>Competitive pricing</li>
+                <li>Customer-focused service</li>
+                <li>Timely delivery and professional support</li>
+                <li>Quality Assurance</li>
+                <li>Customer-Centric Approach</li>
+                <li>On-Time Delivery</li>
+                <li>Experience &amp; Expertise</li>
               </ul>
+            </div>
+
+            {/* Privacy Policy Note */}
+            <div className="col-md-6">
+              <h4 className="twin-column-title">
+                <span className="twin-column-title-icon">🛡️</span>
+                Privacy &amp; Security
+              </h4>
+              <p className="text-muted mb-0 lh-lg">
+                As an e-commerce mobile application operated by Golden2Deal (M) Sdn Bhd, we are committed to protecting your personal data in compliance with Malaysia's Personal Data Protection Act 2010 (PDPA). This Privacy Policy outlines how we collect, use, disclose, and safeguard your information when you use our mobile application.
+              </p>
+              
+              <div className="policy-alert">
+                <strong>Your Trust Matters:</strong> We employ industry-standard encryption and security measures to ensure your data is always safe with us.
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Visit Our Store */}
+        {/* Visit Our Store / Contact Details */}
         <div className="about-store-card">
-          <div className="store-icon-wrapper">📍</div>
-          <h4 className="store-title">Visit Our Store</h4>
+          <div className="store-icon-wrapper">🏢</div>
+          <h4 className="store-title">Contact 2Deal</h4>
           <div className="store-address">
-            <strong>Indian Ladies Fashion</strong>
+            <strong>GOLDEN 2 DEAL (M) SDN. BHD. (1429727-A)</strong>
             <br />
-            Opposite the SNS Tech Arch, Sathy Main Road,
+            Lot No. 2A/9 Anzen Business Park, No. 3-9, Jalan 4/37A, Kawasan Industri Taman Bukit Maluri, 52100 Kepong Kuala Lumpur.
             <br />
-            Saravanampatti Post, Coimbatore – 641035, Tamil Nadu, India
+            Malaysia
           </div>
-          <div className="store-phone-box">
-            📞 Call Us:{" "}
-            <a href="tel:+919597220129" className="store-phone-link">
-              +91 95972 20129
-            </a>
+          <div className="store-contact-row">
+            <div className="store-contact-box">
+              📞 Phone:
+              <a href="tel:[Your Phone Number]" className="store-contact-link">
+                [Your Phone Number]
+              </a>
+            </div>
+            <div className="store-contact-box">
+              ✉️ Email:
+              <a href="mailto:golden2deal@gmail.com" className="store-contact-link">
+                golden2deal@gmail.com
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -484,3 +485,4 @@ function AboutContent() {
 }
 
 export default AboutContent;
+

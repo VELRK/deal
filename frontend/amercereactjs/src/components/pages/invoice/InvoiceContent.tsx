@@ -5,7 +5,7 @@ function InvoiceContent() {
     <>
       <div className="s-invoice">
         <div className="container">
-          <h1 className="heading fw-semibold text-center">Indian Ladies Fashion. Invoice</h1>
+          <h1 className="heading fw-semibold text-center">2Deal. Invoice</h1>
           <div className="wg-invoice">
             <div className="invoice-head">
               <p className="h4 invoice_number">Number #0079347644</p>
@@ -77,7 +77,7 @@ function InvoiceContent() {
             <ul className="invoice-social">
               <li>
                 <Link to={`/`} className="invoice_link link text-body-1">
-                  www.Indian Ladies Fashion.com
+                  www.2Deal.com
                 </Link>
               </li>
               <li>

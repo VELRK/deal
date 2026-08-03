@@ -10,8 +10,8 @@ function subLink(s: ApiCategory) {
 }
 
 export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { variant2?: boolean; variant3?: boolean }) {
-  const { categories } = useCategories();   // GET /Indian Ladies Fashion-api/categories
-  useNavProducts(2); // GET /Indian Ladies Fashion-api/products?nav_featured=1&limit=2
+  const { categories } = useCategories();   // GET /2Deal-api/categories
+  useNavProducts(2); // GET /2Deal-api/products?nav_featured=1&limit=2
 
   if (!categories.length) return null; // nothing to show while loading
 

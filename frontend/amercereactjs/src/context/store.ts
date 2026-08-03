@@ -155,7 +155,7 @@ export const useStore = create<StoreState>()(
         get().compareItem.some((elm) => elm.id === id),
     }),
     {
-      name: "Indian Ladies Fashion-store",
+      name: "2Deal-store",
       partialize: (state) => ({
         cartProducts: state.cartProducts,
         wishList: state.wishList,

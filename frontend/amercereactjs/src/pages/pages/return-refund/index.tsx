@@ -6,7 +6,7 @@ const ReturnRefundPage = () => {
   return (
     <>
       <PageMeta
-        title="Return & Refund Policy | Indian Ladies Fashion"
+        title="Return & Refund Policy | 2Deal"
         description="Read our Return and Refund Policy carefully before making a purchase. Find details about customized wear terms, sarees exchanges, defect reports, and cancellations."
       />
       <PageTitle />

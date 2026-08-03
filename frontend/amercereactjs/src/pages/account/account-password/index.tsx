@@ -6,7 +6,7 @@ const AccountPasswordPage = () => {
   return (
     <>
       <PageMeta
-        title={"Change Password | Indian Ladies Fashion"}
+        title={"Change Password | 2Deal"}
         description={"Update your account password"}
       />
       <AccountPageTitle heading="Change Password" description="Keep your account secure" />

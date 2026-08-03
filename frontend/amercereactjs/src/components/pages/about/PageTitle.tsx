@@ -15,9 +15,9 @@ function PageTitle() {
             </div>
             <h3>About Us</h3>
             <p className="text-body-1 cl-text-2">
-              Coimbatore's destination for elegant ethnic fashion, precision tailoring,
+              Malaysia's trusted destination for quality incense, lifestyle essentials,
               <br className="d-none d-lg-block" />
-              and timeless handcrafted Aari embroidery.
+              and authentic products.
             </p>
           </div>
         </div>

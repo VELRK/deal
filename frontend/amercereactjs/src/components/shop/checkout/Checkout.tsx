@@ -71,7 +71,7 @@ export default function Checkout() {
   /* ── Address form fields ── */
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  // Ignore system-generated placeholder emails (ph_PHONE@Indian Ladies Fashion.app)
+  // Ignore system-generated placeholder emails (ph_PHONE@2Deal.app)
   const realEmail = (email?: string) =>
     email && !email.startsWith("ph_") ? email : "";
   const [addrEmail, setAddrEmail] = useState(realEmail(user?.email));
@@ -564,7 +564,7 @@ export default function Checkout() {
         product_id: Number(id),
         ...(variantId != null ? { variant_id: variantId } : {}),
       })
-      .catch(() => {});
+      .catch(() => { });
   };
   const setQty = (id: ProductId, qty: number, variantId?: number) => {
     if (qty < 1) {
@@ -578,7 +578,7 @@ export default function Checkout() {
         quantity: qty,
         ...(variantId != null ? { variant_id: variantId } : {}),
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   return (
@@ -599,237 +599,237 @@ export default function Checkout() {
 
             {/* Not-logged-in users are redirected to /login?redirect=/checkout above */}
 
-              <div className="checkout-card">
-                <div className="checkout-header">
-                  <div className="icon">📍</div>
-                  Delivery Address
+            <div className="checkout-card">
+              <div className="checkout-header">
+                <div className="icon">📍</div>
+                Delivery Address
+              </div>
+
+              {/* Skeleton while addresses are loading */}
+              {addressLoading && (
+                <div className="mb-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="address-card skeleton-shimmer mb-3" style={{ cursor: "default" }}>
+                      <div className="skeleton-line" style={{ height: 14, width: "40%", marginBottom: 10 }} />
+                      <div className="skeleton-line" style={{ height: 12, width: "70%", marginBottom: 8 }} />
+                      <div className="skeleton-line" style={{ height: 12, width: "55%" }} />
+                    </div>
+                  ))}
                 </div>
+              )}
 
-                {/* Skeleton while addresses are loading */}
-                {addressLoading && (
-                  <div className="mb-4">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="address-card skeleton-shimmer mb-3" style={{ cursor: "default" }}>
-                        <div className="skeleton-line" style={{ height: 14, width: "40%", marginBottom: 10 }} />
-                        <div className="skeleton-line" style={{ height: 12, width: "70%", marginBottom: 8 }} />
-                        <div className="skeleton-line" style={{ height: 12, width: "55%" }} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!addressLoading && isLoggedIn && addresses.length > 0 && !showAddForm && (
-                  <div className="mb-4 animate-fade-in">
-                    <div className="grid-2">
-                      {addresses.map((a, i) => {
-                        const isSelected = selectedAddr === i;
-                        const labelIcon = a.label === "Work" ? "💼" : a.label === "Hotel" ? "🏨" : a.label === "Parents" ? "👨‍👩‍👧" : "🏠";
-                        return (
-                          <div
-                            key={a.id}
-                            className={`address-card ${isSelected ? 'selected' : ''}`}
-                            onClick={() => { setSelectedAddr(i); applyAddress(a); }}
-                          >
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                              <div className="fw-semibold text-dark d-flex align-items-center gap-2" style={{ fontSize: '13px' }}>
-                                {labelIcon} {a.label ?? "Home"}
-                                {Number(a.is_default) === 1 && <span className="badge address-card-badge">Default</span>}
-                              </div>
-                              <div className="radio-circle">
-                                {isSelected && <div className="radio-inner" />}
-                              </div>
+              {!addressLoading && isLoggedIn && addresses.length > 0 && !showAddForm && (
+                <div className="mb-4 animate-fade-in">
+                  <div className="grid-2">
+                    {addresses.map((a, i) => {
+                      const isSelected = selectedAddr === i;
+                      const labelIcon = a.label === "Work" ? "💼" : a.label === "Hotel" ? "🏨" : a.label === "Parents" ? "👨‍👩‍👧" : "🏠";
+                      return (
+                        <div
+                          key={a.id}
+                          className={`address-card ${isSelected ? 'selected' : ''}`}
+                          onClick={() => { setSelectedAddr(i); applyAddress(a); }}
+                        >
+                          <div className="d-flex justify-content-between align-items-start mb-3">
+                            <div className="fw-semibold text-dark d-flex align-items-center gap-2" style={{ fontSize: '13px' }}>
+                              {labelIcon} {a.label ?? "Home"}
+                              {Number(a.is_default) === 1 && <span className="badge address-card-badge">Default</span>}
                             </div>
-                            <div className="address-card-name">{a.full_name}</div>
-                            <div className="address-card-details">
-                              {a.line1}{a.line2 ? `, ${a.line2}` : ""}<br />
-                              {a.city}, {a.state} – {a.pincode}
-                            </div>
-                            <div className="address-card-phone">
-                              📞 {a.phone}
+                            <div className="radio-circle">
+                              {isSelected && <div className="radio-inner" />}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                    <button type="button" className="tf-btn-line-2 link mt-3" onClick={() => navigate("/account-addresses")}>
-                      + Add New Address
-                    </button>
+                          <div className="address-card-name">{a.full_name}</div>
+                          <div className="address-card-details">
+                            {a.line1}{a.line2 ? `, ${a.line2}` : ""}<br />
+                            {a.city}, {a.state} – {a.pincode}
+                          </div>
+                          <div className="address-card-phone">
+                            📞 {a.phone}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+                  <button type="button" className="tf-btn-line-2 link mt-3" onClick={() => navigate("/account-addresses")}>
+                    + Add New Address
+                  </button>
+                </div>
+              )}
 
-                {!addressLoading && (addresses.length === 0) && (
-                  <div className="address-no-data animate-fade-in">
-                    <div className="address-no-data-icon">📍</div>
-                    <h5 className="address-no-data-title">No Delivery Address Found</h5>
-                    <p className="address-no-data-desc">Please add a delivery address to your account to continue with your order.</p>
-                    <button
-                      type="button"
-                      className="tf-btn animate-btn w-100"
-                      onClick={() => navigate("/account-addresses?redirect=/checkout")}
-                    >
-                      + Add Delivery Address
-                    </button>
-                  </div>
-                )}
+              {!addressLoading && (addresses.length === 0) && (
+                <div className="address-no-data animate-fade-in">
+                  <div className="address-no-data-icon">📍</div>
+                  <h5 className="address-no-data-title">No Delivery Address Found</h5>
+                  <p className="address-no-data-desc">Please add a delivery address to your account to continue with your order.</p>
+                  <button
+                    type="button"
+                    className="tf-btn animate-btn w-100"
+                    onClick={() => navigate("/account-addresses?redirect=/checkout")}
+                  >
+                    + Add Delivery Address
+                  </button>
+                </div>
+              )}
 
-                {!addressLoading && addresses.length > 0 && showAddForm && (
-                  <div className="address-no-data mb-4 animate-fade-in">
-                    <p className="address-no-data-desc mb-3">To add a new address, please use your account settings.</p>
-                    <button
-                      type="button"
-                      className="tf-btn btn-sm animate-btn"
-                      onClick={() => navigate("/account-addresses?redirect=/checkout")}
-                    >
-                      Manage Addresses
-                    </button>
-                    <button type="button" className="tf-btn btn-sm ms-2" style={{ background: 'transparent', color: 'var(--ck-ink-soft)' }} onClick={() => setShowAddForm(false)}>
-                      Cancel
-                    </button>
+              {!addressLoading && addresses.length > 0 && showAddForm && (
+                <div className="address-no-data mb-4 animate-fade-in">
+                  <p className="address-no-data-desc mb-3">To add a new address, please use your account settings.</p>
+                  <button
+                    type="button"
+                    className="tf-btn btn-sm animate-btn"
+                    onClick={() => navigate("/account-addresses?redirect=/checkout")}
+                  >
+                    Manage Addresses
+                  </button>
+                  <button type="button" className="tf-btn btn-sm ms-2" style={{ background: 'transparent', color: 'var(--ck-ink-soft)' }} onClick={() => setShowAddForm(false)}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+              <textarea className="premium-input mt-4 mb-0" placeholder="Order notes" rows={2} value={orderNote} onChange={(e) => setOrderNote(e.target.value)} />
+            </div>
+
+            <div className="checkout-card">
+              <div className="checkout-header">
+                <div className="icon">🧾</div>
+                Billing Address
+              </div>
+              <label className="d-flex align-items-center gap-2 mb-3" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={billingSame}
+                  onChange={(e) => setBillingSame(e.target.checked)}
+                />
+                <span>Same as delivery address</span>
+              </label>
+              {!billingSame && (
+                <div className="animate-fade-in">
+                  <input className="premium-input mb-2" placeholder="Company name (optional)" value={billingCompany} onChange={(e) => setBillingCompany(e.target.value)} />
+                  <input className="premium-input mb-2" placeholder="Full name *" value={billingName} onChange={(e) => setBillingName(e.target.value)} required={!billingSame} />
+                  <input className="premium-input mb-2" placeholder="Phone *" value={billingPhone} onChange={(e) => setBillingPhone(e.target.value)} />
+                  <input className="premium-input mb-2" placeholder="Address line *" value={billingStreet} onChange={(e) => setBillingStreet(e.target.value)} />
+                  <div className="row g-2">
+                    <div className="col-md-4"><input className="premium-input" placeholder="City *" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} /></div>
+                    <div className="col-md-4"><input className="premium-input" placeholder="State *" value={billingState} onChange={(e) => setBillingState(e.target.value)} /></div>
+                    <div className="col-md-4"><input className="premium-input" placeholder="Postcode *" value={billingZip} onChange={(e) => setBillingZip(e.target.value)} /></div>
                   </div>
-                )}
-                <textarea className="premium-input mt-4 mb-0" placeholder="Order notes" rows={2} value={orderNote} onChange={(e) => setOrderNote(e.target.value)} />
+                </div>
+              )}
+            </div>
+
+            <div className="checkout-card">
+              <div className="checkout-header">
+                <div className="icon">💳</div>
+                Payment Method
               </div>
 
-              <div className="checkout-card">
-                <div className="checkout-header">
-                  <div className="icon">🧾</div>
-                  Billing Address
+              <div
+                className={`payment-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod("cod")}
+              >
+                <div className="d-flex align-items-center gap-3">
+                  <div className="radio-circle">
+                    {paymentMethod === 'cod' && <div className="radio-inner" />}
+                  </div>
+                  <div>
+                    <div className="payment-card-title">💵 Cash on Delivery</div>
+                    <div className="payment-card-desc">Pay when your order arrives</div>
+                  </div>
                 </div>
-                <label className="d-flex align-items-center gap-2 mb-3" style={{ cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={billingSame}
-                    onChange={(e) => setBillingSame(e.target.checked)}
-                  />
-                  <span>Same as delivery address</span>
-                </label>
-                {!billingSame && (
-                  <div className="animate-fade-in">
-                    <input className="premium-input mb-2" placeholder="Company name (optional)" value={billingCompany} onChange={(e) => setBillingCompany(e.target.value)} />
-                    <input className="premium-input mb-2" placeholder="Full name *" value={billingName} onChange={(e) => setBillingName(e.target.value)} required={!billingSame} />
-                    <input className="premium-input mb-2" placeholder="Phone *" value={billingPhone} onChange={(e) => setBillingPhone(e.target.value)} />
-                    <input className="premium-input mb-2" placeholder="Address line *" value={billingStreet} onChange={(e) => setBillingStreet(e.target.value)} />
-                    <div className="row g-2">
-                      <div className="col-md-4"><input className="premium-input" placeholder="City *" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} /></div>
-                      <div className="col-md-4"><input className="premium-input" placeholder="State *" value={billingState} onChange={(e) => setBillingState(e.target.value)} /></div>
-                      <div className="col-md-4"><input className="premium-input" placeholder="Postcode *" value={billingZip} onChange={(e) => setBillingZip(e.target.value)} /></div>
+              </div>
+
+              <div
+                className={`payment-card mb-3 ${paymentMethod === 'razorpay' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod("razorpay")}
+              >
+                <div className="d-flex align-items-center gap-3">
+                  <div className="radio-circle">
+                    {paymentMethod === 'razorpay' && <div className="radio-inner" />}
+                  </div>
+                  <div>
+                    <div className="payment-card-title">💳 Online Payment (Malaysia)</div>
+                    <div className="payment-card-desc">FPX · Credit/Debit Card · E-Wallets</div>
+                  </div>
+                </div>
+                {paymentMethod === 'razorpay' && (
+                  <div className="payment-details-razorpay animate-fade-in">
+                    <div className="d-flex gap-2 flex-wrap">
+                      {["FPX", "Visa", "Mastercard", "Touch n Go", "GrabPay"].map((m) => (
+                        <span key={m} className="payment-badge">
+                          {m}
+                        </span>
+                      ))}
                     </div>
+                    <p className="payment-secure-text mb-0">
+                      Secure checkout in MYR (RM)
+                      🔒 Secured by Razorpay — 256-bit SSL encryption
+                    </p>
                   </div>
                 )}
               </div>
 
-              <div className="checkout-card">
-                <div className="checkout-header">
-                  <div className="icon">💳</div>
-                  Payment Method
-                </div>
-
+              {walletInfo?.enabled && (
                 <div
-                  className={`payment-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod("cod")}
+                  className={`payment-card mb-0 ${paymentMethod === 'wallet' ? 'selected' : ''} ${!walletBalanceOk ? 'opacity-50' : ''}`}
+                  onClick={() => {
+                    if (walletBalanceOk) {
+                      setPaymentMethod("wallet");
+                      if (useRoyalty) toggleRoyalty(false);
+                    }
+                  }}
                 >
                   <div className="d-flex align-items-center gap-3">
                     <div className="radio-circle">
-                      {paymentMethod === 'cod' && <div className="radio-inner" />}
+                      {paymentMethod === 'wallet' && <div className="radio-inner" />}
                     </div>
-                    <div>
-                      <div className="payment-card-title">💵 Cash on Delivery</div>
-                      <div className="payment-card-desc">Pay when your order arrives</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className={`payment-card mb-3 ${paymentMethod === 'razorpay' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod("razorpay")}
-                >
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="radio-circle">
-                      {paymentMethod === 'razorpay' && <div className="radio-inner" />}
-                    </div>
-                    <div>
-                      <div className="payment-card-title">💳 Online Payment (Malaysia)</div>
-                      <div className="payment-card-desc">FPX · Credit/Debit Card · E-Wallets</div>
-                    </div>
-                  </div>
-                  {paymentMethod === 'razorpay' && (
-                    <div className="payment-details-razorpay animate-fade-in">
-                      <div className="d-flex gap-2 flex-wrap">
-                        {["FPX", "Visa", "Mastercard", "Touch n Go", "GrabPay"].map((m) => (
-                          <span key={m} className="payment-badge">
-                            {m}
-                          </span>
-                        ))}
+                    <div className="flex-grow-1">
+                      <div className="payment-card-title">👛 Pay with Wallet</div>
+                      <div className="payment-card-desc">
+                        Balance: {formatPrice(walletInfo.balance)}
+                        {walletInfo.discount_percent > 0 && ` · Extra ${walletInfo.discount_percent}% off`}
                       </div>
-                      <p className="payment-secure-text mb-0">
-                        Secure checkout in MYR (RM)
-                        🔒 Secured by Razorpay — 256-bit SSL encryption
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {walletInfo?.enabled && (
-                  <div
-                    className={`payment-card mb-0 ${paymentMethod === 'wallet' ? 'selected' : ''} ${!walletBalanceOk ? 'opacity-50' : ''}`}
-                    onClick={() => {
-                      if (walletBalanceOk) {
-                        setPaymentMethod("wallet");
-                        if (useRoyalty) toggleRoyalty(false);
-                      }
-                    }}
-                  >
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="radio-circle">
-                        {paymentMethod === 'wallet' && <div className="radio-inner" />}
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="payment-card-title">👛 Pay with Wallet</div>
-                        <div className="payment-card-desc">
-                          Balance: {formatPrice(walletInfo.balance)}
-                          {walletInfo.discount_percent > 0 && ` · Extra ${walletInfo.discount_percent}% off`}
-                        </div>
-                        {!walletBalanceOk && (
-                          <div className="payment-wallet-error">Insufficient balance for this order</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {royaltyEligible && (
-                  <div
-                    className="payment-card mb-0 mt-3"
-                    style={{ background: useRoyalty ? '#fffbeb' : undefined, borderColor: useRoyalty ? '#fcd34d' : undefined }}
-                  >
-                    <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                      <div>
-                        <div className="payment-card-title">⭐ Pay with Royalty Points</div>
-                        <div className="payment-card-desc">
-                          {royaltyInfo!.points} pts ({formatPrice(royaltyInfo!.balance_rm)})
-                          {billTotal <= 0
-                            ? ' · Add items to apply'
-                            : useRoyalty && royaltyRm > 0
-                              ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${paymentMethod === 'cod' ? 'COD' : 'online'}`
-                              : ' · Deducts from bill; pay remainder with COD / online'}
-                        </div>
-                      </div>
-                      {useRoyalty ? (
-                        <button type="button" className="btn btn-sm btn-link text-danger p-0 fw-semibold" onClick={() => toggleRoyalty(false)}>Remove</button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="tf-btn btn-sm animate-btn"
-                          disabled={!canPayWithRoyalty}
-                          onClick={() => toggleRoyalty(true)}
-                        >
-                          Apply
-                        </button>
+                      {!walletBalanceOk && (
+                        <div className="payment-wallet-error">Insufficient balance for this order</div>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {royaltyEligible && (
+                <div
+                  className="payment-card mb-0 mt-3"
+                  style={{ background: useRoyalty ? '#fffbeb' : undefined, borderColor: useRoyalty ? '#fcd34d' : undefined }}
+                >
+                  <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <div>
+                      <div className="payment-card-title">⭐ Pay with Royalty Points</div>
+                      <div className="payment-card-desc">
+                        {royaltyInfo!.points} pts ({formatPrice(royaltyInfo!.balance_rm)})
+                        {billTotal <= 0
+                          ? ' · Add items to apply'
+                          : useRoyalty && royaltyRm > 0
+                            ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${paymentMethod === 'cod' ? 'COD' : 'online'}`
+                            : ' · Deducts from bill; pay remainder with COD / online'}
+                      </div>
+                    </div>
+                    {useRoyalty ? (
+                      <button type="button" className="btn btn-sm btn-link text-danger p-0 fw-semibold" onClick={() => toggleRoyalty(false)}>Remove</button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="tf-btn btn-sm animate-btn"
+                        disabled={!canPayWithRoyalty}
+                        onClick={() => toggleRoyalty(true)}
+                      >
+                        Apply
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── RIGHT: order summary ── */}
