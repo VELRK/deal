@@ -163,13 +163,18 @@ export function removeLineFromCart(
       // A newer local edit won — do not clobber.
       if (getLocalCartEpoch() !== epochAtRemove) return;
 
+      // Guest session after logout is often empty while local still has the
+      // former user cart. Never replace local from the remove response —
+      // local already dropped the one line; applying [] would wipe the rest.
+      if (!useAuthStore.getState().isLoggedIn) return;
+
       const items = res.data?.data?.items;
       if (!Array.isArray(items)) return;
 
       const filtered = filterRemovedServerItems(items);
       const localNow = useStore.getState().cartProducts;
-      // Never grow the cart from a remove response (failed delete / wrong cart key).
-      if (filtered.length > localNow.length) return;
+      // Only sync prices/stock when server matches local size (successful delete).
+      if (filtered.length !== localNow.length) return;
 
       applyServerCartItems(filtered);
     } catch {
