@@ -1,5 +1,4 @@
 import { useContextElement } from "@/context/Context";
-import { cartTotalQty } from "@/utils/cartQty";
 
 export default function CartIconCount({
   className = "count",
@@ -7,7 +6,7 @@ export default function CartIconCount({
   className?: string;
 }) {
   const { cartProducts } = useContextElement();
-  const count = cartTotalQty(cartProducts);
+  const count = cartProducts.length;
 
   return <span className={className}> {count} </span>;
 }
