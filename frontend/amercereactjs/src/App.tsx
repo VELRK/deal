@@ -11,6 +11,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { useAuthStore } from "@/store/authStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { rememberAuthReturn } from "@/utils/authRedirect";
+import { syncCartFromServer } from "@/utils/cartSync";
 
 import AccountLayout from "@/pages/account/layout";
 import BlogsLayout from "@/pages/blogs/layout";
@@ -142,6 +143,28 @@ function WishlistSync() {
     if (isLoggedIn) fetchWishlist();
     else clear();
   }, [isLoggedIn]);
+  return null;
+}
+
+/**
+ * Pull server cart into Zustand after auth hydrate / login, and when the tab
+ * regains focus (so app→web adds show up without a full hard reload).
+ */
+function CartSync() {
+  const { isLoggedIn, hydrated } = useAuthStore();
+  useEffect(() => {
+    if (!hydrated || !isLoggedIn) return;
+    void syncCartFromServer();
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void syncCartFromServer();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [hydrated, isLoggedIn]);
   return null;
 }
 
@@ -679,6 +702,7 @@ function App() {
       <AuthReturnTracker />
       <AuthSessionGuard />
       <WishlistSync />
+      <CartSync />
       <LayoutModals />
       <SiteScripts />
       <ScrollToTop />
