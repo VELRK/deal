@@ -39,7 +39,6 @@ composer.lock
 
 # Database credentials and config
 application/config/database.php
-application/config/config.php
 
 # ── Environment / Secrets ─────────────────────────────────────
 .env
