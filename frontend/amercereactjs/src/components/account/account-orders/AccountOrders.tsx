@@ -44,6 +44,7 @@ interface Order {
 const TABS = [
   { id: "all", label: "All" },
   { id: "in-progress", label: "In Progress" },
+  { id: "abandoned", label: "Abandoned" },
   { id: "delivered", label: "Delivered" },
   { id: "cancelled", label: "Cancelled" },
 ];
@@ -70,7 +71,11 @@ export default function AccountOrders() {
 
   const getOrderStatusGroup = (status: string) => {
     const s = status.toLowerCase();
-    if (["payment_attempt", "pending", "confirmed", "processing", "shipped"].includes(s)) {
+    // payment_attempt is shown as Abandoned (same as admin Orders tab)
+    if (s === "payment_attempt") {
+      return "abandoned";
+    }
+    if (["pending", "confirmed", "processing", "shipped"].includes(s)) {
       return "in-progress";
     }
     if (s === "delivered") {
@@ -106,7 +111,12 @@ export default function AccountOrders() {
   };
 
   const visibleOrders = orders
-    .filter((o) => activeTab === "all" || getOrderStatusGroup(o.status) === activeTab)
+    .filter((o) => {
+      const group = getOrderStatusGroup(o.status);
+      // "All" mirrors admin: hide abandoned checkouts from the main list
+      if (activeTab === "all") return group !== "abandoned";
+      return group === activeTab;
+    })
     .filter(filterByDate);
 
   const selectedOrder = orders.find((o) => o.id === selectedOrderId);
@@ -463,10 +473,13 @@ export default function AccountOrders() {
           /* Badges by status */
           .badge-in-progress { background: #fff6e6; color: #ff9800; }
           .badge-in-progress .status-dot { background: #ff9800; }
-          
+
+          .badge-abandoned { background: #f3f4f6; color: #6b7280; }
+          .badge-abandoned .status-dot { background: #6b7280; }
+
           .badge-delivered { background: #eafaf1; color: #2e7d32; }
           .badge-delivered .status-dot { background: #2e7d32; }
-          
+
           .badge-cancelled { background: #fdf2f2; color: #d32f2f; }
           .badge-cancelled .status-dot { background: #d32f2f; }
 
@@ -1118,8 +1131,8 @@ export default function AccountOrders() {
                       <div className="card-top-strip">
                         <span className={`status-badge-pill badge-${statusGroup}`}>
                           <span className="status-dot"></span>
-                          {order.status === "payment_attempt"
-                            ? "Payment attempt"
+                          {statusGroup === "abandoned"
+                            ? "Abandoned"
                             : statusGroup === "in-progress"
                               ? "In progress"
                               : statusGroup}
@@ -1236,9 +1249,9 @@ export default function AccountOrders() {
                         {selectedOrder.status === "cancelled" ? "Order Cancelled" : "Return Request Processed"}
                       </div>
                     ) : selectedOrder.status === "payment_attempt" ? (
-                      <div className="status-badge-pill badge-in-progress" style={{ padding: "8px 18px", fontSize: "13.5px" }}>
+                      <div className="status-badge-pill badge-abandoned" style={{ padding: "8px 18px", fontSize: "13.5px" }}>
                         <span className="status-dot"></span>
-                        Payment attempt — awaiting payment
+                        Abandoned — awaiting payment
                       </div>
                     ) : (
                       <div>
@@ -1391,7 +1404,7 @@ export default function AccountOrders() {
                                       : selectedOrder.status === "returned"
                                         ? "Returned"
                                         : selectedOrder.status === "payment_attempt"
-                                          ? "Awaiting payment"
+                                          ? "Abandoned"
                                           : "Arriving soon"}
                                 </span>
                               </div>
