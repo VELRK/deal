@@ -82,10 +82,13 @@ export const useStore = create<StoreState>()(
 
       isAddedToCartProducts: (id, variantId) => {
         const cart = get().cartProducts;
+        const pid = String(id);
         return cart.some((elm) => {
-          if (elm.id !== id) return false;
-          if (variantId == null) return elm.selectedVariantId == null;
-          return elm.selectedVariantId === variantId;
+          if (String(elm.id) !== pid) return false;
+          // Listing / buttons with no variant: any line for this product counts
+          if (variantId == null) return true;
+          if (elm.selectedVariantId == null) return true;
+          return String(elm.selectedVariantId) === String(variantId);
         });
       },
 
@@ -94,6 +97,11 @@ export const useStore = create<StoreState>()(
         if (isAddedToCartProducts(item.id, item.selectedVariantId)) return;
         const cartItem: CartProduct = {
           ...item,
+          id: item.id,
+          selectedVariantId:
+            item.selectedVariantId != null
+              ? Number(item.selectedVariantId)
+              : undefined,
           quantity: qty,
         };
         const next = [...cartProducts, cartItem];
@@ -103,23 +111,34 @@ export const useStore = create<StoreState>()(
       updateQuantity: (id, qty, variantId) => {
         const { cartProducts, isAddedToCartProducts } = get();
         if (!isAddedToCartProducts(id, variantId) || qty < 1) return;
+        const pid = String(id);
         const items = cartProducts.map((item) => {
-          const sameProduct = item.id === id;
-          const sameVariant = variantId == null
-            ? item.selectedVariantId == null
-            : item.selectedVariantId === variantId;
-          return sameProduct && sameVariant ? { ...item, quantity: qty } : item;
+          if (String(item.id) !== pid) return item;
+          if (variantId == null) return { ...item, quantity: qty };
+          if (
+            item.selectedVariantId != null &&
+            String(item.selectedVariantId) !== String(variantId)
+          ) {
+            return item;
+          }
+          return { ...item, quantity: qty };
         });
         set({ cartProducts: items, totalPrice: getTotalPrice(items) });
       },
 
       quantityInCart: (id, variantId) => {
-        const item = get().cartProducts.find((elm) => {
-          if (elm.id !== id) return false;
-          if (variantId == null) return elm.selectedVariantId == null;
-          return elm.selectedVariantId === variantId;
-        });
-        return item ? item.quantity : 0;
+        const pid = String(id);
+        return get().cartProducts.reduce((sum, elm) => {
+          if (String(elm.id) !== pid) return sum;
+          if (variantId == null) return sum + (Number(elm.quantity) || 0);
+          if (
+            elm.selectedVariantId != null &&
+            String(elm.selectedVariantId) !== String(variantId)
+          ) {
+            return sum;
+          }
+          return sum + (Number(elm.quantity) || 0);
+        }, 0);
       },
 
       addToWishlist: (item) => {

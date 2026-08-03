@@ -3,8 +3,10 @@ import { useStore, type CartProduct, type Product } from "@/context/store";
 
 function mapApiItemToCartProduct(item: CartItem): CartProduct {
   const price = Number(item.effective_price ?? item.sale_price ?? item.price ?? 0);
+  const variantId =
+    item.variant_id != null ? Number(item.variant_id) : undefined;
   return {
-    id: item.product_id,
+    id: Number(item.product_id),
     name: item.product_name || item.name || "Product",
     price,
     priceOld: item.sale_price ? Number(item.price) : undefined,
@@ -14,8 +16,9 @@ function mapApiItemToCartProduct(item: CartItem): CartProduct {
     slug: item.slug,
     sku: item.sku,
     unit_label: item.unit_label || item.variant_label,
-    selectedVariantId: item.variant_id ?? undefined,
-    quantity: item.quantity,
+    selectedVariantId:
+      variantId != null && !Number.isNaN(variantId) ? variantId : undefined,
+    quantity: Number(item.quantity) || 1,
   } as CartProduct;
 }
 
