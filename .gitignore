@@ -46,6 +46,7 @@ application/config/database.php
 .env.*.local
 *.env
 config.local.php
+application/config/deploy_webhook_secret.php
 
 # ── Frontend React SOURCE ──
 # Source is now tracked per request.
