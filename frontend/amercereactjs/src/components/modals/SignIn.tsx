@@ -88,8 +88,8 @@ export default function SignIn() {
       const res = await authAPI.login({ email, password });
       const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
       login(token, user);
-      const { syncCartFromServer } = await import("@/utils/cartSync");
-      await syncCartFromServer();
+      const { afterLoginCartSync } = await import("@/utils/cartSync");
+      await afterLoginCartSync();
       const dest = useModalStore.getState().consumeAuthRedirect("/account-page");
       navigate(dest, { replace: true });
     } catch (err: unknown) {
@@ -138,8 +138,8 @@ export default function SignIn() {
       const res = await authAPI.otpVerify({ phone: sentPhoneE164, otp: otpValue });
       const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
       login(token, user);
-      const { syncCartFromServer } = await import("@/utils/cartSync");
-      await syncCartFromServer();
+      const { afterLoginCartSync } = await import("@/utils/cartSync");
+      await afterLoginCartSync();
       const hasRealEmail = user.email && !user.email.startsWith("ph_");
       const fallback = hasRealEmail ? "/account-page" : "/account-setting";
       const dest = useModalStore.getState().consumeAuthRedirect(fallback);

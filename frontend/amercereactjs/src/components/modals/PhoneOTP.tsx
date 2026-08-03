@@ -47,8 +47,8 @@ export default function PhoneOTPModal() {
   const finishLogin = async (token: string, user: ApiUser) => {
     login(token, user);
     try {
-      const { syncCartFromServer } = await import("@/utils/cartSync");
-      await syncCartFromServer();
+      const { afterLoginCartSync } = await import("@/utils/cartSync");
+      await afterLoginCartSync();
     } catch {
       /* ignore cart sync errors */
     }

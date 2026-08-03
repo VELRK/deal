@@ -38,6 +38,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // Keep sk_sid + Zustand cart so guest shopping and login merge still work.
+        // Do not clear localStorage "2Deal-store" or "sk_sid".
         clearAuthStorage();
         set({ token: null, user: null, isLoggedIn: false });
       },

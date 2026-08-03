@@ -145,6 +145,8 @@ export default function Register() {
       if ((res.data as { success?: boolean }).success) {
         const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
         login(token, user);
+        const { afterLoginCartSync } = await import("@/utils/cartSync");
+        await afterLoginCartSync();
         const dest = useModalStore.getState().consumeAuthRedirect("/account-page");
         navigate(dest, { replace: true });
       } else {

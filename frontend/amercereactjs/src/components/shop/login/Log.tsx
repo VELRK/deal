@@ -61,6 +61,8 @@ function Log() {
       });
       const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
       login(token, user);
+      const { afterLoginCartSync } = await import("@/utils/cartSync");
+      await afterLoginCartSync();
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -108,6 +110,8 @@ function Log() {
       const res = await authAPI.otpVerify({ phone: sentPhoneE164, otp: otpValue });
       const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
       login(token, user);
+      const { afterLoginCartSync } = await import("@/utils/cartSync");
+      await afterLoginCartSync();
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

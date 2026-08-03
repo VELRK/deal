@@ -56,7 +56,15 @@ export async function addLineToCart(
   }
 }
 
-/** Merge guest cart into user cart, then hydrate local Zustand from server. */
+/**
+ * After login/register: merge guest session cart (sk_sid) into the user cart,
+ * then replace local Zustand with the server cart.
+ *
+ * Logout flow (do not clear sk_sid or local cart):
+ * 1) Logged-in cart stays on user_id in DB; local badge still shows it.
+ * 2) Guest adds after logout go to X-Session-ID (sk_sid).
+ * 3) On login, merge(sk_sid) moves guest lines into user_id, then we pull.
+ */
 export async function syncCartFromServer(): Promise<void> {
   try {
     const sid = localStorage.getItem("sk_sid") || undefined;
@@ -87,4 +95,9 @@ export async function syncCartFromServer(): Promise<void> {
   } catch {
     /* keep local cart on network failure */
   }
+}
+
+/** Call immediately after login()/register sets the JWT. */
+export async function afterLoginCartSync(): Promise<void> {
+  await syncCartFromServer();
 }

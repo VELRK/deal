@@ -59,6 +59,8 @@ function Log() {
       if ((res.data as { success?: boolean }).success) {
         const { token, user } = (res.data as { success: boolean; data: { token: string; user: ApiUser } }).data;
         login(token, user);
+        const { afterLoginCartSync } = await import("@/utils/cartSync");
+        await afterLoginCartSync();
         navigate(redirectTo, { replace: true });
       } else {
         setError((res.data as { message?: string }).message ?? "Registration failed.");
