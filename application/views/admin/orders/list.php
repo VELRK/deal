@@ -1,31 +1,65 @@
-<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
+<?php $currency = $settings['currency_symbol'] ?? 'RM';
+$tab = $tab ?? ($filters['tab'] ?? 'orders');
+$qs = function (array $extra = []) use ($filters, $tab) {
+    $params = array_filter([
+        'tab'            => $extra['tab'] ?? $tab,
+        'status'         => array_key_exists('status', $extra) ? $extra['status'] : ($filters['status'] ?? ''),
+        'payment_status' => array_key_exists('payment_status', $extra) ? $extra['payment_status'] : ($filters['payment_status'] ?? ''),
+        'search'         => array_key_exists('search', $extra) ? $extra['search'] : ($filters['search'] ?? ''),
+        'page'           => $extra['page'] ?? null,
+    ], static function ($v) {
+        return $v !== null && $v !== '';
+    });
+    return http_build_query($params);
+};
+?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-cart-check me-2 text-warning"></i>Orders</h5>
 </div>
 
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link <?= $tab === 'orders' ? 'active' : '' ?>"
+       href="<?= site_url('admin/orders?' . $qs(['tab' => 'orders', 'status' => '', 'page' => null])) ?>">
+      Orders
+      <span class="badge bg-secondary ms-1"><?= (int)($count_orders ?? 0) ?></span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link <?= $tab === 'abandoned' ? 'active' : '' ?>"
+       href="<?= site_url('admin/orders?' . $qs(['tab' => 'abandoned', 'status' => '', 'page' => null])) ?>">
+      Abandoned
+      <span class="badge bg-warning text-dark ms-1"><?= (int)($count_abandoned ?? 0) ?></span>
+    </a>
+  </li>
+</ul>
+
 <!-- Filters -->
 <div class="card sk-table-card shadow-sm mb-3">
   <div class="card-body py-2">
     <form method="GET" class="d-flex gap-2 flex-wrap">
+      <input type="hidden" name="tab" value="<?= htmlspecialchars($tab) ?>">
       <input type="text" name="search" class="form-control form-control-sm" style="max-width:200px;"
              placeholder="Order number..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
+      <?php if ($tab === 'orders'): ?>
       <select name="status" class="form-select form-select-sm" style="max-width:160px;">
         <option value="">All Statuses</option>
         <?php
         $status_opts = [
-          'payment_attempt' => 'Payment attempt',
           'pending' => 'Pending',
           'confirmed' => 'Confirmed',
           'processing' => 'Processing',
           'shipped' => 'Shipped',
           'delivered' => 'Delivered',
           'cancelled' => 'Cancelled',
+          'returned' => 'Returned',
         ];
         foreach ($status_opts as $s => $label): ?>
           <option value="<?= $s ?>" <?= ($filters['status']??'')===$s?'selected':'' ?>><?= $label ?></option>
         <?php endforeach; ?>
       </select>
+      <?php endif; ?>
       <select name="payment_status" class="form-select form-select-sm" style="max-width:160px;">
         <option value="">Payment Status</option>
         <?php foreach (['pending','paid','failed','refunded'] as $s): ?>
@@ -33,10 +67,16 @@
         <?php endforeach; ?>
       </select>
       <button class="btn btn-sm btn-outline-warning px-3">Filter</button>
-      <a href="<?= site_url('admin/orders') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
+      <a href="<?= site_url('admin/orders?tab=' . urlencode($tab)) ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
     </form>
   </div>
 </div>
+
+<?php if ($tab === 'abandoned'): ?>
+<div class="alert alert-warning py-2 small mb-3">
+  Abandoned checkouts (customer started online payment but did not complete). These do not appear under Orders.
+</div>
+<?php endif; ?>
 
 <div class="card sk-table-card shadow-sm">
   <div class="card-body p-0">
@@ -70,7 +110,13 @@
               <?php endif; ?>
             </td>
             <td class="fw-semibold"><?= $currency . number_format($o['total'],2) ?></td>
-            <td><span class="badge badge-<?= $o['status'] === 'payment_attempt' ? 'pending' : $o['status'] ?>"><?= $o['status'] === 'payment_attempt' ? 'Payment attempt' : ucfirst($o['status']) ?></span></td>
+            <td>
+              <?php
+                $st = $o['status'] ?? '';
+                $badgeClass = $st === 'payment_attempt' ? 'pending' : $st;
+              ?>
+              <span class="badge badge-<?= htmlspecialchars($badgeClass) ?>"><?= htmlspecialchars(Sk_Order_model::status_label($st)) ?></span>
+            </td>
             <td><span class="badge badge-<?= $o['payment_status'] ?>"><?= ucfirst($o['payment_status']) ?></span></td>
             <td><?= sk_format_datetime($o['created_at'], 'd M y, h:i A') ?></td>
             <td class="d-flex gap-1">
@@ -84,7 +130,7 @@
           </tr>
           <?php endforeach; ?>
           <?php if (empty($orders)): ?>
-          <tr><td colspan="8" class="text-center py-5 text-muted">No orders found.</td></tr>
+          <tr><td colspan="9" class="text-center py-5 text-muted"><?= $tab === 'abandoned' ? 'No abandoned orders.' : 'No orders found.' ?></td></tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -92,11 +138,11 @@
   </div>
   <?php $pages = ceil($total / $limit); if ($pages > 1): ?>
   <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-    <small class="text-muted"><?= $total ?> total orders</small>
+    <small class="text-muted"><?= $total ?> total</small>
     <nav><ul class="pagination pagination-sm mb-0">
       <?php for ($i=1; $i<=$pages; $i++): ?>
         <li class="page-item <?= $i===$page?'active':'' ?>">
-          <a class="page-link" href="?page=<?= $i ?>&status=<?= urlencode($filters['status']??'') ?>&search=<?= urlencode($filters['search']??'') ?>"><?= $i ?></a>
+          <a class="page-link" href="?<?= $qs(['page' => $i]) ?>"><?= $i ?></a>
         </li>
       <?php endfor; ?>
     </ul></nav>

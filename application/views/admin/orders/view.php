@@ -144,8 +144,8 @@
         <?php elseif ($is_payment_attempt): ?>
           <div class="d-flex align-items-center gap-2 p-2 rounded mb-2"
             style="background:#fff7ed;color:#9a3412;">
-            <i class="bi bi-credit-card fs-5"></i>
-            <span class="fw-semibold">Payment attempt — awaiting online payment</span>
+            <i class="bi bi-cart-x fs-5"></i>
+            <span class="fw-semibold">Abandoned — customer started checkout but did not complete payment</span>
           </div>
         <?php else: ?>
           <div class="d-flex align-items-center w-100">
@@ -190,7 +190,7 @@
           <select id="orderStatus" class="form-select">
             <?php
             $admin_statuses = [
-              'payment_attempt' => 'Payment attempt',
+              'payment_attempt' => 'Abandoned',
               'pending' => 'Pending',
               'confirmed' => 'Confirmed',
               'processing' => 'Ready to Pick Up (Processing)',

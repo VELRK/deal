@@ -16,8 +16,18 @@ class Orders extends Sk_Base {
         $page   = max(1, (int)$this->input->get('page'));
         $limit  = 15;
         $offset = ($page - 1) * $limit;
+        $tab    = $this->input->get('tab', TRUE);
+        if ($tab !== 'abandoned') {
+            $tab = 'orders';
+        }
+        $statusFilter = $this->input->get('status', TRUE);
+        // Abandoned lives on its own tab — ignore payment_attempt filter on main tab
+        if ($tab === 'orders' && in_array($statusFilter, ['payment_attempt', 'abandoned'], true)) {
+            $statusFilter = '';
+        }
         $filters = [
-            'status'         => $this->input->get('status', TRUE),
+            'tab'            => $tab,
+            'status'         => $statusFilter,
             'payment_status' => $this->input->get('payment_status', TRUE),
             'search'         => $this->input->get('search', TRUE),
         ];
@@ -28,6 +38,14 @@ class Orders extends Sk_Base {
         $data['page']    = $page;
         $data['limit']   = $limit;
         $data['filters'] = $filters;
+        $data['tab']     = $tab;
+        // Counts for tab badges (search/payment filters apply; status tab is fixed)
+        $baseCounts = [
+            'payment_status' => $filters['payment_status'],
+            'search'         => $filters['search'],
+        ];
+        $data['count_orders'] = $this->Sk_Order_model->count_admin($baseCounts + ['tab' => 'orders']);
+        $data['count_abandoned'] = $this->Sk_Order_model->count_admin($baseCounts + ['tab' => 'abandoned']);
         $this->render('orders/list', $data);
     }
 

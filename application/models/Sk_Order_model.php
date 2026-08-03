@@ -157,19 +157,57 @@ class Sk_Order_model extends CI_Model {
         $this->db->select('o.*, u.name as customer_name, u.email as customer_email')
                  ->from('orders o')
                  ->join('users u', 'u.id = o.user_id', 'left');
-        if (!empty($filters['status']))         $this->db->where('o.status', $filters['status']);
-        if (!empty($filters['payment_status'])) $this->db->where('o.payment_status', $filters['payment_status']);
-        if (!empty($filters['search']))         $this->db->like('o.order_number', $filters['search']);
+        $this->_apply_admin_filters($filters);
         $this->db->order_by('o.created_at', 'DESC')->limit($limit, $offset);
         return $this->db->get()->result_array();
     }
 
     public function count_admin($filters = []) {
         $this->db->from('orders o');
-        if (!empty($filters['status']))         $this->db->where('o.status', $filters['status']);
-        if (!empty($filters['payment_status'])) $this->db->where('o.payment_status', $filters['payment_status']);
-        if (!empty($filters['search']))         $this->db->like('o.order_number', $filters['search']);
+        $this->_apply_admin_filters($filters);
         return $this->db->count_all_results();
+    }
+
+    /**
+     * Admin orders list filters.
+     * tab=orders (default): all statuses except payment_attempt (shown as Abandoned).
+     * tab=abandoned: only payment_attempt.
+     */
+    protected function _apply_admin_filters(array $filters): void {
+        $tab = ($filters['tab'] ?? 'orders') === 'abandoned' ? 'abandoned' : 'orders';
+
+        if ($tab === 'abandoned') {
+            $this->db->where('o.status', 'payment_attempt');
+        } else {
+            // Main tab: never show abandoned / payment_attempt
+            if (!empty($filters['status']) && $filters['status'] !== 'payment_attempt' && $filters['status'] !== 'abandoned') {
+                $this->db->where('o.status', $filters['status']);
+            } else {
+                $this->db->where('o.status !=', 'payment_attempt');
+            }
+        }
+
+        if (!empty($filters['payment_status'])) {
+            $this->db->where('o.payment_status', $filters['payment_status']);
+        }
+        if (!empty($filters['search'])) {
+            $this->db->like('o.order_number', $filters['search']);
+        }
+    }
+
+    /** Admin label for order status (payment_attempt → Abandoned). */
+    public static function status_label(string $status): string {
+        $map = [
+            'payment_attempt' => 'Abandoned',
+            'pending'         => 'Pending',
+            'confirmed'       => 'Confirmed',
+            'processing'      => 'Processing',
+            'shipped'         => 'Shipped',
+            'delivered'       => 'Delivered',
+            'cancelled'       => 'Cancelled',
+            'returned'        => 'Returned',
+        ];
+        return $map[$status] ?? ucfirst(str_replace('_', ' ', $status));
     }
 
     /**
