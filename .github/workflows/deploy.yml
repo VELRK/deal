@@ -1,9 +1,5 @@
 name: Auto Deploy Hostinger
 
-# Deploys by asking the server to git-pull over HTTPS (outbound from Hostinger).
-# This avoids GitHub Actions → Hostinger SSH (port 65002), which often times out.
-# SSH is kept as a fallback with retries.
-
 on:
   push:
     branches:
@@ -13,107 +9,22 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
 
     steps:
-      - name: Check required secrets
-        env:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          SSH_KEY: ${{ secrets.SSH_KEY_ILF }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}
-          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
-        run: |
-          echo "HOST set: $([ -n "$HOST" ] && echo yes || echo NO)"
-          echo "USERNAME set: $([ -n "$USERNAME" ] && echo yes || echo NO)"
-          echo "SSH_KEY_ILF set: $([ -n "$SSH_KEY" ] && echo yes || echo NO)"
-          echo "DEPLOY_PATH set: $([ -n "$DEPLOY_PATH" ] && echo yes || echo NO)"
-          echo "DEPLOY_WEBHOOK_TOKEN set: $([ -n "$WEBHOOK_TOKEN" ] && echo yes || echo NO)"
-          echo "DEPLOY_WEBHOOK_URL set: $([ -n "$WEBHOOK_URL" ] && echo yes || echo NO)"
-
-      - name: Deploy via HTTPS webhook (preferred)
-        id: webhook
-        continue-on-error: true
-        env:
-          WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}
-          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
-        run: |
-          if [ -z "$WEBHOOK_TOKEN" ]; then
-            echo "DEPLOY_WEBHOOK_TOKEN not set — skip webhook, will try SSH."
-            exit 1
-          fi
-          URL="${WEBHOOK_URL:-https://superfinelabels.in/deal/deploy-webhook.php}"
-          echo "POST $URL"
-          # Retry a few times (Hostinger / CDN hiccups)
-          for i in 1 2 3 4 5; do
-            echo "Webhook attempt $i/5..."
-            if curl -fsS -X POST \
-              --connect-timeout 30 \
-              --max-time 180 \
-              -H "Content-Type: application/json" \
-              -H "X-Deploy-Token: ${WEBHOOK_TOKEN}" \
-              -d '{"ref":"main"}' \
-              "$URL"; then
-              echo ""
-              echo "Webhook deploy OK"
-              exit 0
-            fi
-            echo "Attempt $i failed — wait ${i}0s"
-            sleep $((i * 10))
-          done
-          echo "Webhook deploy failed after retries"
-          exit 1
-
-      - name: Preflight SSH port (fallback only)
-        if: steps.webhook.outcome != 'success'
-        env:
-          HOST: ${{ secrets.HOST }}
-          PORT: ${{ secrets.SSH_PORT }}
-        run: |
-          PORT="${PORT:-65002}"
-          if [ -z "$HOST" ]; then
-            echo "Missing secret HOST — cannot SSH fallback."
-            exit 1
-          fi
-          echo "Checking TCP $HOST:$PORT from GitHub runner..."
-          ok=0
-          for i in 1 2 3 4 5 6; do
-            if timeout 15 bash -c "echo >/dev/tcp/$HOST/$PORT" 2>/dev/null; then
-              echo "Port $PORT is open"
-              ok=1
-              break
-            fi
-            echo "Attempt $i: port closed/timeout — sleep 15s"
-            sleep 15
-          done
-          if [ "$ok" != "1" ]; then
-            echo ""
-            echo "SSH to $HOST:$PORT timed out from GitHub Actions."
-            echo "Hostinger often blocks datacenter IPs on SSH."
-            echo "Fix: set GitHub secrets DEPLOY_WEBHOOK_TOKEN (+ optional DEPLOY_WEBHOOK_URL)"
-            echo "and ensure deploy-webhook.php is on the server (already in this repo)."
-            echo "Also confirm hPanel → Advanced → SSH Access is enabled."
-            exit 1
-          fi
-
-      - name: Deploy via SSH (fallback, with retries)
-        if: steps.webhook.outcome != 'success'
+      - name: Deploy to Hostinger (public_html/deal)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY_ILF }}
-          port: ${{ secrets.SSH_PORT || 65002 }}
-          protocol: tcp4
-          timeout: 90s
-          command_timeout: 15m
-          script_stop: true
+          port: 65002
+          timeout: 60s
+          command_timeout: 10m
           script: |
             set -e
             TARGET="${{ secrets.DEPLOY_PATH }}"
             if [ -z "$TARGET" ]; then
-              echo "Set GitHub secret DEPLOY_PATH, e.g. /home/uXXXX/domains/superfinelabels.in/public_html/deal"
+              echo "Set GitHub secret DEPLOY_PATH to your Hostinger SSH path, e.g. /home/u221026474/domains/superfinelabels.in/public_html/deal"
               exit 1
             fi
             mkdir -p "$TARGET"
@@ -126,4 +37,4 @@ jobs:
             fi
             git fetch origin main
             git reset --hard origin/main
-            echo "SSH deploy OK → $(git rev-parse --short HEAD)"
+            echo "Deployed $(git rev-parse --short HEAD)"
