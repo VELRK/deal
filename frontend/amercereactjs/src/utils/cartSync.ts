@@ -56,6 +56,7 @@ export async function addLineToCart(
     item.selectedVariantId != null ? Number(item.selectedVariantId) : undefined;
 
   useStore.getState().addProductToCart(item, quantity);
+  markLocalCartMutation();
 
   try {
     const res = await cartAPI.add({
@@ -76,22 +77,54 @@ export async function addLineToCart(
   }
 }
 
+/** Bumped on local cart edits so focus-sync cannot restore just-removed lines. */
+let lastLocalCartMutationAt = 0;
+
+function markLocalCartMutation(): void {
+  lastLocalCartMutationAt = Date.now();
+}
+
 /**
- * Remove a line from local cart (loose id match) and best-effort API delete.
+ * Remove a line from local cart (by index when known, else loose id match)
+ * and best-effort API delete.
  * Does not replace local from API response — guest session may be empty while
  * local still shows former logged-in lines after logout.
  */
 export function removeLineFromCart(
   id: ProductId,
   variantId?: number | null,
+  index?: number,
 ): void {
-  useStore.getState().setCartProducts((prev) =>
-    prev.filter((p) => !isSameCartLine(p, id, variantId)),
-  );
+  const prev = useStore.getState().cartProducts;
+  let removed: CartProduct | undefined;
+  let next: CartProduct[];
+
+  if (
+    typeof index === "number" &&
+    index >= 0 &&
+    index < prev.length &&
+    String(prev[index].id) === String(id)
+  ) {
+    removed = prev[index];
+    next = prev.filter((_, i) => i !== index);
+  } else {
+    removed = prev.find((p) => isSameCartLine(p, id, variantId));
+    next = prev.filter((p) => !isSameCartLine(p, id, variantId));
+  }
+
+  markLocalCartMutation();
+  useStore.getState().setCartProducts(next);
+
+  const vid =
+    removed?.selectedVariantId != null
+      ? Number(removed.selectedVariantId)
+      : variantId != null
+        ? Number(variantId)
+        : undefined;
   cartAPI
     .remove({
-      product_id: Number(id),
-      ...(variantId != null ? { variant_id: Number(variantId) } : {}),
+      product_id: Number(removed?.id ?? id),
+      ...(vid != null && !Number.isNaN(vid) ? { variant_id: vid } : {}),
     })
     .catch(() => {});
 }
@@ -111,11 +144,13 @@ export async function syncCartFromServer(): Promise<void> {
     await cartAPI.merge(sid ? { session_id: sid } : {}).catch(() => null);
 
     const local = useStore.getState().cartProducts;
+    const localMutatedRecently = Date.now() - lastLocalCartMutationAt < 3000;
     let res = await cartAPI.products();
     let items: CartItem[] = res.data?.data?.items ?? [];
 
     // Web-only cart (never reached API) would otherwise be wiped on refresh.
-    if (items.length === 0 && local.length > 0) {
+    // Skip re-push right after a local remove (would resurrect deleted lines).
+    if (items.length === 0 && local.length > 0 && !localMutatedRecently) {
       for (const p of local) {
         const vid =
           p.selectedVariantId != null ? Number(p.selectedVariantId) : undefined;
@@ -129,6 +164,11 @@ export async function syncCartFromServer(): Promise<void> {
       }
       res = await cartAPI.products();
       items = res.data?.data?.items ?? [];
+    }
+
+    // After a web remove, focus-sync can still see the old server cart briefly.
+    if (localMutatedRecently && local.length < items.length) {
+      return;
     }
 
     applyServerCartItems(items);

@@ -14,8 +14,8 @@ export default function Cart() {
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "cart";
 
-  const removeLine = (id: ProductId, variantId?: number) => {
-    removeLineFromCart(id, variantId);
+  const removeLine = (id: ProductId, variantId?: number, index?: number) => {
+    removeLineFromCart(id, variantId, index);
   };
 
   const setQty = (id: ProductId, qty: number, variantId?: number) => {
@@ -82,10 +82,10 @@ export default function Cart() {
           ) : (
             <div>
               {cartProducts.map((item, idx) => (
-                <div key={`${item.id}-${item.selectedVariantId ?? "base"}`}>
+                <div key={`${item.id}-${item.selectedVariantId ?? "base"}-${idx}`}>
                   <CartMiniLine
                     item={item}
-                    onRemove={() => removeLine(item.id, item.selectedVariantId)}
+                    onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
                     onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId)}
                     onProductClick={() => goTo(`/product-detail/${item.id}`)}
                   />

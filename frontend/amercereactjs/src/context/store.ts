@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { persist, type StorageValue } from "zustand/middleware";
 
 import type { ProductCardItem } from "@/types/productCard";
@@ -278,21 +279,9 @@ function getContextSnapshot(state: StoreState) {
   };
 }
 
-type ContextSnapshot = ReturnType<typeof getContextSnapshot>;
-
-let cachedState: StoreState | null = null;
-let cachedSnapshot: ContextSnapshot | null = null;
-
-function getStableContextSnapshot(state: StoreState): ContextSnapshot {
-  if (state === cachedState && cachedSnapshot !== null) {
-    return cachedSnapshot;
-  }
-  cachedState = state;
-  cachedSnapshot = getContextSnapshot(state);
-  return cachedSnapshot;
-}
-
 /** Same API as the old useContextElement() for drop-in replacement in existing components. */
 export function useContextElement() {
-  return useStore(getStableContextSnapshot);
+  // useShallow so cartProducts/wishList identity changes trigger re-renders reliably
+  // (module-level snapshot cache could skip updates across subscribers).
+  return useStore(useShallow(getContextSnapshot));
 }

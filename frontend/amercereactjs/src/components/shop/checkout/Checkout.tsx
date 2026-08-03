@@ -552,12 +552,12 @@ export default function Checkout() {
     } finally { setOrderPlacing(false); }
   };
 
-  const removeLine = (id: ProductId, variantId?: number) => {
-    removeLineFromCart(id, variantId);
+  const removeLine = (id: ProductId, variantId?: number, index?: number) => {
+    removeLineFromCart(id, variantId, index);
   };
-  const setQty = (id: ProductId, qty: number, variantId?: number) => {
+  const setQty = (id: ProductId, qty: number, variantId?: number, index?: number) => {
     if (qty < 1) {
-      removeLine(id, variantId);
+      removeLine(id, variantId, index);
       return;
     }
     updateQuantity(id, qty, variantId);
@@ -830,12 +830,12 @@ export default function Checkout() {
                 {cartProducts.length === 0 ? (
                   <div className="text-center py-4 text-muted fw-semibold">Your cart is empty</div>
                 ) : (
-                  cartProducts.map((item) => (
+                  cartProducts.map((item, idx) => (
                     <CheckoutOrderItemPremium
-                      key={`${item.id}-${item.selectedVariantId ?? "base"}`}
+                      key={`${item.id}-${item.selectedVariantId ?? "base"}-${idx}`}
                       item={item}
-                      onRemove={() => removeLine(item.id, item.selectedVariantId)}
-                      onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId)}
+                      onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
+                      onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
                     />
                   ))
                 )}

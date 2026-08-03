@@ -144,12 +144,12 @@ export default function ShoppingCart() {
   const amountDue = Math.max(0, billTotal - royaltyRm);
   const amountToFreeship = Math.max(0, freeShippingAbove - totalPrice);
 
-  const removeLine = (id: ProductId, variantId?: number) => {
-    removeLineFromCart(id, variantId);
+  const removeLine = (id: ProductId, variantId?: number, index?: number) => {
+    removeLineFromCart(id, variantId, index);
   };
 
-  const setQty = (id: ProductId, qty: number, variantId?: number) => {
-    if (qty < 1) { removeLine(id, variantId); return; }
+  const setQty = (id: ProductId, qty: number, variantId?: number, index?: number) => {
+    if (qty < 1) { removeLine(id, variantId, index); return; }
     updateQuantity(id, qty, variantId);
     cartAPI.update({ product_id: Number(id), quantity: qty, ...(variantId != null ? { variant_id: variantId } : {}) }).catch(() => {});
   };
@@ -602,12 +602,12 @@ export default function ShoppingCart() {
                         </tr>
                       </thead>
                       <tbody>
-                        {cartProducts.map((item) => (
+                        {cartProducts.map((item, idx) => (
                           <CartTableRow
-                            key={`${item.id}-${item.selectedVariantId ?? "base"}`}
+                            key={`${item.id}-${item.selectedVariantId ?? "base"}-${idx}`}
                             item={item}
-                            onRemove={() => removeLine(item.id, item.selectedVariantId)}
-                            onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId)}
+                            onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
+                            onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
                           />
                         ))}
                       </tbody>

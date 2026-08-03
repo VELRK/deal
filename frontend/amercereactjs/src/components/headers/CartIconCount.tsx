@@ -1,12 +1,12 @@
-import { useContextElement } from "@/context/Context";
+import { useStore } from "@/context/store";
 
 export default function CartIconCount({
   className = "count",
 }: {
   className?: string;
 }) {
-  const { cartProducts } = useContextElement();
-  const count = cartProducts.length;
+  // Subscribe to length directly — avoid object snapshot equality missing updates.
+  const count = useStore((s) => s.cartProducts.length);
 
   return <span className={className}> {count} </span>;
 }
