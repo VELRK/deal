@@ -47,13 +47,8 @@ application/config/database.php
 *.env
 config.local.php
 
-# ── Frontend React SOURCE (build locally; only output is committed) ──
-# Keep package manifests tracked so Vite/tooling pins survive deploys.
-frontend/amercereactjs/*
-!frontend/amercereactjs/package.json
-!frontend/amercereactjs/package-lock.json
-!frontend/amercereactjs/vite.config.ts
-!frontend/amercereactjs/build-live.cjs
+# ── Frontend React SOURCE ──
+# Source is now tracked per request.
 
 # Stray lockfile next to build output
 frontend/package-lock.json

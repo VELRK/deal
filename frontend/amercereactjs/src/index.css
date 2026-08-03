@@ -1,0 +1,119 @@
+
+/* Product Image Fix */
+img {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+html, body {
+  font-family: 'Inter', sans-serif;
+}
+
+
+.btn-classic-add-to-cart {
+  background-color: #3ec1bc !important;
+  border: none !important;
+  color: #fff !important;
+  font-family: 'Inter', sans-serif;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+.btn-classic-add-to-cart:hover {
+  background-color: #33a39e !important;
+  color: #fff !important;
+}
+
+
+.btn-offer-add-to-cart {
+  background-color: #3ec1bc !important;
+  border: none !important;
+  color: #fff !important;
+  padding: 8px 0 !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+.btn-offer-add-to-cart:hover {
+  background-color: #2da19d !important;
+}
+
+/* Match ProductCard fonts to Offers.tsx reference */
+.offer-styled-card .card-product_info .name-product {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  margin-bottom: 8px !important;
+  height: 38px !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  color: #212529 !important;
+  text-decoration: none !important;
+}
+
+.offer-styled-card .card-product_info .price {
+  font-family: 'Inter', sans-serif !important;
+  color: #d32f2f !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.card-product { font-family: 'Inter', sans-serif !important; }
+
+/* --- Mobile Responsive Fixes for All Product Cards --- */
+@media (max-width: 767px) {
+  /* Fix image aspect ratio and prevent extreme cropping */
+  .product-img,
+  .card-product_wrapper > a {
+    aspect-ratio: 1 / 1 !important;
+  }
+  
+  .product-img img,
+  .card-product_wrapper > a img {
+    object-fit: contain !important;
+    background-color: #fdfaf3; /* matches the shop bg */
+  }
+
+  /* Fix Add to Cart buttons overflowing */
+  .btn-classic-add-to-cart,
+  .btn-offer-add-to-cart,
+  .tf-btn-reset,
+  .card-product .list-product-btn .box-icon:first-child {
+    font-size: 11px !important;
+    padding: 6px 4px !important;
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* Fix product titles and prices to fit nicely */
+  .name-product,
+  .offer-styled-card .card-product_info .name-product,
+  .card-product .title {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    margin-bottom: 4px !important;
+    min-height: 30px !important;
+    height: auto !important;
+  }
+  
+  .card-product_info .price,
+  .card-product .price {
+    font-size: 13px !important;
+  }
+  
+  /* Reduce padding on the cards */
+  .card-product, .classic-view {
+    padding: 6px !important;
+  }
+}
