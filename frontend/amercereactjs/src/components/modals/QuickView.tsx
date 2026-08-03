@@ -4,9 +4,10 @@ import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
 import { useModalStore } from "@/store/modalStore";
 import { Drawer } from "@/components/Modal";
+import { addLineToCart } from "@/utils/cartSync";
 
 export default function QuickView() {
-  const { quickViewItem, addProductToCart, isAddedToCartProducts } = useContextElement();
+  const { quickViewItem, isAddedToCartProducts } = useContextElement();
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "quickView";
 
@@ -41,9 +42,9 @@ export default function QuickView() {
     ];
   }, [product]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || isAdded) return;
-    addProductToCart(product, quantity);
+    await addLineToCart(product, quantity);
   };
 
   return (

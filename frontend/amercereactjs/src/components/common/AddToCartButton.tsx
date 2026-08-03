@@ -1,5 +1,6 @@
 import { useContextElement, type Product } from "@/context/Context";
 import { useModalStore } from "@/store/modalStore";
+import { addLineToCart } from "@/utils/cartSync";
 
 interface AddToCartButtonProps {
   product?: Product;
@@ -22,13 +23,13 @@ export default function AddToCartButton({
   variant = "default",
   style,
 }: AddToCartButtonProps) {
-  const { addProductToCart, isAddedToCartProducts, setQuickAddItem, setQuickAddProduct } = useContextElement();
+  const { isAddedToCartProducts, setQuickAddItem, setQuickAddProduct } = useContextElement();
   const { openModal } = useModalStore();
   const isAdded = product ? isAddedToCartProducts(product.id) : false;
   const isQuickAddTrigger = href === "#quickAdd";
   const isCartTrigger = href === "#shoppingCart";
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = async (e: React.MouseEvent) => {
     if (!product) return;
 
     e.preventDefault();
@@ -47,7 +48,7 @@ export default function AddToCartButton({
       return;
     }
 
-    addProductToCart(product, quantity);
+    await addLineToCart(product, quantity);
     openModal("cart");
   };
 

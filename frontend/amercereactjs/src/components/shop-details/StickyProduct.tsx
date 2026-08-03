@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useContextElement } from "@/context/Context";
 import { useCurrentProductStore } from "@/store/currentProductStore";
 import { formatPrice } from "@/utils/formatPrice";
-import { cartAPI } from "@/services/api";
+import { addLineToCart } from "@/utils/cartSync";
 import { useModalStore } from "@/store/modalStore";
 
 export default function StickyProduct() {
@@ -10,9 +10,10 @@ export default function StickyProduct() {
   const [isMobile, setIsMobile]   = useState(false);
   const [quantity, setQuantity]   = useState(1);
   const [selectedSize, setSelectedSize] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const product = useCurrentProductStore((s) => s.product);
-  const { addProductToCart, isAddedToCartProducts } = useContextElement();
+  const { isAddedToCartProducts } = useContextElement();
   const { openModal } = useModalStore();
 
   const unitVariants = product?.unitVariants ?? [];
@@ -43,7 +44,8 @@ export default function StickyProduct() {
   const imgSrc   = selectedVariant?.img || product.img || product.images?.[0]?.src || "";
   const sizes    = (product.sizes ?? []).map(String).filter(Boolean);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (adding) return;
     if (isInCart) {
       openModal("cart");
       return;
@@ -56,13 +58,13 @@ export default function StickyProduct() {
       selectedVariantId: variantId,
       selectedSize,
     };
-    addProductToCart(payload, quantity);
-    cartAPI.add({
-      product_id: Number(product.id),
-      quantity,
-      ...(variantId ? { variant_id: variantId } : {}),
-    }).catch(() => {});
-    openModal("cart");
+    setAdding(true);
+    try {
+      await addLineToCart(payload, quantity);
+      openModal("cart");
+    } finally {
+      setAdding(false);
+    }
   };
 
   const isStockOut = product && (product as { isStockOut?: boolean }).isStockOut;

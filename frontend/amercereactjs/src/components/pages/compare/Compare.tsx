@@ -2,9 +2,10 @@
 
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
+import { addLineToCart } from "@/utils/cartSync";
 
 function Compare() {
-  const { compareItem, removeFromCompareItem, addProductToCart } =
+  const { compareItem, removeFromCompareItem } =
     useContextElement();
 
   if (!compareItem || compareItem.length === 0) {
@@ -142,7 +143,7 @@ function Compare() {
                     <td key={product.id} className="compare-col compare-value">
                       <button
                         className="tf-btn s-small animate-btn"
-                        onClick={() => addProductToCart(product)}
+                        onClick={() => void addLineToCart(product)}
                       >
                         <span className="text-caption-01"> Add To Cart </span>
                       </button>

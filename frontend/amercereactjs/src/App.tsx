@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { rememberAuthReturn } from "@/utils/authRedirect";
 import { syncCartFromServer } from "@/utils/cartSync";
+import { useStore } from "@/context/store";
 
 import AccountLayout from "@/pages/account/layout";
 import BlogsLayout from "@/pages/blogs/layout";
@@ -147,20 +148,36 @@ function WishlistSync() {
 }
 
 /**
- * Pull server cart into Zustand after auth hydrate / login, and when the tab
- * regains focus (so app→web adds show up without a full hard reload).
+ * Pull server cart into Zustand after auth + cart persist hydrate, and when
+ * the tab regains focus (so app→web adds show up without a full hard reload).
  */
 function CartSync() {
   const { isLoggedIn, hydrated } = useAuthStore();
   useEffect(() => {
     if (!hydrated || !isLoggedIn) return;
-    void syncCartFromServer();
+    let cancelled = false;
+    let focusTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const run = () => {
+      if (!cancelled) void syncCartFromServer();
+    };
+
+    const onCartReady = () => run();
+    const unsubCart = useStore.persist.onFinishHydration(onCartReady);
+    if (useStore.persist.hasHydrated()) onCartReady();
+
     const onFocus = () => {
-      if (document.visibilityState === "visible") void syncCartFromServer();
+      if (document.visibilityState !== "visible") return;
+      clearTimeout(focusTimer);
+      // Debounce so an in-flight web add can finish before we pull.
+      focusTimer = setTimeout(run, 400);
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
+      cancelled = true;
+      unsubCart();
+      clearTimeout(focusTimer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };

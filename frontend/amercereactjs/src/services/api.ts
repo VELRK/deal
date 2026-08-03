@@ -355,9 +355,12 @@ export const cartAPI = {
       "/cart/suggestions",
       { params },
     ),
-  add: (data: { product_id: number; quantity: number; variant_id?: number }) => http.post("/cart/add", data),
-  update: (data: { product_id: number; quantity: number; variant_id?: number }) => http.post("/cart/update", data),
-  remove: (data: { product_id: number; variant_id?: number }) => http.post("/cart/remove", data),
+  add: (data: { product_id: number; quantity: number; variant_id?: number }) =>
+    http.post<{ success: boolean; data: { items: CartItem[]; summary: CartSummary } }>("/cart/add", data),
+  update: (data: { product_id: number; quantity: number; variant_id?: number }) =>
+    http.post<{ success: boolean; data: { items: CartItem[]; summary: CartSummary } }>("/cart/update", data),
+  remove: (data: { product_id: number; variant_id?: number }) =>
+    http.post<{ success: boolean; data: { items: CartItem[]; summary: CartSummary } }>("/cart/remove", data),
   clear: () => http.post("/cart/clear", {}),
   /** Merge guest session cart into logged-in user cart */
   merge: (data?: { session_id?: string }) =>

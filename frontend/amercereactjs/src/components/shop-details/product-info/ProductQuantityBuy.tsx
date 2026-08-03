@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useProduct } from "@/context/useProduct";
 import { useContextElement } from "@/context/Context";
 import type { ProductCardItem } from "@/types/productCard";
-import { cartAPI } from "@/services/api";
+import { addLineToCart } from "@/utils/cartSync";
 import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
 
@@ -18,7 +18,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     currentVariantId,
     unitVariants,
   } = useProduct();
-  const { addProductToCart, isAddedToCartProducts } = useContextElement();
+  const { isAddedToCartProducts } = useContextElement();
   const { isLoggedIn } = useAuthStore();
   const { openModal } = useModalStore();
   const navigate = useNavigate();
@@ -45,12 +45,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     selectedSize: currentSize || undefined,
   });
 
-  const cartPayload = () => ({
-    product_id: Number(product.id),
-    quantity,
-    ...(variantId ? { variant_id: variantId } : {}),
-  });
-
   const handleAddToCart = async () => {
     if (adding || isOutOfStock) return;
     // Already in cart → open cart instead of adding a duplicate line
@@ -60,8 +54,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     }
     setAdding(true);
     try {
-      addProductToCart(selectedProduct(), quantity);
-      cartAPI.add(cartPayload()).catch(() => {});
+      await addLineToCart(selectedProduct(), quantity);
       openModal("cart");
     } finally {
       setAdding(false);
@@ -80,8 +73,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     setAdding(true);
     try {
       if (!isInCart) {
-        addProductToCart(selectedProduct(), quantity);
-        await cartAPI.add(cartPayload()).catch(() => {});
+        await addLineToCart(selectedProduct(), quantity);
       }
       navigate("/checkout");
     } finally {

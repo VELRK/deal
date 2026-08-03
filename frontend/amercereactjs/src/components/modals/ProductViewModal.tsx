@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useProductViewStore } from "@/store/productViewStore";
 import { useContextElement } from "@/context/Context";
-import { productsAPI, cartAPI, reviewsAPI } from "@/services/api";
+import { productsAPI, reviewsAPI } from "@/services/api";
 import type { ApiProduct, ApiReview } from "@/services/api";
 import { apiImageUrl } from "@/hooks/useApi";
 import { formatPrice } from "@/utils/formatPrice";
+import { addLineToCart } from "@/utils/cartSync";
 
 const LOW_STOCK = 5;
 
@@ -32,7 +33,7 @@ function AttrRow({ label, value }: { label: string; value?: string | number | nu
 
 export default function ProductViewModal() {
   const { productKey, closeView } = useProductViewStore();
-  const { addProductToCart, isAddedToCartProducts } = useContextElement();
+  const { isAddedToCartProducts } = useContextElement();
   const navigate = useNavigate();
 
   const [product, setProduct]   = useState<ApiProduct | null>(null);
@@ -116,7 +117,7 @@ export default function ProductViewModal() {
     if (!product || adding || isOutOfStock) return;
     setAdding(true);
     try {
-      addProductToCart(
+      await addLineToCart(
         {
           id: product.id,
           img: apiImageUrl(defaultVariant?.image || product.thumbnail),
@@ -130,11 +131,6 @@ export default function ProductViewModal() {
         },
         quantity,
       );
-      await cartAPI.add({
-        product_id: product.id,
-        quantity,
-        ...(variantId ? { variant_id: Number(variantId) } : {}),
-      }).catch(() => {});
     } finally {
       setAdding(false);
     }

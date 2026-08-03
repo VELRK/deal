@@ -4,15 +4,17 @@ import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
 import { useModalStore } from "@/store/modalStore";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/Modal";
+import { addLineToCart } from "@/utils/cartSync";
 
 export default function QuickAdd() {
-  const { quickAddProduct, addProductToCart, isAddedToCartProducts } = useContextElement();
+  const { quickAddProduct, isAddedToCartProducts } = useContextElement();
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "quickAdd";
 
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [selectedSizeIndex, setSelectedSizeIndex]   = useState(0);
   const [quantity, setQuantity]                     = useState(1);
+  const [adding, setAdding]                         = useState(false);
 
   // Reset selections whenever the product changes
   useEffect(() => {
@@ -33,14 +35,19 @@ export default function QuickAdd() {
     ?? product?.images?.[0]?.src
     ?? "/frontend/assets/images/product/product-1.jpg";
 
-  const handleAddToCart = () => {
-    if (!product) return;
+  const handleAddToCart = async () => {
+    if (!product || adding) return;
     if (isAddedToCartProducts(product.id)) return;
-    addProductToCart(
-      { ...product, selectedSize: selectedSize ?? undefined, selectedColor: selectedColor?.label },
-      quantity,
-    );
-    closeModal();
+    setAdding(true);
+    try {
+      await addLineToCart(
+        { ...product, selectedSize: selectedSize ?? undefined, selectedColor: selectedColor?.label },
+        quantity,
+      );
+      closeModal();
+    } finally {
+      setAdding(false);
+    }
   };
 
   const icon = (
