@@ -73,6 +73,10 @@ export default defineConfig(({ mode }) => {
           target: "http://127.0.0.1/deal",
           changeOrigin: true,
         },
+        "/frontend/assets": {
+          target: "http://127.0.0.1/deal",
+          changeOrigin: true,
+        },
       },
     },
     build: {
