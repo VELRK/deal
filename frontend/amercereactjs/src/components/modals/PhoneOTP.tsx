@@ -44,8 +44,14 @@ export default function PhoneOTPModal() {
     closeModal();
   };
 
-  const finishLogin = (token: string, user: ApiUser) => {
+  const finishLogin = async (token: string, user: ApiUser) => {
     login(token, user);
+    try {
+      const { syncCartFromServer } = await import("@/utils/cartSync");
+      await syncCartFromServer();
+    } catch {
+      /* ignore cart sync errors */
+    }
     const hasRealEmail = user.email && !user.email.startsWith("ph_");
     const fallback = hasRealEmail ? "/account-page" : "/account-setting";
     const dest = useModalStore.getState().consumeAuthRedirect(fallback);
@@ -125,7 +131,7 @@ export default function PhoneOTPModal() {
       const res = await authAPI.otpVerify({ phone: sentPhone, otp: otpValue });
       const r = res.data as { success: boolean; message?: string; data?: { token: string; user: ApiUser } };
       if (r.success && r.data?.token) {
-        finishLogin(r.data.token, r.data.user);
+        await finishLogin(r.data.token, r.data.user);
       } else {
         setError(r.message ?? "Invalid OTP.");
       }

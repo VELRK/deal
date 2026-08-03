@@ -60,7 +60,20 @@ class Sk_JWT {
     public function get_user_from_request() {
         $token = $this->get_token_from_request();
         if (!$token) return null;
-        return $this->decode($token);
+        $payload = $this->decode($token);
+        if (!$payload || empty($payload['user_id'])) {
+            return null;
+        }
+
+        // Reject tokens for deleted / blocked / missing users (avoids empty cart after account merge)
+        $CI =& get_instance();
+        $CI->load->model('Sk_User_model');
+        $user = $CI->Sk_User_model->get_by_id((int) $payload['user_id']);
+        if (!$user || empty($user['status']) || !empty($user['deleted_at'])) {
+            return null;
+        }
+
+        return $payload;
     }
 
     /** Store token hash until exp so logout invalidates it. */
