@@ -10,6 +10,7 @@ import { userAPI, cartAPI, ordersAPI, promoAPI, paymentAPI, siteSettingsAPI } fr
 import type { ApiAddress, RoyaltyCartInfo } from "@/services/api";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
+import { removeLineFromCart } from "@/utils/cartSync";
 
 /* Razorpay global type */
 declare global {
@@ -552,19 +553,7 @@ export default function Checkout() {
   };
 
   const removeLine = (id: ProductId, variantId?: number) => {
-    setCartProducts((prev) =>
-      prev.filter((p) => {
-        if (p.id !== id) return true;
-        if (variantId == null) return p.selectedVariantId != null;
-        return p.selectedVariantId !== variantId;
-      }),
-    );
-    cartAPI
-      .remove({
-        product_id: Number(id),
-        ...(variantId != null ? { variant_id: variantId } : {}),
-      })
-      .catch(() => { });
+    removeLineFromCart(id, variantId);
   };
   const setQty = (id: ProductId, qty: number, variantId?: number) => {
     if (qty < 1) {

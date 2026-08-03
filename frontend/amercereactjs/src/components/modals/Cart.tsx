@@ -6,27 +6,16 @@ import { useModalStore } from "@/store/modalStore";
 import { Drawer } from "@/components/Modal";
 import { useAuthStore } from "@/store/authStore";
 import { cartAPI } from "@/services/api";
+import { removeLineFromCart } from "@/utils/cartSync";
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { cartProducts, setCartProducts, updateQuantity, totalPrice } = useContextElement();
+  const { cartProducts, updateQuantity, totalPrice } = useContextElement();
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "cart";
 
   const removeLine = (id: ProductId, variantId?: number) => {
-    setCartProducts((prev) =>
-      prev.filter((p) => {
-        if (p.id !== id) return true;
-        if (variantId == null) return p.selectedVariantId != null;
-        return p.selectedVariantId !== variantId;
-      }),
-    );
-    cartAPI
-      .remove({
-        product_id: Number(id),
-        ...(variantId != null ? { variant_id: variantId } : {}),
-      })
-      .catch(() => { });
+    removeLineFromCart(id, variantId);
   };
 
   const setQty = (id: ProductId, qty: number, variantId?: number) => {

@@ -1,5 +1,10 @@
 import { cartAPI, type CartItem } from "@/services/api";
-import { useStore, type CartProduct, type Product } from "@/context/store";
+import {
+  useStore,
+  type CartProduct,
+  type Product,
+  type ProductId,
+} from "@/context/store";
 
 function mapApiItemToCartProduct(item: CartItem): CartProduct {
   const price = Number(item.effective_price ?? item.sale_price ?? item.price ?? 0);
@@ -24,6 +29,18 @@ function mapApiItemToCartProduct(item: CartItem): CartProduct {
 
 export function applyServerCartItems(items: CartItem[]): void {
   useStore.getState().setCartProducts(items.map(mapApiItemToCartProduct));
+}
+
+/** Loose product/variant match (string vs number ids from persist/API). */
+export function isSameCartLine(
+  p: { id: ProductId; selectedVariantId?: number },
+  id: ProductId,
+  variantId?: number | null,
+): boolean {
+  if (String(p.id) !== String(id)) return false;
+  if (variantId == null) return true;
+  if (p.selectedVariantId == null) return true;
+  return String(p.selectedVariantId) === String(variantId);
 }
 
 /**
@@ -57,6 +74,26 @@ export async function addLineToCart(
     /* keep optimistic local line if API fails */
     return false;
   }
+}
+
+/**
+ * Remove a line from local cart (loose id match) and best-effort API delete.
+ * Does not replace local from API response — guest session may be empty while
+ * local still shows former logged-in lines after logout.
+ */
+export function removeLineFromCart(
+  id: ProductId,
+  variantId?: number | null,
+): void {
+  useStore.getState().setCartProducts((prev) =>
+    prev.filter((p) => !isSameCartLine(p, id, variantId)),
+  );
+  cartAPI
+    .remove({
+      product_id: Number(id),
+      ...(variantId != null ? { variant_id: Number(variantId) } : {}),
+    })
+    .catch(() => {});
 }
 
 /**

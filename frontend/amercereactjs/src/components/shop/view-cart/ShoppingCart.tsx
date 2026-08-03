@@ -8,9 +8,10 @@ import { promoAPI, siteSettingsAPI, cartAPI, userAPI, type RoyaltyCartInfo } fro
 import { useModalStore } from "@/store/modalStore";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { saveUseRoyalty } from "@/utils/royaltyStorage";
+import { removeLineFromCart } from "@/utils/cartSync";
 
 export default function ShoppingCart() {
-  const { cartProducts, setCartProducts, updateQuantity, totalPrice } =
+  const { cartProducts, updateQuantity, totalPrice } =
     useContextElement();
   const { isLoggedIn } = useAuthStore();
 
@@ -144,14 +145,7 @@ export default function ShoppingCart() {
   const amountToFreeship = Math.max(0, freeShippingAbove - totalPrice);
 
   const removeLine = (id: ProductId, variantId?: number) => {
-    setCartProducts((prev) =>
-      prev.filter((p) => {
-        if (p.id !== id) return true;
-        if (variantId == null) return p.selectedVariantId != null;
-        return p.selectedVariantId !== variantId;
-      }),
-    );
-    cartAPI.remove({ product_id: Number(id), ...(variantId != null ? { variant_id: variantId } : {}) }).catch(() => {});
+    removeLineFromCart(id, variantId);
   };
 
   const setQty = (id: ProductId, qty: number, variantId?: number) => {
