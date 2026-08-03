@@ -37,8 +37,9 @@ application/cache/api/
 vendor/
 composer.lock
 
-# Database credentials — copy database.php.example → database.php locally
+# Database credentials and config
 application/config/database.php
+application/config/config.php
 
 # ── Environment / Secrets ─────────────────────────────────────
 .env
