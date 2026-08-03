@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCategories } from "@/hooks/useApi";
-import type { ApiCategory } from "@/services/api";
+
 
 export default function CategorySearch({
   parentClass = "form_search-product",
