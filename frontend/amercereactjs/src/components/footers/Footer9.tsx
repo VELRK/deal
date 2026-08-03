@@ -218,12 +218,12 @@ export default function Footer9({
             padding: 40px 0 20px 0 !important;
           }
           .luxury-footer-col {
-            margin-bottom: 25px;
+            margin-bottom: 0px !important;
           }
           .footer-brand-info {
             align-items: center !important;
             text-align: center !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 30px !important;
           }
           .luxury-social-list {
             justify-content: center !important;
@@ -260,6 +260,11 @@ export default function Footer9({
           }
 
           .footer-col-block .tf-collapse-content {
+            display: none;
+          }
+
+          .footer-col-block.open .tf-collapse-content {
+            display: block;
             padding-top: 16px !important;
             padding-bottom: 16px !important;
             border-bottom: 1px solid rgba(62, 193, 188, 0.08) !important;
