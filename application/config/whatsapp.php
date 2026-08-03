@@ -14,7 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 
 $config['whatsapp']['provider'] = 'syncr';
-$config['whatsapp']['api_key']  = '674e498739ed6b8f2ed24ebdc3b243272776edd10cca20161979f8c72637842b05bab827f1867cd2efb49331993e20b0dc196c48de22694331f722bd079bab53';
+$config['whatsapp']['api_key']  = 'f20a70ac7131c40762b928155d4ebc1c6115d88041e0f9611c085d8e8f6c22200be15ba0a45f2dd2404a242a2e4b237b9634dbac8e517b8e8b97177e99946481';
 $config['whatsapp']['api_url']  = 'https://waadmin.syncr.in/v1/message/send-message';
 $config['whatsapp']['from_number'] = '';
 $config['whatsapp']['development_mode'] = false;
