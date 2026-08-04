@@ -233,6 +233,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
       </li>
 
       <li class="nav-item">
+        <a href="<?= site_url('shopkart/notifications') ?>"
+           class="nav-link sk-nav-link <?= $uri==='notifications'?'active':'' ?>">
+          <i class="bi bi-bell me-2"></i> Notifications
+        </a>
+      </li>
+
+      <li class="nav-item">
         <a href="<?= site_url('shopkart/whatsapp-report') ?>"
            class="nav-link sk-nav-link <?= $uri==='whatsapp-report'?'active':'' ?>">
           <i class="bi bi-whatsapp me-2"></i> WhatsApp Report

@@ -270,4 +270,40 @@ class Sk_User extends Sk_Base_Api {
 
         return $this->error('Payment gateway is not configured. Please contact support.', 503);
     }
+
+    /**
+     * POST /shopkart-api/user/device-token
+     * Body: { token, platform?: android|ios|web }
+     */
+    public function register_device_token() {
+        $this->auth_required();
+        $data = $this->body();
+        $token = trim((string)($data['token'] ?? ''));
+        $platform = strtolower(trim((string)($data['platform'] ?? 'android')));
+        if ($token === '') {
+            return $this->error('FCM token is required.');
+        }
+        $this->load->model('Sk_Notification_model');
+        $this->Sk_Notification_model->upsert_token((int)$this->user['user_id'], $token, $platform);
+        $this->success([
+            'token'    => $token,
+            'platform' => in_array($platform, ['android', 'ios', 'web'], true) ? $platform : 'android',
+        ], 'Device token registered.');
+    }
+
+    /**
+     * DELETE or POST /shopkart-api/user/device-token/remove
+     * Body: { token }
+     */
+    public function unregister_device_token() {
+        $this->auth_required();
+        $data = $this->body();
+        $token = trim((string)($data['token'] ?? ''));
+        if ($token === '') {
+            return $this->error('FCM token is required.');
+        }
+        $this->load->model('Sk_Notification_model');
+        $this->Sk_Notification_model->delete_token($token, (int)$this->user['user_id']);
+        $this->success([], 'Device token removed.');
+    }
 }
