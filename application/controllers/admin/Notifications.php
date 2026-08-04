@@ -172,10 +172,30 @@ class Notifications extends Sk_Base {
         if (!empty($result['error'])) {
             $this->session->set_flashdata('error', $result['error']);
         } else {
-            $this->session->set_flashdata(
-                'success',
-                'Sent: ' . (int)($result['ok'] ?? 0) . ' ok, ' . (int)($result['fail'] ?? 0) . ' failed.'
-            );
+            $okCount = (int)($result['ok'] ?? 0);
+            $failCount = (int)($result['fail'] ?? 0);
+            $hint = '';
+            if ($failCount > 0 && !empty($result['logs'])) {
+                foreach ($result['logs'] as $log) {
+                    $blob = (string)($log['response'] ?? '');
+                    if (stripos($blob, 'SenderId mismatch') !== false) {
+                        $hint = 'SenderId mismatch: device token is from another Firebase project '
+                            . '(often the Flutter **dev** flavor → deal-dev-a090d). '
+                            . 'Rebuild with **prod** flavor, get a fresh FCM token from deal-bc4c4 '
+                            . '(package com.twodeal.consumer), then retry.';
+                        break;
+                    }
+                }
+            }
+            if ($okCount < 1 && $hint !== '') {
+                $this->session->set_flashdata('error', $hint);
+            } else {
+                $msg = 'Sent: ' . $okCount . ' ok, ' . $failCount . ' failed.';
+                if ($hint !== '') {
+                    $msg .= ' ' . $hint;
+                }
+                $this->session->set_flashdata($failCount > 0 && $okCount < 1 ? 'error' : 'success', $msg);
+            }
         }
         redirect('shopkart/notifications/view/' . $row['id']);
     }

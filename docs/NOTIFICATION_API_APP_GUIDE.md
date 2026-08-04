@@ -29,17 +29,35 @@ All `data` values from FCM are **strings**.
 
 ## 2. Firebase options (Flutter)
 
+Admin FCM send uses project **`deal-bc4c4`** (sender id `189494181575`). Device tokens must come from that same project.
+
+| Build | Package | Firebase project | Works with admin send? |
+|-------|---------|------------------|------------------------|
+| **prod** | `com.twodeal.consumer` | `deal-bc4c4` | Yes |
+| **dev** | `com.twodeal.consumer.dev` | `deal-dev-a090d` | No → `SenderId mismatch` |
+
+Use a **prod** flavor build (`flutter run --flavor prod` / release prod) when testing admin push. Tokens from the **dev** app will always fail against this server.
+
+Android prod `google-services.json` must have:
+
+- `project_id`: `deal-bc4c4`
+- `project_number`: `189494181575`
+- `mobilesdk_app_id`: `1:189494181575:android:93935ffb899ac80de848e2`
+- `package_name`: `com.twodeal.consumer`
+
+Place it under `android/app/src/prod/google-services.json` (flavor file), not only a loose copy on disk.
+
 ```dart
+// Prefer google-services.json / FlutterFire for Android.
+// If hardcoding, use Android appId — never the web appId for native.
 FirebaseOptions(
-  apiKey: 'AIzaSyDVLXhBh4qBJbNOezmNmqfr4cPR2R27Cvo',
-  appId: '1:189494181575:web:dce824b331eae998e848e2', // use Android/iOS appId from Console for native apps
+  apiKey: 'AIzaSyAHXARUeW64Z2OBYGFRcHRhD6plgYpWrwU', // Android key from google-services.json
+  appId: '1:189494181575:android:93935ffb899ac80de848e2',
   messagingSenderId: '189494181575',
   projectId: 'deal-bc4c4',
   storageBucket: 'deal-bc4c4.firebasestorage.app',
 );
 ```
-
-Add **Android** and **iOS** apps in Firebase Console and use those `appId` / `google-services.json` / `GoogleService-Info.plist`. The web `appId` above is for web clients only.
 
 Packages (typical):
 
