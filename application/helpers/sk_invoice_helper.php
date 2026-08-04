@@ -645,6 +645,45 @@ function sk_mail_order_invoice(array $order, array $settings = []): bool {
         ]);
     }
 
+    // Admin copy: full order digest (no customer-facing invoice tone); PDF attached when available.
+    $currency = $settings['currency_symbol'] ?? 'RM';
+    $itemsSummary = '';
+    foreach (($order['items'] ?? []) as $item) {
+        $itemsSummary .= htmlspecialchars(($item['product_name'] ?? 'Item') . ' × ' . ($item['quantity'] ?? 1)) . '<br>';
+    }
+    $adminPdf = [];
+    $adminTmp = '';
+    if (!empty($pdf)) {
+        $adminTmp = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'admin-' . $pdfName;
+        if (@file_put_contents($adminTmp, $pdf) !== false) {
+            $adminPdf = [$adminTmp];
+        }
+    }
+    sk_mail_notify_admin(
+        'Invoice emailed – order #' . ($invoice['order_number'] ?? $order['order_number'] ?? ''),
+        sk_mail_admin_rows([
+            'Event'          => 'Tax invoice email sent to customer',
+            'Order'          => '#' . ($invoice['order_number'] ?? $order['order_number'] ?? ''),
+            'Customer'       => $to_name,
+            'Customer email' => $to_email,
+            'Phone'          => $order['shipping_phone'] ?? ($order['customer_phone'] ?? ''),
+            'Payment'        => strtoupper($order['payment_method'] ?? ''),
+            'Total'          => $currency . number_format((float)($order['total'] ?? 0), 2),
+            'Items'          => $itemsSummary,
+            'Ship to'        => implode(', ', array_filter([
+                $order['shipping_line1'] ?? '',
+                $order['shipping_city'] ?? '',
+                $order['shipping_state'] ?? '',
+                $order['shipping_pincode'] ?? '',
+            ])),
+        ]),
+        $settings,
+        $adminPdf
+    );
+    if ($adminTmp !== '' && is_file($adminTmp)) {
+        @unlink($adminTmp);
+    }
+
     return $sent;
 }
 

@@ -25,7 +25,7 @@ class Settings extends Sk_Base {
             'currency', 'currency_symbol', 'tax_rate', 'shipping_charge',
             'free_shipping_above', 'razorpay_key_id', 'razorpay_key_secret',
             'razorpay_mode', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
-            'smtp_from_name', 'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
+            'smtp_from_name', 'admin_email', 'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics', 'top_bar_text',
             'whatsapp_number',
             'askeva_api_url', 'askeva_api_token', 'askeva_order_template', 'askeva_template_lang',
@@ -171,6 +171,7 @@ class Settings extends Sk_Base {
             'smtp_pass'      => $this->input->post('smtp_pass', FALSE),
             'smtp_from_name' => trim($this->input->post('smtp_from_name', TRUE) ?? ''),
             'site_email'     => trim($this->input->post('site_email', TRUE) ?? ''),
+            'admin_email'    => trim($this->input->post('admin_email', TRUE) ?? ''),
         ];
         foreach ($posted as $key => $val) {
             if ($key === 'smtp_pass') {
@@ -191,13 +192,13 @@ class Settings extends Sk_Base {
             redirect('admin/settings?tab=email');
         }
 
-        $to = trim($settings['site_email'] ?? $this->admin['email'] ?? '');
+        $to = trim($settings['admin_email'] ?? '') ?: trim($settings['site_email'] ?? $this->admin['email'] ?? '');
         $site = $settings['site_name'] ?? '2DEAL';
         $sent = sk_send_mail(
             $to,
             $this->admin['name'] ?? 'Admin',
             'SMTP test – ' . $site,
-            '<p>This is a test email from ' . htmlspecialchars($site) . ' at ' . date('Y-m-d H:i:s') . '.</p>'
+            '<p>This is a test email from ' . htmlspecialchars($site) . ' at ' . date('Y-m-d H:i:s') . '.</p><p>Admin inbox: ' . htmlspecialchars(sk_mailer_notify_email($settings)) . '</p>'
         );
 
         if ($sent) {

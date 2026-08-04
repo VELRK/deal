@@ -13,9 +13,22 @@ function sk_mailer_settings(): array {
     return $CI->Sk_Admin_model->get_settings();
 }
 
+/**
+ * Admin notification inbox (Settings → Admin Email).
+ * Falls back to Site Email, then SMTP From address.
+ */
 function sk_mailer_notify_email(array $settings = []): string {
     if (empty($settings)) {
         $settings = sk_mailer_settings();
+    }
+    $admin = trim((string)($settings['admin_email'] ?? ''));
+    if ($admin !== '' && filter_var($admin, FILTER_VALIDATE_EMAIL)) {
+        return $admin;
+    }
+    $site = trim((string)($settings['site_email'] ?? ''));
+    if ($site !== '' && filter_var($site, FILTER_VALIDATE_EMAIL)
+        && !in_array(sk_mailer_email_domain($site), ['shopkart.com', 'shopkart.app', 'example.com', 'example.org', 'test.com'], true)) {
+        return $site;
     }
     return sk_mailer_resolve_from_email($settings);
 }
@@ -189,6 +202,59 @@ function sk_send_mail($to_email, $to_name, $subject, $html_body, array $attachme
     return $result;
 }
 
+/**
+ * Send admin-only mail (different body from customer). Uses Settings → Admin Email.
+ */
+function sk_mail_notify_admin(string $subject, string $innerHtml, array $settings = [], array $attachments = []): bool {
+    if (empty($settings)) {
+        $settings = sk_mailer_settings();
+    }
+    $adminEmail = sk_mailer_notify_email($settings);
+    if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    $site_name = htmlspecialchars($settings['site_name'] ?? '2DEAL');
+    $safeSubject = htmlspecialchars($subject);
+    $body = "
+<!DOCTYPE html>
+<html>
+<head><meta charset='utf-8'></head>
+<body style='margin:0;padding:20px;background:#f1f5f9;font-family:Arial,sans-serif;color:#334155;'>
+  <div style='max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;'>
+    <div style='background:#0f172a;padding:16px 24px;'>
+      <p style='margin:0;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.6px;'>Admin notification</p>
+      <h2 style='margin:4px 0 0;color:#fff;font-size:18px;'>{$safeSubject}</h2>
+    </div>
+    <div style='padding:24px;'>{$innerHtml}</div>
+    <div style='background:#f8fafc;padding:14px 24px;border-top:1px solid #e2e8f0;'>
+      <p style='margin:0;color:#94a3b8;font-size:12px;'>{$site_name} · sent to admin inbox · " . date('d M Y, h:i A') . "</p>
+    </div>
+  </div>
+</body>
+</html>";
+    return sk_send_mail($adminEmail, $site_name . ' Admin', '[Admin] ' . $subject, $body, $attachments);
+}
+
+/** Escape + label/value rows for admin digests. */
+function sk_mail_admin_rows(array $rows): string {
+    $html = '<table width="100%" style="border-collapse:collapse;font-size:14px;">';
+    foreach ($rows as $label => $value) {
+        if ($value === null || $value === '') {
+            continue;
+        }
+        $l = htmlspecialchars((string)$label);
+        $v = is_string($value) && strpos($value, '<') !== false
+            ? $value
+            : nl2br(htmlspecialchars((string)$value));
+        $html .= "<tr>
+          <td style='padding:8px 0;border-bottom:1px solid #f1f5f9;color:#64748b;width:38%;vertical-align:top;'>{$l}</td>
+          <td style='padding:8px 0;border-bottom:1px solid #f1f5f9;color:#0f172a;vertical-align:top;'>{$v}</td>
+        </tr>";
+    }
+    $html .= '</table>';
+    return $html;
+}
+
 /** Build and send an order confirmation email to the customer. */
 function sk_mail_order_confirmation($order, $settings = []) {
     $to_email = $order['customer_email'] ?? '';
@@ -319,11 +385,36 @@ function sk_mail_order_confirmation($order, $settings = []) {
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    $itemsSummary = '';
+    foreach (($order['items'] ?? []) as $item) {
+        $itemsSummary .= htmlspecialchars(($item['product_name'] ?? 'Item') . ' × ' . ($item['quantity'] ?? 1)) . '<br>';
+    }
+    sk_mail_notify_admin(
+        'New order #' . ($order['order_number'] ?? $order['id'] ?? ''),
+        sk_mail_admin_rows([
+            'Event'           => 'Order confirmation email sent to customer',
+            'Order'           => '#' . ($order['order_number'] ?? ''),
+            'Customer'        => $to_name,
+            'Customer email'  => $to_email,
+            'Customer phone'  => $order['shipping_phone'] ?? ($order['customer_phone'] ?? ''),
+            'Payment'         => strtoupper($order['payment_method'] ?? 'COD'),
+            'Total'           => $currency . number_format((float)($order['total'] ?? 0), 2),
+            'Items'           => $itemsSummary,
+            'Ship to'         => implode(', ', array_filter([
+                $order['shipping_line1'] ?? '',
+                $order['shipping_city'] ?? '',
+                $order['shipping_state'] ?? '',
+                $order['shipping_pincode'] ?? '',
+            ])),
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Send order status update email to customer. */
-function sk_mail_order_status($order, $new_status, $settings = []) {
+function sk_mail_order_status($order, $new_status, $settings = [], bool $notifyAdmin = true) {
     $to_email = $order['customer_email'] ?? '';
     $to_name  = $order['customer_name']  ?? 'Customer';
 
@@ -377,7 +468,24 @@ function sk_mail_order_status($order, $new_status, $settings = []) {
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    if ($notifyAdmin) {
+        sk_mail_notify_admin(
+            "Order #{$order['order_number']} status → {$s['label']}",
+            sk_mail_admin_rows([
+                'Event'          => 'Order status email sent to customer',
+                'Order'          => '#' . ($order['order_number'] ?? ''),
+                'New status'     => $s['label'] . ' (' . $new_status . ')',
+                'Customer'       => $to_name,
+                'Customer email' => $to_email,
+                'Tracking'       => $order['tracking_number'] ?? '',
+                'Payment'        => strtoupper($order['payment_method'] ?? ''),
+                'Total'          => ($settings['currency_symbol'] ?? 'RM') . number_format((float)($order['total'] ?? 0), 2),
+            ]),
+            $settings
+        );
+    }
+    return $sent;
 }
 
 /** Send password reset verification code to the user's email. */
@@ -415,7 +523,21 @@ function sk_mail_password_reset_code($user, $code, $settings = [], $portalLabel 
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    // Admin alert without the OTP (security).
+    sk_mail_notify_admin(
+        'Password reset requested – ' . ($portalLabel ?: 'Account'),
+        sk_mail_admin_rows([
+            'Event'   => 'Customer password reset code emailed (code not shown to admin)',
+            'Portal'  => $portalLabel ?: 'Account',
+            'Name'    => $to_name,
+            'Email'   => $to_email,
+            'User ID' => $user['id'] ?? '',
+            'Time'    => date('d M Y, h:i A'),
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Affiliate forgot password: reset via secure link. */
@@ -453,7 +575,20 @@ function sk_mail_affiliate_password_reset(array $affiliate, string $link, array 
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    sk_mail_notify_admin(
+        'Affiliate password reset requested',
+        sk_mail_admin_rows([
+            'Event'         => 'Affiliate password reset link emailed (link not shown to admin)',
+            'Affiliate'     => $to_name,
+            'Email'         => $to_email,
+            'Affiliate ID'  => $affiliate['id'] ?? '',
+            'Promo code'    => $affiliate['promo_code'] ?? '',
+            'Time'          => date('d M Y, h:i A'),
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Affiliate invite: set password via verification link. */
@@ -496,7 +631,20 @@ function sk_mail_affiliate_invite($affiliate, $link, $settings = []) {
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    sk_mail_notify_admin(
+        'Affiliate invite emailed – ' . ($affiliate['name'] ?? ''),
+        sk_mail_admin_rows([
+            'Event'        => 'Affiliate invite / set-password email sent',
+            'Affiliate'    => $to_name,
+            'Email'        => $to_email,
+            'Promo code'   => $affiliate['promo_code'] ?? '',
+            'Affiliate ID' => $affiliate['id'] ?? '',
+            'Phone'        => $affiliate['phone'] ?? '',
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Affiliate self-registration: confirmation to applicant (pending approval). */
@@ -535,6 +683,7 @@ function sk_mail_affiliate_registration(array $affiliate, array $settings = []) 
 </body>
 </html>";
 
+    // Customer ack only — admin copy is sk_mail_affiliate_registration_admin().
     return sk_send_mail($to_email, $to_name, $subject, $body);
 }
 
@@ -543,37 +692,20 @@ function sk_mail_affiliate_registration_admin(array $affiliate, array $settings 
     if (empty($settings)) {
         $settings = sk_mailer_settings();
     }
-    $adminEmail = sk_mailer_notify_email($settings);
-    if ($adminEmail === '') {
-        return false;
-    }
-
-    $site_name = $settings['site_name'] ?? '2DEAL';
-    $name  = htmlspecialchars($affiliate['name'] ?? '');
-    $email = htmlspecialchars($affiliate['email'] ?? '');
-    $phone = htmlspecialchars($affiliate['phone'] ?? '');
-    $promo = htmlspecialchars($affiliate['promo_code'] ?? '');
     $adminUrl = htmlspecialchars(site_url('admin/affiliates'));
-    $subject = 'New affiliate registration – ' . ($affiliate['name'] ?? 'Applicant');
+    $inner = sk_mail_admin_rows([
+        'Event'      => 'New affiliate registration (pending approval)',
+        'Name'       => $affiliate['name'] ?? '',
+        'Email'      => $affiliate['email'] ?? '',
+        'Phone'      => $affiliate['phone'] ?? '',
+        'Promo code' => $affiliate['promo_code'] ?? '',
+    ]) . '<p style="margin-top:20px;"><a href="' . $adminUrl . '" style="background:#059669;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Review in admin</a></p>';
 
-    $body = "
-<!DOCTYPE html>
-<html>
-<head><meta charset='utf-8'></head>
-<body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
-  <div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
-    <h2 style='margin:0 0 16px;color:#0f172a;'>New affiliate registration</h2>
-    <p><strong>Name:</strong> {$name}<br>
-    <strong>Email:</strong> {$email}<br>
-    <strong>Phone:</strong> {$phone}<br>
-    <strong>Promo code:</strong> {$promo}</p>
-    <p style='margin-top:24px;'><a href='{$adminUrl}' style='background:#059669;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;'>Review in admin</a></p>
-    <p style='color:#94a3b8;font-size:13px;margin-top:24px;'>{$site_name}</p>
-  </div>
-</body>
-</html>";
-
-    return sk_send_mail($adminEmail, $site_name . ' Admin', $subject, $body);
+    return sk_mail_notify_admin(
+        'New affiliate registration – ' . ($affiliate['name'] ?? 'Applicant'),
+        $inner,
+        $settings
+    );
 }
 
 /** Affiliate approved: notify applicant with promo code and login link. */
@@ -615,7 +747,20 @@ function sk_mail_affiliate_approved(array $affiliate, array $settings = []) {
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    sk_mail_notify_admin(
+        'Affiliate approved – ' . ($affiliate['name'] ?? ''),
+        sk_mail_admin_rows([
+            'Event'        => 'Affiliate approved email sent to applicant',
+            'Affiliate'    => $to_name,
+            'Email'        => $to_email,
+            'Promo code'   => $affiliate['promo_code'] ?? '',
+            'Affiliate ID' => $affiliate['id'] ?? '',
+            'Phone'        => $affiliate['phone'] ?? '',
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Affiliate payout paid: notify affiliate that payment was sent. */
@@ -670,7 +815,23 @@ function sk_mail_affiliate_payout_paid(array $affiliate, array $payout, array $s
 </body>
 </html>";
 
-    return sk_send_mail($to_email, $to_name, $subject, $body);
+    $sent = sk_send_mail($to_email, $to_name, $subject, $body);
+    $currency = $settings['currency_symbol'] ?? 'RM';
+    sk_mail_notify_admin(
+        "Affiliate payout paid – {$currency}" . number_format((float)($payout['amount'] ?? 0), 2),
+        sk_mail_admin_rows([
+            'Event'              => 'Affiliate payout paid email sent',
+            'Affiliate'          => $to_name,
+            'Email'              => $to_email,
+            'Amount'             => $currency . number_format((float)($payout['amount'] ?? 0), 2),
+            'Payment reference'  => $payout['payment_reference'] ?? '',
+            'Paid at'            => !empty($payout['paid_at']) ? date('d M Y, h:i A', strtotime($payout['paid_at'])) : date('d M Y, h:i A'),
+            'Pending balance'    => $currency . number_format((float)($affiliate['pending_commission'] ?? 0), 2),
+            'Total paid to date' => $currency . number_format((float)($affiliate['paid_commission'] ?? 0), 2),
+        ]),
+        $settings
+    );
+    return $sent;
 }
 
 /** Contact / affiliate enquiry: ack to user + notify admin. */
@@ -697,21 +858,17 @@ function sk_mail_contact_enquiry(string $name, string $email, string $message, a
 
     $sentUser = sk_send_mail($email, $name, $userSubject, $userBody);
 
-    $adminEmail = sk_mailer_notify_email($settings);
-    $sentAdmin = false;
-    if ($adminEmail !== '') {
-        $adminSubject = ($isAffiliate ? 'New affiliate enquiry' : 'New contact enquiry') . ' – ' . $name;
-        $adminBody = "
-<!DOCTYPE html>
-<html><body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
-<div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
-  <h2 style='margin:0 0 16px;'>{$adminSubject}</h2>
-  <p><strong>Name:</strong> {$safeName}<br><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
-  <p style='background:#f8fafc;padding:16px;border-radius:8px;'>{$safeMsg}</p>
-</div>
-</body></html>";
-        $sentAdmin = sk_send_mail($adminEmail, $site_name . ' Admin', $adminSubject, $adminBody);
-    }
+    $adminSubject = ($isAffiliate ? 'New affiliate enquiry' : 'New contact enquiry') . ' – ' . $name;
+    $sentAdmin = sk_mail_notify_admin(
+        $adminSubject,
+        sk_mail_admin_rows([
+            'Event'   => $isAffiliate ? 'Affiliate programme enquiry' : 'Contact form enquiry',
+            'Name'    => $name,
+            'Email'   => $email,
+            'Message' => $safeMsg,
+        ]),
+        $settings
+    );
 
     return ['user' => $sentUser, 'admin' => $sentAdmin];
 }

@@ -258,10 +258,16 @@
               <label class="form-label">SMTP Password</label>
               <input type="password" name="smtp_pass" class="form-control" value="<?= htmlspecialchars($settings['smtp_pass'] ?? '') ?>">
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Admin Email</label>
+              <input type="email" name="admin_email" class="form-control" value="<?= htmlspecialchars($settings['admin_email'] ?? '') ?>" placeholder="admin@yourdomain.com">
+              <div class="form-text">Every customer/affiliate mail also notifies this inbox with a separate admin summary (not the same customer email).</div>
+            </div>
             <div class="col-12">
               <div class="alert alert-info small mb-0">
                 Use your mailbox SMTP (e.g. Hostinger: <code>smtp.hostinger.com</code>, port <code>465</code> SSL or <code>587</code> TLS).
                 <strong>Site Email</strong> (General tab) must match the mailbox address you send from.
+                Set <strong>Admin Email</strong> to receive admin digests for orders, invoices, status, affiliates, contact, etc.
               </div>
             </div>
             <div class="col-12">

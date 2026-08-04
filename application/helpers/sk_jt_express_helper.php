@@ -391,9 +391,9 @@ function sk_jt_sync_order_tracking(int $orderId, array $trackResult): array {
             $CI->load->model('Sk_Admin_model');
             $settings = $CI->Sk_Admin_model->get_settings();
             // Customer: email + WhatsApp
-            sk_mail_order_status($fresh, $newStatus, $settings);
+            sk_mail_order_status($fresh, $newStatus, $settings, false);
             sk_whatsapp_notify_order_status($fresh, $newStatus, $settings);
-            // Admin: email so JT-driven changes are visible in inbox
+            // Admin: JT-specific digest (not the generic order-status admin copy)
             sk_mail_jt_order_status_admin($fresh, $prevStatus, $newStatus, $latestLabel, $settings);
         }
     }
@@ -417,36 +417,30 @@ function sk_mail_jt_order_status_admin(array $order, string $fromStatus, string 
     if (empty($settings)) {
         $settings = sk_mailer_settings();
     }
-    $adminEmail = sk_mailer_notify_email($settings);
-    if ($adminEmail === '') {
-        return false;
-    }
 
-    $site_name = $settings['site_name'] ?? '2DEAL';
-    $orderNo   = htmlspecialchars($order['order_number'] ?? '');
-    $awb       = htmlspecialchars($order['jt_bill_code'] ?? $order['tracking_number'] ?? '—');
-    $from      = htmlspecialchars(ucfirst($fromStatus ?: '—'));
-    $to        = htmlspecialchars(ucfirst($toStatus ?: '—'));
-    $courier   = htmlspecialchars($courierLabel !== '' ? $courierLabel : ($order['jt_courier_status'] ?? '—'));
+    $orderNo   = $order['order_number'] ?? '';
+    $awb       = $order['jt_bill_code'] ?? $order['tracking_number'] ?? '—';
+    $from      = ucfirst($fromStatus ?: '—');
+    $to        = ucfirst($toStatus ?: '—');
+    $courier   = $courierLabel !== '' ? $courierLabel : ($order['jt_courier_status'] ?? '—');
     $orderUrl  = htmlspecialchars(site_url('shopkart/jt-express/view/' . (int)($order['id'] ?? 0)));
-    $subject   = "JT Express updated order #{$order['order_number']} → {$toStatus}";
 
-    $body = "
-<!DOCTYPE html>
-<html><head><meta charset='utf-8'></head>
-<body style='margin:0;padding:20px;background:#f8fafc;font-family:Arial,sans-serif;color:#334155;'>
-  <div style='max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e2e8f0;'>
-    <h2 style='margin:0 0 12px;color:#0f172a;'>JT Express status update</h2>
-    <p>Order <strong>#{$orderNo}</strong> was auto-updated from JT tracking.</p>
-    <p><strong>Order status:</strong> {$from} → <span style='color:#ca8a04;'>{$to}</span><br>
-    <strong>AWB:</strong> {$awb}<br>
-    <strong>Courier:</strong> {$courier}</p>
-    <p style='margin-top:24px;'><a href='{$orderUrl}' style='background:#ca8a04;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;'>Open JT shipment</a></p>
-    <p style='color:#94a3b8;font-size:13px;margin-top:24px;'>{$site_name}</p>
-  </div>
-</body></html>";
+    $inner = sk_mail_admin_rows([
+        'Event'          => 'JT Express auto-updated portal order status',
+        'Order'          => '#' . $orderNo,
+        'Status change'  => $from . ' → ' . $to,
+        'AWB'            => $awb,
+        'Courier status' => $courier,
+        'Customer'       => $order['customer_name'] ?? ($order['shipping_name'] ?? ''),
+        'Customer email' => $order['customer_email'] ?? '',
+        'Phone'          => $order['shipping_phone'] ?? '',
+    ]) . '<p style="margin-top:20px;"><a href="' . $orderUrl . '" style="background:#ca8a04;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Open JT shipment</a></p>';
 
-    return sk_send_mail($adminEmail, $site_name . ' Admin', $subject, $body);
+    return sk_mail_notify_admin(
+        "JT Express updated order #{$orderNo} → {$toStatus}",
+        $inner,
+        $settings
+    );
 }
 
 /**
