@@ -38,6 +38,24 @@ function sk_fcm_config(): array {
     $CI =& get_instance();
     $CI->config->load('firebase', true);
     $cfg = $CI->config->item('firebase');
+    if (!is_array($cfg)) {
+        $cfg = [];
+    }
+    // CI use_sections nests $config['firebase'] under the file name again.
+    if (isset($cfg['firebase']) && is_array($cfg['firebase']) && !isset($cfg['client_email'])) {
+        $cfg = $cfg['firebase'];
+    }
+    // Direct-include fallback (same pattern as WhatsApp) when section load is empty/wrong.
+    if (empty($cfg['client_email']) || empty($cfg['private_key'])) {
+        $path = APPPATH . 'config/firebase.php';
+        if (is_file($path)) {
+            $config = [];
+            include $path;
+            if (!empty($config['firebase']) && is_array($config['firebase'])) {
+                $cfg = $config['firebase'];
+            }
+        }
+    }
     return is_array($cfg) ? $cfg : [];
 }
 
@@ -45,6 +63,22 @@ function sk_fcm_web_config(): array {
     $CI =& get_instance();
     $CI->config->load('firebase_web', true);
     $cfg = $CI->config->item('firebase_web');
+    if (!is_array($cfg)) {
+        $cfg = [];
+    }
+    if (isset($cfg['firebase_web']) && is_array($cfg['firebase_web']) && !isset($cfg['apiKey'])) {
+        $cfg = $cfg['firebase_web'];
+    }
+    if (empty($cfg['apiKey'])) {
+        $path = APPPATH . 'config/firebase_web.php';
+        if (is_file($path)) {
+            $config = [];
+            include $path;
+            if (!empty($config['firebase_web']) && is_array($config['firebase_web'])) {
+                $cfg = $config['firebase_web'];
+            }
+        }
+    }
     return is_array($cfg) ? $cfg : [];
 }
 
