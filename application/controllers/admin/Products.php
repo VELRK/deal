@@ -284,7 +284,7 @@ class Products extends Sk_Base {
 
         $this->_clear_product_api_cache();
         $this->session->set_flashdata('success', 'Product updated successfully.');
-        redirect('admin/products/edit/' . $id);
+        redirect('admin/products');
     }
 
     public function delete($id) {
