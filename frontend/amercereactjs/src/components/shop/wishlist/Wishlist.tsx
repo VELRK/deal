@@ -4,6 +4,7 @@ import { useStore } from "@/context/store";
 import { useModalStore } from "@/store/modalStore";
 import type { ProductCardItem } from "@/types/productCard";
 import { formatPrice } from "@/utils/formatPrice";
+import { apiImageUrl } from "@/hooks/useApi";
 
 function WishlistTableRow({
   product,
@@ -12,7 +13,8 @@ function WishlistTableRow({
   product: ProductCardItem;
   removeFromWishlist: (id: string | number) => void;
 }) {
-  const imgSrc = product.img || "/frontend/assets/images/product/product-1.jpg";
+  const baseImg = product.img || "/frontend/assets/images/product/product-1.jpg";
+  const imgSrc = apiImageUrl(baseImg);
 
   return (
     <div className="classic-wishlist-item">

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { apiImageUrl } from "@/hooks/useApi";
 import { useMemo, useState, memo, useEffect } from "react";
 import { useStore, type CartProduct } from "@/context/store";
 import { useAuthStore } from "@/store/authStore";
@@ -767,7 +768,8 @@ const CartTableRow = memo(function CartTableRow({
   onRemove: () => void;
   onQtyChange: (qty: number) => void;
 }) {
-  const imgSrc = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const baseImg = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const imgSrc = apiImageUrl(baseImg);
   const colorLabel = item.selectedColor ?? item.colors?.[0]?.label ?? null;
   const sizeLabel = item.selectedSize ?? null;
   const packLabel = item.unit_label ?? null;

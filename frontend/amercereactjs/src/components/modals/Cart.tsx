@@ -7,6 +7,7 @@ import { Drawer } from "@/components/Modal";
 import { useAuthStore } from "@/store/authStore";
 import { cartAPI } from "@/services/api";
 import { removeLineFromCart } from "@/utils/cartSync";
+import { apiImageUrl } from "@/hooks/useApi";
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -168,7 +169,8 @@ function CartMiniLine({
   onQtyChange: (qty: number) => void;
   onProductClick: () => void;
 }) {
-  const imgSrc = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const baseImg = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const imgSrc = apiImageUrl(baseImg);
   const packLabel = item.unit_label;
   const lineTotal = item.price * item.quantity;
 

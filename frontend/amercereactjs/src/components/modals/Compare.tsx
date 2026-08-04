@@ -1,4 +1,5 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { apiImageUrl } from "@/hooks/useApi";
 
 import { useContextElement, type Product } from "@/context/Context";
 
@@ -69,8 +70,9 @@ function CompareOffcanvasItem({
   item: Product;
   onRemove: () => void;
 }) {
-  const imgSrc =
+  const baseImg =
     item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const imgSrc = apiImageUrl(baseImg);
 
   return (
     <div className="tf-compare-item file-delete">

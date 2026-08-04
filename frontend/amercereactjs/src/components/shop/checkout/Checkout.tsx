@@ -4,6 +4,7 @@ import "./Checkout.css";
 
 import { useContextElement, type CartProduct } from "@/context/Context";
 import type { ProductId } from "@/context/store";
+import { apiImageUrl } from "@/hooks/useApi";
 import { formatPrice } from "@/utils/formatPrice";
 import { useAuthStore } from "@/store/authStore";
 import { userAPI, cartAPI, ordersAPI, promoAPI, paymentAPI, siteSettingsAPI } from "@/services/api";
@@ -934,7 +935,8 @@ export default function Checkout() {
 const CheckoutOrderItemPremium = memo(function CheckoutOrderItemPremium({ item, onRemove, onQtyChange }: {
   item: CartProduct; onRemove: () => void; onQtyChange: (qty: number) => void;
 }) {
-  const imgSrc = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const baseImg = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const imgSrc = apiImageUrl(baseImg);
   const colorLabel = item.selectedColor ?? item.colors?.[0]?.label ?? null;
   const sizeLabel = item.selectedSize ?? null;
 
