@@ -3,14 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /*
 |--------------------------------------------------------------------------
-| Firebase Admin SDK (service account) — copy to firebase.php
+| Firebase Admin SDK (service account) — deal-bc4c4
 |--------------------------------------------------------------------------
 |
-| 1. Firebase Console → Project deal-bc4c4 → Project settings → Service accounts
-| 2. Generate new private key → download JSON
-| 3. Map JSON fields into $config['firebase'] below (keep private_key newlines as \n)
+| Easiest: download JSON from Firebase Console and save as:
+|   application/config/firebase-service-account.json
+| firebase.php loads that file automatically (gitignored).
 |
-| Required for FCM HTTP v1 send from Admin Notifications.
+| Or paste fields into firebase.php manually.
+|
+| Console steps:
+| 1. https://console.firebase.google.com/ → deal-bc4c4
+| 2. Project settings → Service accounts
+| 3. Generate new private key
 |
 */
 
