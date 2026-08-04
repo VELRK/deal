@@ -115,3 +115,6 @@ verify_colors.php
 
 # ── Deploy SSH keys (never commit) ────────────────────────────
 deploy-keys/
+
+# ── Firebase Admin private key (never commit) ─────────────────
+application/config/firebase-service-account.json
