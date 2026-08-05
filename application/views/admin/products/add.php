@@ -287,14 +287,14 @@ function opt($list, $val) {
               <label class="form-label">MRP / Price <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text">RM</span>
-                <input type="number" name="price" class="form-control" step="1" min="0" required>
+                <input type="number" name="price" class="form-control" step="0.01" min="0" required>
               </div>
             </div>
             <div class="col-md-3">
               <label class="form-label">Sale / Offer Price</label>
               <div class="input-group">
                 <span class="input-group-text">RM</span>
-                <input type="number" name="sale_price" class="form-control" step="1" min="0" placeholder="Optional">
+                <input type="number" name="sale_price" class="form-control" step="0.01" min="0" placeholder="Optional">
               </div>
             </div>
             <div class="col-md-3 d-flex align-items-end">

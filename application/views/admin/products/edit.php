@@ -307,14 +307,14 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
               <label class="form-label">MRP / Price <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text">RM</span>
-                <input type="number" name="price" class="form-control" value="<?= $p['price'] ?>" required>
+                <input type="number" name="price" class="form-control" step="0.01" min="0" value="<?= $p['price'] ?>" required>
               </div>
             </div>
             <div class="col-md-3">
               <label class="form-label">Sale Price</label>
               <div class="input-group">
                 <span class="input-group-text">RM</span>
-                <input type="number" name="sale_price" class="form-control" value="<?= $p['sale_price'] ?? '' ?>">
+                <input type="number" name="sale_price" class="form-control" step="0.01" min="0" value="<?= $p['sale_price'] ?? '' ?>">
               </div>
             </div>
             <div class="col-md-3 d-flex align-items-end">
