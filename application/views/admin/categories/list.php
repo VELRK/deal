@@ -336,7 +336,7 @@ function saveCat(){
   const spin=document.getElementById('catSpin');spin.classList.remove('d-none');
   fetch(url,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{spin.classList.add('d-none');if(res.success){bootstrap.Modal.getInstance(document.getElementById('catModal')).hide();showAlert(id?'Category updated.':'Category added.');setTimeout(()=>location.reload(),700);}else showAlert(res.message||'Error','danger');}).catch(()=>{spin.classList.add('d-none');showAlert('Network error','danger');});
 }
-function delCat(id,name){if(!confirm(`Delete category "${name}"? Its subcategories will also be deleted.`))return;fetch(`<?= base_url('admin/categories/delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('cat-row-'+id)?.remove();showAlert('Deleted.');}});}
+function delCat(id,name){if(!confirm(`Delete category "${name}"? Its subcategories will also be deleted.`))return;fetch(`<?= base_url('admin/categories/delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('cat-row-'+id)?.remove();showAlert('Deleted.');}else showAlert(res.message||'Could not delete category.','danger');}).catch(()=>showAlert('Could not delete category.','danger'));}
 
 // ── Subcategory ───────────────────────────────────────────────
 function openSub(){document.getElementById('subModalTitle').textContent='Add Subcategory';document.getElementById('subForm').reset();document.getElementById('subId').value='';document.getElementById('subMegaTitleId').value='';document.getElementById('subPrev').innerHTML='';}
@@ -345,11 +345,11 @@ function saveSub(){
   const form=document.getElementById('subForm');if(!form.checkValidity()){form.reportValidity();return;}
   const id=document.getElementById('subId').value;
   const fd=new FormData(form);
-  const url=id?`<?= base_url('admin/subcategories/update') ?>/${id}`:'<?= base_url('admin/subcategories/store') ?>';
+  const url=id?`<?= base_url('admin/categories/sub_update') ?>/${id}`:'<?= base_url('admin/categories/sub_store') ?>';
   const spin=document.getElementById('subSpin');spin.classList.remove('d-none');
   fetch(url,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{spin.classList.add('d-none');if(res.success){bootstrap.Modal.getInstance(document.getElementById('subModal')).hide();showAlert(id?'Subcategory updated.':'Subcategory added.');setTimeout(()=>location.reload(),700);}else showAlert(res.message||'Error','danger');}).catch(()=>{spin.classList.add('d-none');showAlert('Network error','danger');});
 }
-function delSub(id,name){if(!confirm(`Delete subcategory "${name}"?`))return;fetch(`<?= base_url('admin/subcategories/delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('sub-row-'+id)?.remove();showAlert('Deleted.');}});}
+function delSub(id,name){if(!confirm(`Delete subcategory "${name}"?`))return;fetch(`<?= base_url('admin/categories/sub_delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('sub-row-'+id)?.remove();showAlert('Deleted.');}else showAlert(res.message||'Could not delete subcategory.','danger');}).catch(()=>showAlert('Could not delete subcategory.','danger'));}
 
 // ── Mega Menu Title ───────────────────────────────────────────
 function openTitle(){document.getElementById('titleModalTitle').textContent='Add Title';document.getElementById('titleForm').reset();document.getElementById('titleId').value='';}
@@ -362,5 +362,5 @@ function saveTitle(){
   const spin=document.getElementById('titleSpin');spin.classList.remove('d-none');
   fetch(url,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{spin.classList.add('d-none');if(res.success){bootstrap.Modal.getInstance(document.getElementById('titleModal')).hide();showAlert(id?'Title updated.':'Title added.');setTimeout(()=>location.reload(),700);}else showAlert(res.message||'Error','danger');}).catch(()=>{spin.classList.add('d-none');showAlert('Network error','danger');});
 }
-function delTitle(id,name){if(!confirm(`Delete title "${name}"?`))return;fetch(`<?= base_url('admin/categories/title_delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('title-row-'+id)?.remove();showAlert('Deleted.');}});}
+function delTitle(id,name){if(!confirm(`Delete title "${name}"?`))return;fetch(`<?= base_url('admin/categories/title_delete') ?>/${id}`,{method:'POST'}).then(r=>r.json()).then(res=>{if(res.success){document.getElementById('title-row-'+id)?.remove();showAlert('Deleted.');}else showAlert(res.message||'Could not delete title.','danger');}).catch(()=>showAlert('Could not delete title.','danger'));}
 </script>

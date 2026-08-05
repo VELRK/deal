@@ -106,7 +106,10 @@ class Categories extends Sk_Base {
     }
 
     public function sub_delete($id) {
-        $this->Sk_Admin_model->delete_subcategory($id);
+        $ok = $this->Sk_Admin_model->delete_subcategory((int)$id);
+        if (!$ok) {
+            return $this->json(['success' => false, 'message' => 'Subcategory not found or already deleted.']);
+        }
         $this->json(['success' => true]);
     }
 

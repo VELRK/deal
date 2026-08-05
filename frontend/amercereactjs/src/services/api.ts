@@ -553,6 +553,17 @@ export const affiliateAPI = {
     http.get<{ success: boolean; data: { available: boolean } }>(
       `/affiliate/check-promo?code=${encodeURIComponent(code)}`,
     ),
+  submitEnquiry: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    promo_code?: string;
+    message: string;
+  }) =>
+    http.post<{ success: boolean; message: string; data?: { id: number; status: string } }>(
+      "/affiliate/enquiry",
+      data,
+    ),
 };
 
 export interface ApiBanner {

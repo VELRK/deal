@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useProduct } from "@/context/useProduct";
 import { useContextElement } from "@/context/Context";
 import type { ProductCardItem } from "@/types/productCard";
-import { addLineToCart } from "@/utils/cartSync";
+import { addLineToCart, setCartLineQuantity } from "@/utils/cartSync";
 import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
+import { useStore } from "@/context/store";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -27,11 +28,19 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
   const selectedVariant = unitVariants.find((v) => v.id === currentVariantId) ?? unitVariants[0];
   const variantId = selectedVariant?.id;
   const isInCart = isAddedToCartProducts(product.id, variantId);
+  const cartQty = useStore((s) => s.quantityInCart(product.id, variantId));
   const [adding, setAdding] = useState(false);
 
   const stock = Number(selectedVariant?.stock ?? product.stock ?? 0);
   const isOutOfStock = stock === 0;
   const isLowStock = stock > 0 && stock <= LOW_STOCK_THRESHOLD;
+
+  // Keep detail qty in sync with cart when this line already exists.
+  useEffect(() => {
+    if (cartQty > 0) {
+      setQuantity(Math.min(stock > 0 ? stock : cartQty, Math.max(1, cartQty)));
+    }
+  }, [cartQty, stock, product.id, variantId, setQuantity]);
 
   const selectedProduct = () => ({
     ...product,
@@ -45,16 +54,24 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     selectedSize: currentSize || undefined,
   });
 
+  const changeQuantity = async (next: number) => {
+    const max = stock > 0 ? stock : next;
+    const q = Math.min(max, Math.max(1, next));
+    setQuantity(q);
+    if (isInCart) {
+      await setCartLineQuantity(product.id, q, variantId);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (adding || isOutOfStock) return;
-    // Already in cart → open cart instead of adding a duplicate line
-    if (isInCart) {
-      openModal("cart");
-      return;
-    }
     setAdding(true);
     try {
-      await addLineToCart(selectedProduct(), quantity);
+      if (isInCart) {
+        await setCartLineQuantity(product.id, quantity, variantId);
+      } else {
+        await addLineToCart(selectedProduct(), quantity);
+      }
       openModal("cart");
     } finally {
       setAdding(false);
@@ -64,7 +81,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
   const handleBuyNow = async () => {
     if (adding || isOutOfStock) return;
     if (!isLoggedIn) {
-      // Return to this product after login so Buy Now can continue
       useModalStore.getState().openModal("signIn", {
         redirect: location.pathname + location.search,
       });
@@ -72,7 +88,9 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     }
     setAdding(true);
     try {
-      if (!isInCart) {
+      if (isInCart) {
+        await setCartLineQuantity(product.id, quantity, variantId);
+      } else {
         await addLineToCart(selectedProduct(), quantity);
       }
       navigate("/checkout");
@@ -141,10 +159,10 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
               <button
                 type="button"
                 className="btn-quantity btn-decrease"
-                disabled={quantity <= 1 || isOutOfStock}
+                disabled={quantity <= 1 || isOutOfStock || adding}
                 onClick={(e) => {
                   e.preventDefault();
-                  setQuantity(Math.max(1, quantity - 1));
+                  void changeQuantity(quantity - 1);
                 }}
               >
                 <i className="icon icon-minus" />
@@ -159,10 +177,10 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
               <button
                 type="button"
                 className="btn-quantity btn-increase"
-                disabled={isOutOfStock || quantity >= stock}
+                disabled={isOutOfStock || quantity >= stock || adding}
                 onClick={(e) => {
                   e.preventDefault();
-                  setQuantity(Math.min(stock, quantity + 1));
+                  void changeQuantity(quantity + 1);
                 }}
               >
                 <i className="icon icon-plus" />
@@ -175,10 +193,10 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
               type="button"
               disabled={adding || isOutOfStock}
               className="btn w-100 classic-btn-add-to-cart text-uppercase d-flex align-items-center justify-content-center gap-2"
-              onClick={(e) => { e.preventDefault(); handleAddToCart(); }}
+              onClick={(e) => { e.preventDefault(); void handleAddToCart(); }}
             >
               <i className="icon icon-Handbag" style={{ fontSize: "16px" }} />
-              {adding ? "Adding…" : isInCart ? "View Cart" : "Add to Cart"}
+              {adding ? "Updating…" : isInCart ? "Update Cart" : "Add to Cart"}
             </button>
           </div>
         </div>
@@ -187,7 +205,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
           type="button"
           className="btn w-100 classic-btn-buy-now text-uppercase mt-2"
           disabled={adding || isOutOfStock}
-          onClick={handleBuyNow}
+          onClick={() => void handleBuyNow()}
         >
           Buy It Now
         </button>

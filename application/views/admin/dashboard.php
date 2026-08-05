@@ -36,7 +36,7 @@
   <div class="col-6 col-lg-4">
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
-        <div class="sk-stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-currency-rupee"></i></div>
+        <div class="sk-stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-cash-stack"></i></div>
         <div><div class="fs-4 fw-bold"><?= $currency . number_format($s['revenue'], 0) ?></div><div class="text-muted small">Revenue</div></div>
       </div>
     </div>
@@ -69,7 +69,7 @@
   <div class="col-6 col-lg-3">
     <div class="card sk-stat-card shadow-sm h-100">
       <div class="card-body d-flex align-items-center gap-3">
-        <div class="sk-stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-currency-rupee"></i></div>
+        <div class="sk-stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-cash-stack"></i></div>
         <div><div class="fs-4 fw-bold"><?= $currency . number_format($total_revenue, 0) ?></div><div class="text-muted small">Total Revenue</div></div>
       </div>
     </div>

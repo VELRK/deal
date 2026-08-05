@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useContextElement } from "@/context/Context";
 import { useCurrentProductStore } from "@/store/currentProductStore";
 import { formatPrice } from "@/utils/formatPrice";
-import { addLineToCart } from "@/utils/cartSync";
+import { addLineToCart, setCartLineQuantity } from "@/utils/cartSync";
 import { useModalStore } from "@/store/modalStore";
+import { useStore } from "@/context/store";
 
 export default function StickyProduct() {
   const [isVisible, setIsVisible] = useState(false);
@@ -20,10 +21,17 @@ export default function StickyProduct() {
   const selectedVariant = unitVariants.find((v) => v.isDefault) ?? unitVariants[0];
   const variantId = selectedVariant?.id ?? product?.selectedVariantId;
   const isInCart = product ? isAddedToCartProducts(product.id, variantId) : false;
+  const cartQty = useStore((s) =>
+    product ? s.quantityInCart(product.id, variantId) : 0,
+  );
 
   useEffect(() => {
     if (product?.sizes?.[0]) setSelectedSize(String(product.sizes[0]));
   }, [product?.id]);
+
+  useEffect(() => {
+    if (cartQty > 0) setQuantity(Math.max(1, cartQty));
+  }, [cartQty, product?.id, variantId]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 767);
@@ -44,12 +52,16 @@ export default function StickyProduct() {
   const imgSrc   = selectedVariant?.img || product.img || product.images?.[0]?.src || "";
   const sizes    = (product.sizes ?? []).map(String).filter(Boolean);
 
+  const changeQuantity = async (next: number) => {
+    const q = Math.max(1, next);
+    setQuantity(q);
+    if (isInCart) {
+      await setCartLineQuantity(product.id, q, variantId);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (adding) return;
-    if (isInCart) {
-      openModal("cart");
-      return;
-    }
     const payload = {
       ...product,
       price,
@@ -60,7 +72,11 @@ export default function StickyProduct() {
     };
     setAdding(true);
     try {
-      await addLineToCart(payload, quantity);
+      if (isInCart) {
+        await setCartLineQuantity(product.id, quantity, variantId);
+      } else {
+        await addLineToCart(payload, quantity);
+      }
       openModal("cart");
     } finally {
       setAdding(false);
@@ -106,12 +122,14 @@ export default function StickyProduct() {
                 <p className="title">Quantity:</p>
                 <div className="wg-quantity style-2">
                   <button className="btn-quantity minus-btn" type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
+                    disabled={adding || quantity <= 1}
+                    onClick={() => void changeQuantity(quantity - 1)}>
                     <i className="icon icon-minus" />
                   </button>
                   <input className="quantity-product" type="text" readOnly value={quantity} />
                   <button className="btn-quantity plus-btn" type="button"
-                    onClick={() => setQuantity((q) => q + 1)}>
+                    disabled={adding}
+                    onClick={() => void changeQuantity(quantity + 1)}>
                     <i className="icon icon-plus" />
                   </button>
                 </div>
@@ -120,8 +138,8 @@ export default function StickyProduct() {
               <button
                 type="button"
                 className={`tf-btn btn-add-to-cart ${!isStockOut ? "animate-btn" : ""}`}
-                onClick={isStockOut ? undefined : handleAddToCart}
-                disabled={!!isStockOut}
+                onClick={isStockOut ? undefined : () => void handleAddToCart()}
+                disabled={!!isStockOut || adding}
                 style={
                   isStockOut
                     ? { backgroundColor: "#e2e2e2", color: "#333", cursor: "not-allowed", border: "none", fontWeight: "600" }
@@ -130,9 +148,11 @@ export default function StickyProduct() {
               >
                 {isStockOut
                   ? "Out of Stock"
-                  : isInCart
-                    ? "View Cart"
-                    : `Add To Cart — ${formatPrice(price * quantity)}`}
+                  : adding
+                    ? "Updating…"
+                    : isInCart
+                      ? "Update Cart"
+                      : `Add To Cart — ${formatPrice(price * quantity)}`}
               </button>
             </form>
           </div>

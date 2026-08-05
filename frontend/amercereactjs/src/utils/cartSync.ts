@@ -161,6 +161,14 @@ export async function addLineToCart(
   const variantId =
     item.selectedVariantId != null ? Number(item.selectedVariantId) : undefined;
 
+  const already = useStore
+    .getState()
+    .isAddedToCartProducts(item.id, variantId);
+  if (already) {
+    // Product already in cart — set absolute quantity (do not stack via cartAPI.add).
+    return setCartLineQuantity(item.id, quantity, variantId);
+  }
+
   useStore.getState().addProductToCart(item, quantity);
   bumpLocalCartEpoch();
   forgetRemovedLine(item.id, variantId);
@@ -172,6 +180,39 @@ export async function addLineToCart(
       ...(variantId != null && !Number.isNaN(variantId)
         ? { variant_id: variantId }
         : {}),
+    });
+    const items = res.data?.data?.items;
+    if (Array.isArray(items)) {
+      applyServerCartItems(filterRemovedServerItems(items));
+      bumpLocalCartEpoch();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Set absolute quantity for an existing cart line (local + API). */
+export async function setCartLineQuantity(
+  id: ProductId,
+  qty: number,
+  variantId?: number | null,
+): Promise<boolean> {
+  const quantity = Math.max(1, Number(qty) || 1);
+  const vid =
+    variantId != null && !Number.isNaN(Number(variantId))
+      ? Number(variantId)
+      : undefined;
+
+  useStore.getState().updateQuantity(id, quantity, vid);
+  bumpLocalCartEpoch();
+  forgetRemovedLine(id, vid);
+
+  try {
+    const res = await cartAPI.update({
+      product_id: Number(id),
+      quantity,
+      ...(vid != null ? { variant_id: vid } : {}),
     });
     const items = res.data?.data?.items;
     if (Array.isArray(items)) {

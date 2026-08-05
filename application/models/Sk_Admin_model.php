@@ -200,7 +200,12 @@ class Sk_Admin_model extends CI_Model {
     }
 
     public function delete_subcategory($id) {
+        // Detach products first so a FK/RESTRICT constraint cannot block the delete.
+        if ($this->db->field_exists('subcategory_id', 'products')) {
+            $this->db->where('subcategory_id', $id)->update('products', ['subcategory_id' => null]);
+        }
         $this->db->where('id', $id)->delete('subcategories');
+        return $this->db->affected_rows() > 0;
     }
 
     // ── Mega Menu Titles ──────────────────────────────────────

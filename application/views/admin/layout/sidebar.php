@@ -232,12 +232,15 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
         </a>
       </li>
 
+      <?php // Notifications menu hidden — push delivery is on hold. ?>
+      <?php if (FALSE): ?>
       <li class="nav-item">
         <a href="<?= site_url('shopkart/notifications') ?>"
            class="nav-link sk-nav-link <?= $uri==='notifications'?'active':'' ?>">
           <i class="bi bi-bell me-2"></i> Notifications
         </a>
       </li>
+      <?php endif; ?>
 
       <li class="nav-item">
         <a href="<?= site_url('shopkart/whatsapp-report') ?>"

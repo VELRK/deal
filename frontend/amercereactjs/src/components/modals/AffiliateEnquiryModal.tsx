@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/Modal";
 import { useModalStore } from "@/store/modalStore";
-import { contactAPI } from "@/services/api";
+import { affiliateAPI } from "@/services/api";
 import { generatePromoCode } from "@/utils/generatePromoCode";
 import {
   MY_COUNTRY_CODE,
@@ -55,19 +55,15 @@ export default function AffiliateEnquiryModal() {
       setLoading(false);
       return;
     }
-    const promoPreview = generatePromoCode(name, fullPhone);
-    const message = [
-      "Affiliate programme enquiry",
-      "",
-      `Phone: ${fullPhone}`,
-      `Suggested promo code: ${promoPreview}`,
-      "",
-      "Details:",
-      details.trim(),
-    ].join("\n");
 
     try {
-      const res = await contactAPI.send({ name: name.trim(), email: email.trim(), message });
+      const res = await affiliateAPI.submitEnquiry({
+        name: name.trim(),
+        email: email.trim(),
+        phone: fullPhone,
+        promo_code: generatePromoCode(name, fullPhone),
+        message: details.trim(),
+      });
       if (res.data?.success) {
         setSuccess(true);
         resetForm();
