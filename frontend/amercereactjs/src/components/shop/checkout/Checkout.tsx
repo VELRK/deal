@@ -503,8 +503,24 @@ export default function Checkout() {
         image: "/frontend/assets/images/logo/logo.png",
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
-        // Explicitly allow netbanking so Razorpay shows the Net Banking mode.
-        method: { netbanking: true, card: true, wallet: true },
+        // Malaysia (Curlec): FPX is online banking — not India's "netbanking".
+        method: { fpx: true, card: true, wallet: true },
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: "Net Banking (FPX)",
+                instruments: [{ method: "fpx" }],
+              },
+              cards_wallets: {
+                name: "Cards & E-Wallets",
+                instruments: [{ method: "card" }, { method: "wallet" }],
+              },
+            },
+            sequence: ["block.banks", "block.cards_wallets"],
+            preferences: { show_default_blocks: true },
+          },
+        },
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
             await paymentAPI.verify({
