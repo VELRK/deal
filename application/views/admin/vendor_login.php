@@ -36,7 +36,7 @@
         <label class="form-label">Vendor Email</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-          <input type="email" name="email" class="form-control" placeholder="vendor@shopkart.com" required autofocus>
+          <input type="email" name="email" class="form-control" placeholder="vendor@2deal.com" required autofocus>
         </div>
       </div>
 

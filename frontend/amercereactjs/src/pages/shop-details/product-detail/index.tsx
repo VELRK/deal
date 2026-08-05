@@ -97,7 +97,7 @@ export default function Page() {
   return (
     <>
       <PageMeta
-        title={apiProduct.seo?.meta_title || apiProduct.meta_title || `${card.name} | ShopKart`}
+        title={apiProduct.seo?.meta_title || apiProduct.meta_title || `${card.name} | 2DEAL`}
         description={apiProduct.seo?.meta_description || apiProduct.meta_desc || apiProduct.short_desc || card.name}
         keywords={apiProduct.seo?.meta_keywords || apiProduct.meta_keywords}
         image={apiProduct.seo?.og_image || apiProduct.og_image || apiImageUrl(apiProduct.thumbnail)}

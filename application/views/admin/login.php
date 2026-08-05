@@ -32,7 +32,7 @@
         <label class="form-label">Email Address</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-          <input type="email" name="email" class="form-control" placeholder="admin@shopkart.com" required autofocus>
+          <input type="email" name="email" class="form-control" placeholder="admin@2deal.com" required autofocus>
         </div>
       </div>
 
@@ -53,7 +53,7 @@
     </form>
 
     <p class="text-center text-muted small mt-4 mb-1">
-      &copy; <?= date('Y') ?> ShopKart. All rights reserved.
+      &copy; <?= date('Y') ?> 2DEAL. All rights reserved.
     </p>
     <p class="text-center small mb-0">
       <a href="<?= site_url('admin/vendor/login') ?>">Vendor login</a> ·

@@ -20,7 +20,7 @@ import { useSeoPage, useSiteSettings } from "@/hooks/useApi";
 export default function HomeFashion2Page() {
   const { settings } = useSiteSettings();
   const seoPage = useSeoPage("home");
-  const siteName = settings?.site_name ?? "ShopKart";
+  const siteName = settings?.site_name ?? "2DEAL";
   const title = seoPage?.meta_title || settings?.meta_title || `${siteName} - Incense Sticks, Soaps & Food Products`;
   const description = seoPage?.meta_description || settings?.meta_description || settings?.meta_desc || `Shop Incense Sticks, Dhoop Sticks, Sambrani Cones, Soaps and Food Products at ${siteName}.`;
 

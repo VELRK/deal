@@ -169,7 +169,10 @@ function CartMiniLine({
   onQtyChange: (qty: number) => void;
   onProductClick: () => void;
 }) {
-  const baseImg = item.img ?? item.images?.[0]?.src ?? "/frontend/assets/images/product/product-1.jpg";
+  const baseImg =
+    item.img ||
+    item.images?.[0]?.src ||
+    "/frontend/assets/images/no-image.png";
   const imgSrc = apiImageUrl(baseImg);
   const packLabel = item.unit_label;
   const lineTotal = item.price * item.quantity;
@@ -183,6 +186,12 @@ function CartMiniLine({
           src={imgSrc}
           alt={item.name}
           style={styles.productImg}
+          onError={(e) => {
+            const el = e.currentTarget;
+            if (el.dataset.fallback === "1") return;
+            el.dataset.fallback = "1";
+            el.src = "/frontend/assets/images/no-image.png";
+          }}
         />
       </div>
 

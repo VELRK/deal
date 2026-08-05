@@ -156,23 +156,51 @@ const LOCAL_ASSETS_PREFIX = import.meta.env.DEV ? "/deal" : "";
 
 /** Convert a backend thumbnail path like "assets/uploads/..." to a full URL. */
 export function apiImageUrl(path?: string | null): string {
-  if (!path) return `/frontend/assets/images/no-image.png`;
-  if (path.startsWith("http")) return path;
-  
-  let clean = path.replace(/^(deal\/frontend\/|deal1\/|deal\/|ilf\/frontend\/|ilf\/|ecomm\/|frontend\/)/, "");
-  
+  if (!path || !String(path).trim()) {
+    return `/frontend/assets/images/no-image.png`;
+  }
+
+  let raw = String(path).trim();
+
+  // Absolute remote URL — keep as-is (strip accidental double-processing artifacts)
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  // Drop query/hash so cache-bust tokens from a prior apiImageUrl() call do not
+  // get encodeURIComponent'd into the filename (breaks cart/checkout thumbs).
+  raw = raw.split(/[?#]/)[0];
+
+  // Already a rooted public URL for this deploy
+  if (
+    raw.startsWith("/deal/") ||
+    raw.startsWith("/deal1/") ||
+    raw.startsWith("/frontend/")
+  ) {
+    return raw;
+  }
+
+  let clean = raw.replace(/^\/+/, "");
+  clean = clean.replace(
+    /^(deal\/frontend\/|deal1\/|deal\/|ilf\/frontend\/|ilf\/|ecomm\/|frontend\/)/,
+    "",
+  );
+
   if (!clean.includes("/")) {
     clean = `assets/uploads/products/${clean}`;
   }
-  
-  const encoded = clean.split("/").map(encodeURIComponent).join("/");
-  const timestamp = `?v=${new Date().getTime()}`;
-  
+
+  const encoded = clean
+    .split("/")
+    .filter(Boolean)
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
+
   if (import.meta.env.DEV) {
-    return `${LOCAL_ASSETS_PREFIX}/${encoded}${timestamp}`;
+    return `${LOCAL_ASSETS_PREFIX}/${encoded}`;
   }
-  if (ASSETS_BASE) return `${ASSETS_BASE}/${encoded}${timestamp}`;
-  return `/deal/${encoded}${timestamp}`;
+  if (ASSETS_BASE) return `${ASSETS_BASE}/${encoded}`;
+  return `/deal/${encoded}`;
 }
 
 // ── useTestimonials ───────────────────────────────────────────────────────────

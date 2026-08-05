@@ -29,7 +29,7 @@ export default function BlogSingleDynamicPage() {
   return (
     <>
       <PageMeta
-        title={blog.seo?.meta_title || blog.meta_title || `${blog.title} | ShopKart`}
+        title={blog.seo?.meta_title || blog.meta_title || `${blog.title} | 2DEAL`}
         description={blog.seo?.meta_description || blog.meta_desc || (blog.excerpt ?? blog.title).slice(0, 160)}
         keywords={blog.seo?.meta_keywords || blog.meta_keywords}
         image={blog.seo?.og_image || blog.og_image || blog.image_url || undefined}
