@@ -503,6 +503,8 @@ export default function Checkout() {
         image: "/frontend/assets/images/logo/logo.png",
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
+        // Explicitly allow netbanking so Razorpay shows the Net Banking mode.
+        method: { netbanking: true, card: true, wallet: true },
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
             await paymentAPI.verify({
@@ -739,13 +741,13 @@ export default function Checkout() {
                   </div>
                   <div>
                     <div className="payment-card-title">💳 Online Payment (Malaysia)</div>
-                    <div className="payment-card-desc">FPX · Credit/Debit Card · E-Wallets</div>
+                    <div className="payment-card-desc">Net Banking (FPX) · Credit/Debit Card · E-Wallets</div>
                   </div>
                 </div>
                 {paymentMethod === 'razorpay' && (
                   <div className="payment-details-razorpay animate-fade-in">
                     <div className="d-flex gap-2 flex-wrap">
-                      {["FPX", "Visa", "Mastercard", "Touch n Go", "GrabPay"].map((m) => (
+                      {["Net Banking (FPX)", "Visa", "Mastercard", "Touch n Go", "GrabPay"].map((m) => (
                         <span key={m} className="payment-badge">
                           {m}
                         </span>

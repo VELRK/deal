@@ -52,6 +52,8 @@ export default function AccountWalletTopup() {
       image: `${import.meta.env.BASE_URL}assets/logo/logo.png`,
       prefill: d.prefill ?? {},
       theme: { color: "#3EC1BC" },
+      // Explicitly allow netbanking so Razorpay shows the Net Banking mode.
+      method: { netbanking: true, card: true, wallet: true },
       handler: async (response: {
         razorpay_order_id: string;
         razorpay_payment_id: string;
@@ -199,7 +201,7 @@ export default function AccountWalletTopup() {
 
         <div className="topup-card-custom">
           <div className="gateway-note">
-            Pay securely via <strong>FPX / online banking / card</strong> (Razorpay or ToyyibPay).
+            Pay securely via <strong>FPX / Net Banking / card</strong> (Razorpay or ToyyibPay).
             Funds are added to your wallet after payment is confirmed.
           </div>
 
