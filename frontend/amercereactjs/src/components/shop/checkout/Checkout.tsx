@@ -503,24 +503,8 @@ export default function Checkout() {
         image: "/frontend/assets/images/logo/logo.png",
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
-        // Malaysia (Curlec): FPX is online banking — not India's "netbanking".
-        method: { fpx: true, card: true, wallet: true },
-        config: {
-          display: {
-            blocks: {
-              banks: {
-                name: "Net Banking (FPX)",
-                instruments: [{ method: "fpx" }],
-              },
-              cards_wallets: {
-                name: "Cards & E-Wallets",
-                instruments: [{ method: "card" }, { method: "wallet" }],
-              },
-            },
-            sequence: ["block.banks", "block.cards_wallets"],
-            preferences: { show_default_blocks: true },
-          },
-        },
+        // Do not pass method/config filters — Curlec only shows methods
+        // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
             await paymentAPI.verify({

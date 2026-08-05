@@ -52,24 +52,8 @@ export default function AccountWalletTopup() {
       image: `${import.meta.env.BASE_URL}assets/logo/logo.png`,
       prefill: d.prefill ?? {},
       theme: { color: "#3EC1BC" },
-      // Malaysia (Curlec): FPX is online banking — not India's "netbanking".
-      method: { fpx: true, card: true, wallet: true },
-      config: {
-        display: {
-          blocks: {
-            banks: {
-              name: "Net Banking (FPX)",
-              instruments: [{ method: "fpx" }],
-            },
-            cards_wallets: {
-              name: "Cards & E-Wallets",
-              instruments: [{ method: "card" }, { method: "wallet" }],
-            },
-          },
-          sequence: ["block.banks", "block.cards_wallets"],
-          preferences: { show_default_blocks: true },
-        },
-      },
+      // Do not pass method/config filters — Curlec only shows methods
+      // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
       handler: async (response: {
         razorpay_order_id: string;
         razorpay_payment_id: string;
