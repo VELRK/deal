@@ -169,11 +169,8 @@ export default function AccountWalletTopup() {
           .form-group-custom { margin-bottom: 22px; }
           .form-group-custom label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
           .input-amount-wrapper { position: relative; display: flex; align-items: center; }
-          .input-amount-prefix {
-            position: absolute; left: 16px; font-size: 18px; font-weight: 600; color: #64748b; pointer-events: none;
-          }
           .input-amount {
-            width: 100%; height: 52px; padding: 10px 16px 10px 52px; font-size: 20px; font-weight: 700;
+            width: 100%; height: 52px; padding: 10px 16px; font-size: 20px; font-weight: 700;
             border: 1px solid #d1d5db; border-radius: 10px; outline: none;
           }
           .input-amount:focus { border-color: #3ec1bc; box-shadow: 0 0 0 4px rgba(62,193,188,.1); }
@@ -213,7 +210,6 @@ export default function AccountWalletTopup() {
             <div className="form-group-custom">
               <label htmlFor="amount">Top-up amount (MYR)</label>
               <div className="input-amount-wrapper">
-                <span className="input-amount-prefix">RM</span>
                 <input
                   type="number"
                   id="amount"
