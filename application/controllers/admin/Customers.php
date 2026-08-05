@@ -111,4 +111,23 @@ class Customers extends Sk_Base {
         $this->Sk_User_model->update($id, ['status' => $new]);
         $this->json(['success' => true, 'status' => $new]);
     }
+
+    public function delete($id) {
+        $id = (int)$id;
+        $customer = $this->Sk_User_model->get_by_id($id);
+        if (!$customer) {
+            return $this->json(['success' => false, 'message' => 'Customer not found.'], 404);
+        }
+
+        $result = $this->Sk_User_model->hard_delete($id);
+        if (!$result['ok']) {
+            return $this->json(['success' => false, 'message' => $result['message']]);
+        }
+
+        $this->activity_log->log_admin('customers', 'hard_delete', $id, [
+            'name'  => $customer['name'],
+            'email' => $customer['email'],
+        ]);
+        $this->json(['success' => true, 'message' => $result['message']]);
+    }
 }

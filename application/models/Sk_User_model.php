@@ -268,4 +268,113 @@ class Sk_User_model extends CI_Model {
     public function new_users_today() {
         return $this->db->where('DATE(created_at) = CURDATE()', null, false)->count_all_results('users');
     }
+
+    /**
+     * Permanently remove a customer and personal data from the database.
+     * Orders and commission history are kept with user_id cleared.
+     */
+    public function hard_delete($id): array {
+        $id = (int)$id;
+        $user = $this->get_by_id($id);
+        if (!$user) {
+            return ['ok' => false, 'message' => 'Customer not found.'];
+        }
+
+        $this->db->trans_start();
+        $this->_hard_delete_user_related($id);
+        $this->db->where('id', $id)->delete('users');
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['ok' => false, 'message' => 'Could not delete customer. A database constraint may be blocking removal.'];
+        }
+        return ['ok' => true, 'message' => 'Customer permanently deleted.'];
+    }
+
+    private function _hard_delete_user_related(int $userId): void {
+        if ($this->db->table_exists('reviews')) {
+            $reviews = $this->db->select('id, product_id')
+                ->where('user_id', $userId)
+                ->get('reviews')->result_array();
+            $productIds = [];
+            foreach ($reviews as $rev) {
+                $revId = (int)$rev['id'];
+                $productIds[(int)$rev['product_id']] = true;
+                if ($this->db->table_exists('review_media')) {
+                    $media = $this->db->where('review_id', $revId)->get('review_media')->result_array();
+                    foreach ($media as $m) {
+                        $full = FCPATH . ($m['file_path'] ?? '');
+                        if (!empty($m['file_path']) && is_file($full)) {
+                            @unlink($full);
+                        }
+                    }
+                    $this->db->where('review_id', $revId)->delete('review_media');
+                }
+            }
+            $this->db->where('user_id', $userId)->delete('reviews');
+            foreach (array_keys($productIds) as $productId) {
+                $this->_recalc_product_rating((int)$productId);
+            }
+        }
+
+        $this->_delete_rows_for_user('customer_wallet_transactions', $userId);
+        $this->_delete_rows_for_user('customer_wallets', $userId);
+        $this->_delete_rows_for_user('customer_royalty_transactions', $userId);
+        $this->_delete_rows_for_user('customer_royalty', $userId);
+
+        foreach (['addresses', 'wishlist', 'cart', 'sk_device_tokens'] as $table) {
+            $this->_delete_rows_for_user($table, $userId);
+        }
+
+        if ($this->db->table_exists('carts')) {
+            $cartIds = array_column(
+                $this->db->select('id')->where('user_id', $userId)->get('carts')->result_array(),
+                'id'
+            );
+            if ($cartIds && $this->db->table_exists('cart_items')) {
+                $this->db->where_in('cart_id', $cartIds)->delete('cart_items');
+            }
+            $this->db->where('user_id', $userId)->delete('carts');
+        }
+
+        foreach ([
+            'orders',
+            'affiliate_enquiries',
+            'contact_enquiries',
+            'activity_logs',
+            'jwt_blacklist',
+            'promo_usage',
+            'affiliate_commissions',
+            'sk_notification_logs',
+        ] as $table) {
+            $this->_nullify_user_id($table, $userId);
+        }
+    }
+
+    private function _delete_rows_for_user(string $table, int $userId): void {
+        if ($this->db->table_exists($table) && $this->db->field_exists('user_id', $table)) {
+            $this->db->where('user_id', $userId)->delete($table);
+        }
+    }
+
+    private function _nullify_user_id(string $table, int $userId): void {
+        if ($this->db->table_exists($table) && $this->db->field_exists('user_id', $table)) {
+            $this->db->where('user_id', $userId)->update($table, ['user_id' => null]);
+        }
+    }
+
+    private function _recalc_product_rating(int $productId): void {
+        if (!$this->db->table_exists('products') || $productId <= 0) {
+            return;
+        }
+        $row = $this->db
+            ->select('AVG(rating) AS avg_r, COUNT(*) AS cnt')
+            ->where('product_id', $productId)
+            ->where('status', 'approved')
+            ->get('reviews')->row_array();
+        $this->db->where('id', $productId)->update('products', [
+            'avg_rating'   => round((float)($row['avg_r'] ?? 0), 2),
+            'review_count' => (int)($row['cnt'] ?? 0),
+        ]);
+    }
 }

@@ -19,7 +19,7 @@
       <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($customers as $c): ?>
-        <tr>
+        <tr id="row-<?= (int)$c['id'] ?>">
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold"
@@ -37,7 +37,7 @@
               <?= $c['status'] ? 'Active' : 'Blocked' ?>
             </span>
           </td>
-          <td class="d-flex gap-1">
+          <td class="d-flex gap-1 flex-wrap">
             <a href="<?= site_url('shopkart/customers/view/'.$c['id']) ?>" class="btn btn-sm btn-outline-primary" title="View">
               <i class="bi bi-eye"></i>
             </a>
@@ -48,6 +48,12 @@
                     class="btn btn-sm <?= $c['status'] ? 'btn-outline-danger' : 'btn-outline-success' ?>"
                     title="<?= $c['status'] ? 'Block' : 'Activate' ?>">
               <i class="bi bi-<?= $c['status'] ? 'slash-circle' : 'check-circle' ?>"></i>
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    title="Delete permanently"
+                    onclick="skConfirmDelete('<?= site_url('shopkart/customers/delete/'.$c['id']) ?>', 'row-<?= (int)$c['id'] ?>')">
+              <i class="bi bi-trash"></i>
             </button>
           </td>
         </tr>

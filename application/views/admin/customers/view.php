@@ -6,6 +6,10 @@
     <a href="<?= site_url('shopkart/customers/edit/'.$customer['id']) ?>" class="btn btn-sm btn-warning">
       <i class="bi bi-pencil me-1"></i> Edit
     </a>
+    <button type="button" class="btn btn-sm btn-outline-danger"
+            onclick="if(confirm('Permanently delete <?= htmlspecialchars($customer['name'], ENT_QUOTES) ?>? Their account, addresses, cart, wallet, and reviews will be removed. Order history will remain without the customer link.')) { $.post('<?= site_url('shopkart/customers/delete/'.(int)$customer['id']) ?>', {}, function(res) { if (res.success) { location.href='<?= site_url('shopkart/customers') ?>'; } else { alert(res.message || 'Delete failed.'); } }, 'json'); }">
+      <i class="bi bi-trash me-1"></i> Delete
+    </button>
     <a href="<?= site_url('shopkart/customers') ?>" class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i> Back
     </a>
