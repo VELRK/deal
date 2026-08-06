@@ -116,6 +116,7 @@ export default function Checkout() {
   /* ── Site Settings (shipping only; GST hidden on storefront) ── */
   const [shippingCharge, setShippingCharge] = useState(50);
   const [freeShippingAbove, setFreeShippingAbove] = useState(999);
+  const [walletFreeShippingSetting, setWalletFreeShippingSetting] = useState(true);
 
   useEffect(() => {
     siteSettingsAPI.get().then(res => {
@@ -123,6 +124,7 @@ export default function Checkout() {
         const s = res.data.data;
         if (typeof s.shipping_charge === 'number') setShippingCharge(s.shipping_charge);
         if (typeof s.free_shipping_above === 'number') setFreeShippingAbove(s.free_shipping_above);
+        if (typeof s.wallet_free_shipping === 'boolean') setWalletFreeShippingSetting(s.wallet_free_shipping);
       }
     }).catch(err => console.error("Failed to load site settings", err));
   }, []);
@@ -131,6 +133,7 @@ export default function Checkout() {
     enabled: boolean;
     balance: number;
     discount_percent: number;
+    free_shipping?: boolean;
     points?: number;
     royalty?: RoyaltyCartInfo;
   } | null>(null);
@@ -156,6 +159,9 @@ export default function Checkout() {
           const d = res.data?.data;
           if (d) {
             setWalletInfo(d);
+            if (typeof d.free_shipping === 'boolean') {
+              setWalletFreeShippingSetting(d.free_shipping);
+            }
             const roy = d.royalty;
             if (roy && !roy.can_redeem && useRoyalty) {
               setUseRoyalty(false);
@@ -268,11 +274,28 @@ export default function Checkout() {
     sessionStorage.setItem("checkout_payment_method", paymentMethod);
   }, [paymentMethod]);
 
-  const shippingCost = totalPrice <= 0 ? 0 : (totalPrice >= freeShippingAbove ? 0 : shippingCharge);
+  const baseShippingCost = totalPrice <= 0 ? 0 : (totalPrice >= freeShippingAbove ? 0 : shippingCharge);
   const subtotalAfterPromo = Math.max(0, totalPrice - promoDiscount);
-  const walletDiscount = paymentMethod === "wallet" && walletInfo && walletInfo.discount_percent > 0
-    ? Math.round(subtotalAfterPromo * walletInfo.discount_percent / 100)
+  // Wallet is a separate full-pay method: optional % off + optional free delivery (admin setting).
+  const walletPct = walletInfo?.discount_percent ?? 0;
+  const walletDiscountPreview = walletInfo?.enabled && walletPct > 0
+    ? Math.round(subtotalAfterPromo * walletPct / 100 * 100) / 100
     : 0;
+  const walletFreeShipping = !!walletInfo?.enabled && walletFreeShippingSetting;
+  const walletShippingCost = walletFreeShipping ? 0 : baseShippingCost;
+  const walletPayable = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
+  // Enable wallet only when balance covers the full wallet payable (no gateway top-up).
+  const walletBalanceOk = !!walletInfo?.enabled && walletInfo.balance + 0.009 >= walletPayable && walletPayable > 0;
+
+  // If wallet was selected but balance no longer covers full payable, fall back to COD.
+  useEffect(() => {
+    if (paymentMethod === "wallet" && !walletBalanceOk) {
+      setPaymentMethod("cod");
+    }
+  }, [paymentMethod, walletBalanceOk]);
+
+  const walletDiscount = paymentMethod === "wallet" ? walletDiscountPreview : 0;
+  const shippingCost = paymentMethod === "wallet" ? walletShippingCost : baseShippingCost;
   // TESTING: show Apply whenever customer has any royalty points
   const billTotal = Math.max(0, subtotalAfterPromo - walletDiscount) + shippingCost;
   const royaltyEligible =
@@ -291,7 +314,6 @@ export default function Checkout() {
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), billTotal)
     : 0;
   const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → COD / online
-  const walletBalanceOk = !walletInfo || walletInfo.balance >= amountDue;
 
   /* ── Place order ── */
   const [orderError, setOrderError] = useState("");
@@ -425,8 +447,8 @@ export default function Checkout() {
         billing_address: billing,
         payment_method: paymentMethod,
         use_wallet: paymentMethod === "wallet" ? 1 : 0,
-        use_royalty: useRoyalty && royaltyRm > 0 ? 1 : 0,
-        apply_royalty: useRoyalty && royaltyRm > 0 ? 1 : 0,
+        use_royalty: paymentMethod !== "wallet" && useRoyalty && royaltyRm > 0 ? 1 : 0,
+        apply_royalty: paymentMethod !== "wallet" && useRoyalty && royaltyRm > 0 ? 1 : 0,
         promo_code: appliedCode || undefined,
         coupon: appliedCode || undefined,
         coupon_code: appliedCode || undefined,
@@ -779,10 +801,15 @@ export default function Checkout() {
                       <div className="payment-card-title">👛 Pay with Wallet</div>
                       <div className="payment-card-desc">
                         Balance: {formatPrice(walletInfo.balance)}
-                        {walletInfo.discount_percent > 0 && ` · Extra ${walletInfo.discount_percent}% off`}
+                        {walletPct > 0 && ` · Extra ${walletPct}% off`}
+                        {walletFreeShipping && ' · Free delivery'}
+                        {' · Full payment only (no gateway)'}
                       </div>
                       {!walletBalanceOk && (
-                        <div className="payment-wallet-error">Insufficient balance for this order</div>
+                        <div className="payment-wallet-error">
+                          Need {formatPrice(walletPayable)} or more in wallet to use this method
+                          {walletInfo.balance > 0 ? ` (you have ${formatPrice(walletInfo.balance)})` : ''}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -885,7 +912,7 @@ export default function Checkout() {
                   totalPrice <= 0
                     ? formatPrice(0)
                     : shippingCost === 0
-                      ? <span className="text-success">Free</span>
+                      ? <span className="text-success">{paymentMethod === 'wallet' && walletFreeShipping ? 'Free (wallet)' : 'Free'}</span>
                       : formatPrice(shippingCost)
                 }</span>
               </div>

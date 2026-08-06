@@ -24,6 +24,14 @@
         <small class="text-muted">0 = no extra discount</small>
       </div>
       <div class="col-md-2">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="wallet_free_shipping" id="wFreeShip" value="1"
+                 <?= (($settings['wallet_free_shipping'] ?? '1') !== '0') ? 'checked' : '' ?>>
+          <label class="form-check-label" for="wFreeShip">Free delivery on wallet pay</label>
+        </div>
+        <small class="text-muted">Full wallet pay only — no gateway</small>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small">Points per RM</label>
         <input type="number" step="0.01" name="wallet_points_per_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($settings['wallet_points_per_rm'] ?? '5') ?>" title="500 pts / 100 RM = 5">
       </div>

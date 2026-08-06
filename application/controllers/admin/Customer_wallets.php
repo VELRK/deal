@@ -102,6 +102,7 @@ class Customer_wallets extends Sk_Base {
             $this->Sk_Admin_model->save_settings([
                 'customer_wallet_enabled'          => $this->input->post('customer_wallet_enabled') ? '1' : '0',
                 'customer_wallet_discount_percent' => (string) round($pct, 2),
+                'wallet_free_shipping'             => $this->input->post('wallet_free_shipping') ? '1' : '0',
                 'wallet_points_per_rm'             => $this->input->post('wallet_points_per_rm') ?: '5',
                 'royalty_enabled'                  => $this->input->post('royalty_enabled') ? '1' : '0',
                 'royalty_min_redeem_points'        => (string)max(1, (int)$this->input->post('royalty_min_redeem_points')),

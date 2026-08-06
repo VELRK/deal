@@ -448,6 +448,8 @@ export const userAPI = {
       enabled: boolean;
       balance: number;
       discount_percent: number;
+      /** Free delivery when paying full order with wallet */
+      free_shipping?: boolean;
       points?: number;
       royalty?: RoyaltyCartInfo;
     };
@@ -690,6 +692,8 @@ export interface ApiSiteSettings {
   tax_rate?: number;
   shipping_charge?: number;
   free_shipping_above?: number;
+  /** When true, full wallet pay gets free delivery */
+  wallet_free_shipping?: boolean;
   meta_title?: string;
   meta_desc?: string;
   meta_description?: string;

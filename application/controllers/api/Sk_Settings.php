@@ -12,7 +12,7 @@ class Sk_Settings extends Sk_Base_Api {
         $rows = $this->db->where_in('key', [
             'newsletter_popup_enabled', 'site_name', 'currency_symbol',
             'top_bar_enabled', 'top_bar_text', 'whatsapp_enabled', 'whatsapp_number',
-            'tax_rate', 'shipping_charge', 'free_shipping_above',
+            'tax_rate', 'shipping_charge', 'free_shipping_above', 'wallet_free_shipping',
             'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics',
         ])->get('settings')->result_array();
@@ -30,6 +30,12 @@ class Sk_Settings extends Sk_Base_Api {
         $map['tax_rate']            = isset($map['tax_rate']) ? (float)$map['tax_rate'] : 0;
         $map['shipping_charge']     = isset($map['shipping_charge']) ? (float)$map['shipping_charge'] : 50;
         $map['free_shipping_above'] = isset($map['free_shipping_above']) ? (float)$map['free_shipping_above'] : 999;
+        // Default ON — free delivery when paying full order with wallet
+        $map['wallet_free_shipping'] = !isset($map['wallet_free_shipping'])
+            || $map['wallet_free_shipping'] === ''
+            || $map['wallet_free_shipping'] === '1'
+            || $map['wallet_free_shipping'] === 1
+            || $map['wallet_free_shipping'] === true;
         $map['currency_symbol']     = sk_currency_symbol($map);
         $map['currency_code']       = strtoupper(trim((string)($map['currency_code'] ?? 'MYR'))) ?: 'MYR';
         if (in_array($map['currency_code'], ['INR', 'RS', ''], true)) {

@@ -138,8 +138,13 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        $payment_method = $data['payment_method'] ?? 'razorpay';
-        $use_wallet     = !empty($data['use_wallet']);
+        $payment_method = strtolower(trim((string)($data['payment_method'] ?? 'razorpay')));
+        // Wallet is a separate full-pay method only — no partial wallet + gateway.
+        if ($payment_method === 'wallet') {
+            $use_wallet = true;
+        } else {
+            $use_wallet = false;
+        }
         $use_royalty    = !empty($data['use_royalty']) || !empty($data['apply_royalty']);
         $royalty_points_req = (int)($data['royalty_points'] ?? 0);
         $wallet_discount = 0;
@@ -156,16 +161,18 @@ class Sk_Order extends Sk_Base_Api {
         $minRoyaltyPts = sk_royalty_min_redeem_points($settingsAll);
         $minRoyaltyRm = sk_royalty_min_redeem_rm($settingsAll);
 
-        $uses_wallet = ($payment_method === 'wallet')
-            || ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled);
+        $uses_wallet = ($payment_method === 'wallet' && $wallet_enabled);
 
         if ($payment_method === 'wallet' && !$wallet_enabled) {
             return $this->error('Wallet payments are not enabled.');
         }
+        if ($payment_method === 'wallet' && (!empty($data['use_royalty']) || !empty($data['apply_royalty']))) {
+            return $this->error('Wallet and royalty cannot be combined. Pay the full order with wallet only.');
+        }
 
         $code_discount = $discount;
 
-        if ($uses_wallet && $wallet_enabled) {
+        if ($uses_wallet) {
             $walletPct = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
             // get_wallet_discount_percent() already returns 0 when disabled / invalid
             if ($walletPct > 0) {
@@ -178,16 +185,20 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
+        // Normal shipping from admin settings; wallet full-pay can zero it when configured.
         $shipping = ($subtotal <= 0)
             ? 0
             : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
+        if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
+            $shipping = 0;
+        }
         $taxable_amount = max(0, $subtotal - $discount);
         // Storefront does not charge/show GST
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        // Royalty pays bill (up to balance). Testing unlock: any points ≥1; else need Rs100+.
-        if ($use_royalty && $royalty_enabled) {
+        // Royalty pays bill (up to balance). Not allowed with wallet full-pay method.
+        if ($use_royalty && $royalty_enabled && $payment_method !== 'wallet') {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
             $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
             $testUnlock = sk_royalty_test_unlock($settingsAll);
@@ -216,17 +227,24 @@ class Sk_Order extends Sk_Base_Api {
 
         $dueAfterRoyalty = round(max(0, $total - $royalty_used_rm), 2);
 
-        if ($uses_wallet && $wallet_enabled && $dueAfterRoyalty > 0) {
+        if ($uses_wallet && $dueAfterRoyalty > 0) {
             $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
-            $wallet_amount = round(min((float)($walletInfo['balance'] ?? 0), $dueAfterRoyalty), 2);
+            $balance = round((float)($walletInfo['balance'] ?? 0), 2);
+            // Full payment only: balance must cover the entire order total.
+            if ($balance + 0.009 < $dueAfterRoyalty) {
+                return $this->error(
+                    'Insufficient wallet balance. Need RM ' . number_format($dueAfterRoyalty, 2)
+                    . ' (you have RM ' . number_format($balance, 2) . '). Wallet pays the full order only — no payment gateway.'
+                );
+            }
+            $wallet_amount = $dueAfterRoyalty;
         }
 
         if ($payment_method === 'wallet') {
-            if (round($wallet_amount + $royalty_used_rm, 2) < $total) {
+            if (round($wallet_amount + $royalty_used_rm, 2) + 0.009 < $total) {
                 return $this->error('Insufficient wallet balance for this order.');
             }
-        } elseif ($payment_method === 'razorpay' && $use_wallet && $wallet_enabled
-            && $dueAfterRoyalty > 0 && $wallet_amount >= $dueAfterRoyalty) {
+            // Force method + paid state — never open Razorpay for wallet.
             $payment_method = 'wallet';
         }
 
@@ -239,6 +257,10 @@ class Sk_Order extends Sk_Base_Api {
         $confirm_now    = $is_paid_now || $is_cod;
         $is_razorpay_due = !$confirm_now && strtolower((string)$payment_method) === 'razorpay';
 
+        // Safety: wallet method must never leave a gateway remainder.
+        if ($payment_method === 'wallet' && !$is_paid_now) {
+            return $this->error('Insufficient wallet balance for this order.');
+        }
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
         $this->Sk_Order_model->ensure_payment_attempt_status();
@@ -304,9 +326,7 @@ class Sk_Order extends Sk_Base_Api {
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
         if ($wallet_amount > 0) {
-            $payDesc = $gateway_amount > 0
-                ? ('Partial wallet payment for order #' . $order_id)
-                : ('Order #' . $order_id);
+            $payDesc = 'Wallet full payment for order #' . $order_id;
             if (!$this->Sk_Customer_wallet_model->apply_wallet_payment(
                 $user_id,
                 $wallet_amount,
