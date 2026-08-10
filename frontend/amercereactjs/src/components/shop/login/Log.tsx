@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import PhoneLoginForm, { type OtpAuthResult } from "@/components/auth/PhoneLoginForm";
 import { sanitizeAuthRedirect, rememberAuthReturn } from "@/utils/authRedirect";
 
+/** Minimal Flipkart-style phone box (no Login heading). */
 function Log() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,7 +47,6 @@ function Log() {
                 border: "1px solid #eef2f7",
               }}
             >
-              <h3 className="fw-semibold mb-3" style={{ fontSize: 20 }}>Mobile number</h3>
               <PhoneLoginForm onSuccess={finishLogin} idPrefix="page-otp" variant="page" />
             </div>
           </div>

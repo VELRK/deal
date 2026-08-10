@@ -180,7 +180,7 @@ export default function PhoneLoginForm({
                 type="tel"
                 inputMode="numeric"
                 maxLength={12}
-                placeholder="12-345 6789"
+                placeholder="Enter mobile number"
                 value={formatMalaysiaDisplay(phone)}
                 onChange={(e) => {
                   setPhone(e.target.value.replace(/\D/g, "").slice(0, 11));
@@ -295,7 +295,7 @@ export default function PhoneLoginForm({
         }}
         style={{ minHeight: 48 }}
       >
-        {loading ? "Please wait…" : step === "phone" ? "Get OTP" : "Verify"}
+        {loading ? "Please wait…" : step === "phone" ? "Request OTP" : "Verify"}
       </button>
     </div>
   );

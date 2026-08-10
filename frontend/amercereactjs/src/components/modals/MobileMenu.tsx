@@ -211,7 +211,7 @@ export default function MobileMenu({
                   className="w-100 d-flex align-items-center border-0 bg-transparent p-0 text-dark"
                 >
                   <i className="icon icon-User fs-4 me-3 text-muted"></i>
-                  <span className="fw-medium">Login</span>
+                  <span className="fw-medium">Account</span>
                 </button>
               )}
             </li>

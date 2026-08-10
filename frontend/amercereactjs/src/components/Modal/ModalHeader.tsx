@@ -2,7 +2,7 @@ import React from "react";
 import styles from "./modal.module.css";
 
 interface ModalHeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   onClose?: () => void;
   icon?: React.ReactNode;
@@ -14,20 +14,26 @@ export default function ModalHeader({
   onClose,
   icon,
 }: ModalHeaderProps) {
+  const hasTitle = Boolean(title || subtitle || icon);
+
   return (
-    <div className={styles.header}>
-      <div className="d-flex align-items-center gap-3">
-        {icon && (
-          <div className="d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#F1F5F9', color: 'var(--modal-primary)' }}>
-            {icon}
+    <div className={styles.header} style={!hasTitle ? { justifyContent: "flex-end", paddingBottom: 8 } : undefined}>
+      {hasTitle ? (
+        <div className="d-flex align-items-center gap-3">
+          {icon && (
+            <div className="d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#F1F5F9", color: "var(--modal-primary)" }}>
+              {icon}
+            </div>
+          )}
+          <div className={styles.headerContent}>
+            {title && <h3 className={styles.title}>{title}</h3>}
+            {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           </div>
-        )}
-        <div className={styles.headerContent}>
-          <h3 className={styles.title}>{title}</h3>
-          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         </div>
-      </div>
-      
+      ) : (
+        <span />
+      )}
+
       {onClose && (
         <button
           type="button"

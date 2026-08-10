@@ -31,7 +31,7 @@ export default function AccountIcon({ hasText = false }: AccountIconProps) {
       className={`nav-icon-item link ${hasText ? "has-text" : ""}`}
     >
       <i className="icon icon-User" />
-      {hasText && <span className="d-none d-xl-block"> Login/Register </span>}
+      {hasText && <span className="d-none d-xl-block"> Account </span>}
     </a>
   );
 }

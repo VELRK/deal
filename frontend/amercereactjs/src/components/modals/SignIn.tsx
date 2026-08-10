@@ -4,6 +4,10 @@ import { useModalStore } from "@/store/modalStore";
 import { Modal, ModalHeader, ModalBody } from "@/components/Modal";
 import PhoneLoginForm, { type OtpAuthResult } from "@/components/auth/PhoneLoginForm";
 
+/**
+ * Flipkart-style auth box: phone + Request OTP only.
+ * No "Login" title — same flow for new and existing customers.
+ */
 export default function SignIn() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
@@ -29,7 +33,7 @@ export default function SignIn() {
 
   return (
     <Modal isOpen={isOpen} onClose={closeModal} maxWidth="380px">
-      <ModalHeader title="Mobile number" onClose={closeModal} />
+      <ModalHeader onClose={closeModal} />
       <ModalBody>
         <PhoneLoginForm onSuccess={finishLogin} idPrefix="signin-otp" variant="modal" />
       </ModalBody>
