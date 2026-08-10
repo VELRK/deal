@@ -38,10 +38,22 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        // Keep sk_sid + Zustand cart so guest shopping and login merge still work.
-        // Do not clear localStorage "2Deal-store" or "sk_sid".
+        // Keep sk_sid + cart store so guest shopping / login merge still work.
+        const token = useAuthStore.getState().token;
         clearAuthStorage();
         set({ token: null, user: null, isLoggedIn: false });
+        // Best-effort server blacklist (send old token in header after local clear)
+        if (token) {
+          const base = import.meta.env.VITE_API_BASE_URL ?? "/shopkart-api";
+          void fetch(`${base}/logout`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+          }).catch(() => { /* ignore */ });
+        }
       },
 
       setUser: (user) => set({ user }),

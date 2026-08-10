@@ -319,6 +319,7 @@ export const authAPI = {
     http.post<{ success: boolean; message: string; data?: { test_otp?: string; dev_hint?: string } }>("/otp-request", data),
   otpVerify: (data: { phone: string; otp: string; name?: string }) =>
     http.post<OtpAuthResponse>("/otp-verify", data),
+  logout: () => http.post<{ success: boolean; message: string }>("/logout"),
 };
 
 // ── Products ──────────────────────────────────────────────────────────────────

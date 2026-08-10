@@ -71,36 +71,25 @@ export default function Checkout() {
     }
   }, [isLoggedIn, navigate]);
 
-  useEffect(() => { loadAddresses(); }, [isLoggedIn]);
-
   /* ── Address form fields ── */
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   // Ignore system-generated placeholder emails (OTP auto-register)
   const realEmail = (email?: string) =>
     email && !isPlaceholderEmail(email) ? email : "";
-  const [addrEmail, setAddrEmail] = useState(realEmail(user?.email));
-  const [addrPhone, setAddrPhone] = useState(user?.phone ?? "");
-  const needsProfile = isProfileIncomplete(user);
-  const needsAddress = !addressLoading && addresses.length === 0;
-
-  // Sync phone/email/name when user logs in (new OTP users fill remaining details here)
-  useEffect(() => {
-    if (user?.phone && !addrPhone) setAddrPhone(user.phone);
-    if (user?.email && !addrEmail) setAddrEmail(realEmail(user.email));
-    if (user?.name && !isPlaceholderName(user.name) && !firstName && !lastName) {
-      const parts = user.name.trim().split(/\s+/);
-      setFirstName(parts[0] ?? "");
-      setLastName(parts.slice(1).join(" "));
-    }
-  }, [user, addrPhone, addrEmail, firstName, lastName]);
-
+  const [addrEmail, setAddrEmail] = useState("");
+  const [addrPhone, setAddrPhone] = useState("");
   const [addrCity, setAddrCity] = useState("");
   const [addrStreet, setAddrStreet] = useState("");
   const [addrState, setAddrState] = useState("");
   const [addrZip, setAddrZip] = useState("");
   const [, setZipError] = useState(false);
   const [orderNote, setOrderNote] = useState("");
+  const needsProfile = isProfileIncomplete(user);
+  const needsName = isPlaceholderName(user?.name);
+  const needsEmail = isPlaceholderEmail(user?.email);
+  const needsAddress = !addressLoading && addresses.length === 0;
+  const userId = user?.id ?? null;
 
   function applyAddress(addr: ApiAddress) {
     const parts = addr.full_name.split(" ");
@@ -115,6 +104,40 @@ export default function Checkout() {
     setZipError(false);
     setShowAddForm(false);
   }
+
+  // When account changes (logout → other phone), wipe previous checkout fields
+  useEffect(() => {
+    setAddresses([]);
+    setSelectedAddr(-1);
+    setShowAddForm(false);
+    setFirstName("");
+    setLastName("");
+    setAddrEmail("");
+    setAddrPhone("");
+    setAddrCity("");
+    setAddrStreet("");
+    setAddrState("");
+    setAddrZip("");
+    setOrderNote("");
+    if (isLoggedIn) {
+      void loadAddresses();
+    } else {
+      setAddressLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only on account switch
+  }, [userId, isLoggedIn]);
+
+  // Prefill from the current account only (never keep another user's values)
+  useEffect(() => {
+    if (!user) return;
+    setAddrPhone(user.phone ?? "");
+    setAddrEmail(realEmail(user.email));
+    if (user.name && !isPlaceholderName(user.name)) {
+      const parts = user.name.trim().split(/\s+/);
+      setFirstName(parts[0] ?? "");
+      setLastName(parts.slice(1).join(" "));
+    }
+  }, [userId]);
 
   /* ── Promo code ── */
   const [promoInput, setPromoInput] = useState("");
@@ -748,39 +771,47 @@ export default function Checkout() {
                 <div className="address-no-data animate-fade-in text-start mb-3">
                   <h5 className="address-no-data-title mb-2">Complete your profile</h5>
                   <p className="address-no-data-desc mb-3">
-                    Add your name and email once — we&apos;ll save them to your account.
+                    {user?.phone
+                      ? `Account: +${String(user.phone).replace(/^\+/, "")}. Add missing details once.`
+                      : "Add missing details once — saved to this phone account."}
                   </p>
                   <div className="row g-3">
-                    <div className="col-md-6">
-                      <label className="form-label small fw-semibold">First name *</label>
-                      <input
-                        className="premium-input"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        required
-                        placeholder="First name"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label small fw-semibold">Last name</label>
-                      <input
-                        className="premium-input"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Last name"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label small fw-semibold">Email *</label>
-                      <input
-                        type="email"
-                        className="premium-input"
-                        value={addrEmail}
-                        onChange={(e) => setAddrEmail(e.target.value)}
-                        required
-                        placeholder="you@example.com"
-                      />
-                    </div>
+                    {needsName && (
+                      <>
+                        <div className="col-md-6">
+                          <label className="form-label small fw-semibold">First name *</label>
+                          <input
+                            className="premium-input"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                            placeholder="First name"
+                          />
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label small fw-semibold">Last name</label>
+                          <input
+                            className="premium-input"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="Last name"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {needsEmail && (
+                      <div className="col-md-6">
+                        <label className="form-label small fw-semibold">Email *</label>
+                        <input
+                          type="email"
+                          className="premium-input"
+                          value={addrEmail}
+                          onChange={(e) => setAddrEmail(e.target.value)}
+                          required
+                          placeholder="you@example.com"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
