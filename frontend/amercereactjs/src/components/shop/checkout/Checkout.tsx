@@ -266,6 +266,8 @@ export default function Checkout() {
     const stored = loadStoredPromo();
     if (stored?.code) {
       setAppliedCode(stored.code);
+      // Show stored discount immediately so wallet/order totals update before API refresh
+      if (stored.discount > 0) setPromoDiscount(stored.discount);
       return;
     }
 
@@ -323,8 +325,11 @@ export default function Checkout() {
     sessionStorage.setItem("checkout_payment_method", paymentMethod);
   }, [paymentMethod]);
 
-  const baseShippingCost = totalPrice <= 0 ? 0 : (totalPrice >= freeShippingAbove ? 0 : shippingCharge);
+  // Shipping / free-shipping threshold use amount after coupon or affiliate discount
   const subtotalAfterPromo = Math.max(0, totalPrice - promoDiscount);
+  const baseShippingCost = subtotalAfterPromo <= 0
+    ? 0
+    : (subtotalAfterPromo >= freeShippingAbove ? 0 : shippingCharge);
   // Wallet is a separate full-pay method: optional % off + optional free delivery (admin setting).
   const walletPct = walletInfo?.discount_percent ?? 0;
   const walletDiscountPreview = walletInfo?.enabled && walletPct > 0
@@ -332,9 +337,12 @@ export default function Checkout() {
     : 0;
   const walletFreeShipping = !!walletInfo?.enabled && walletFreeShippingSetting;
   const walletShippingCost = walletFreeShipping ? 0 : baseShippingCost;
-  const walletPayable = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
+  // Payable after promo/affiliate + wallet extras — updates when coupon/affiliate changes
+  const walletPayable = Math.round((Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost) * 100) / 100;
+  const walletBalance = Number(walletInfo?.balance || 0);
+  const walletShortfall = Math.max(0, Math.round((walletPayable - walletBalance) * 100) / 100);
   // Enable wallet only when balance covers the full wallet payable (no gateway top-up).
-  const walletBalanceOk = !!walletInfo?.enabled && walletInfo.balance + 0.009 >= walletPayable && walletPayable > 0;
+  const walletBalanceOk = !!walletInfo?.enabled && walletBalance + 0.009 >= walletPayable && walletPayable > 0;
 
   // If wallet was selected but balance no longer covers full payable, fall back to COD.
   useEffect(() => {
@@ -447,7 +455,14 @@ export default function Checkout() {
 
     if (paymentMethod === "wallet") {
       if (!walletInfo?.enabled) { setOrderError("Wallet payments are not available."); return; }
-      if (!walletBalanceOk) { setOrderError("Insufficient wallet balance for this order."); return; }
+      if (!walletBalanceOk) {
+        setOrderError(
+          walletShortfall > 0
+            ? `Low balance in wallet. You need ${formatPrice(walletShortfall)} more to pay this order with wallet.`
+            : "Low balance in wallet. Please top up or choose another payment method.",
+        );
+        return;
+      }
     }
 
     setOrderPlacing(true);
@@ -1065,15 +1080,25 @@ export default function Checkout() {
                     <div className="flex-grow-1">
                       <div className="payment-card-title">👛 Pay with Wallet</div>
                       <div className="payment-card-desc">
-                        Balance: {formatPrice(walletInfo.balance)}
+                        Balance: {formatPrice(walletBalance)}
                         {walletPct > 0 && ` · Extra ${walletPct}% off`}
                         {walletFreeShipping && ' · Free delivery'}
                         {' · Full payment only (no gateway)'}
+                        {promoDiscount > 0 && appliedCode
+                          ? ` · After ${appliedCode}: ${formatPrice(walletPayable)}`
+                          : ` · Order total: ${formatPrice(walletPayable)}`}
                       </div>
-                      {!walletBalanceOk && (
+                      {useRoyalty && (
                         <div className="payment-wallet-error">
-                          Need {formatPrice(walletPayable)} or more in wallet to use this method
-                          {walletInfo.balance > 0 ? ` (you have ${formatPrice(walletInfo.balance)})` : ''}
+                          Remove royalty points to pay with wallet
+                          {walletPayable > 0 ? ` (needs ${formatPrice(walletPayable)} after discounts)` : ""}.
+                        </div>
+                      )}
+                      {!useRoyalty && !walletBalanceOk && walletPayable > 0 && (
+                        <div className="payment-wallet-error">
+                          {walletBalance <= 0
+                            ? `Low balance in wallet. Add ${formatPrice(walletPayable)} to pay this order with wallet.`
+                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (order ${formatPrice(walletPayable)}).`}
                         </div>
                       )}
                     </div>
