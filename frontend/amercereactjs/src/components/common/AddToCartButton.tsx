@@ -1,6 +1,7 @@
 import { useContextElement, type Product } from "@/context/Context";
 import { useModalStore } from "@/store/modalStore";
 import { addLineToCart } from "@/utils/cartSync";
+import type { UnitVariantOption } from "@/context/productContextTypes";
 
 interface AddToCartButtonProps {
   product?: Product;
@@ -11,6 +12,22 @@ interface AddToCartButtonProps {
   label?: string;
   variant?: "default" | "icon" | "tooltip";
   style?: React.CSSProperties;
+}
+
+/** True when product (and every pack, if any) has no sellable stock. */
+function isProductFullyOutOfStock(product?: Product | null): boolean {
+  if (!product) return true;
+  const variants = (product as { unitVariants?: UnitVariantOption[] }).unitVariants;
+  if (Array.isArray(variants) && variants.length > 0) {
+    return variants.every((v) => Number(v.stock ?? 0) <= 0);
+  }
+  if (typeof (product as { isStockOut?: boolean }).isStockOut === "boolean") {
+    return !!(product as { isStockOut?: boolean }).isStockOut;
+  }
+  if (typeof (product as { inStock?: boolean }).inStock === "boolean") {
+    return !(product as { inStock?: boolean }).inStock;
+  }
+  return Number((product as { stock?: number }).stock ?? 0) <= 0;
 }
 
 export default function AddToCartButton({
@@ -28,9 +45,10 @@ export default function AddToCartButton({
   const isAdded = product ? isAddedToCartProducts(product.id) : false;
   const isQuickAddTrigger = href === "#quickAdd";
   const isCartTrigger = href === "#shoppingCart";
+  const isStockOut = isProductFullyOutOfStock(product);
 
   const handleClick = async (e: React.MouseEvent) => {
-    if (!product) return;
+    if (!product || isStockOut) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -48,11 +66,18 @@ export default function AddToCartButton({
       return;
     }
 
+    const variants = (product as { unitVariants?: UnitVariantOption[] }).unitVariants;
+    // Pack products must go through Quick Add so the customer picks a sellable variant
+    if (Array.isArray(variants) && variants.length > 0) {
+      setQuickAddItem(product.id);
+      setQuickAddProduct(product);
+      openModal("quickAdd");
+      return;
+    }
+
     await addLineToCart(product, quantity);
     openModal("cart");
   };
-
-  const isStockOut = product && (product as { isStockOut?: boolean }).isStockOut;
 
   const activeClass = !isQuickAddTrigger && isAdded ? "added" : "";
 

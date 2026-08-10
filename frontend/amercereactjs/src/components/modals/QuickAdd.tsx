@@ -1,10 +1,21 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
 import { useModalStore } from "@/store/modalStore";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/Modal";
 import { addLineToCart } from "@/utils/cartSync";
+import type { UnitVariantOption } from "@/context/productContextTypes";
+
+function pickDefaultVariantId(variants: UnitVariantOption[]): number | null {
+  if (!variants.length) return null;
+  const preferred =
+    variants.find((v) => v.isDefault && Number(v.stock) > 0)
+    ?? variants.find((v) => Number(v.stock) > 0)
+    ?? variants.find((v) => v.isDefault)
+    ?? variants[0];
+  return preferred?.id ?? null;
+}
 
 export default function QuickAdd() {
   const { quickAddProduct, isAddedToCartProducts } = useContextElement();
@@ -12,37 +23,81 @@ export default function QuickAdd() {
   const isOpen = activeModal === "quickAdd";
 
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-  const [selectedSizeIndex, setSelectedSizeIndex]   = useState(0);
-  const [quantity, setQuantity]                     = useState(1);
-  const [adding, setAdding]                         = useState(false);
+  const [selectedSizeIndex, setSelectedSizeIndex] = useState(0);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
 
-  // Reset selections whenever the product changes
+  const product = quickAddProduct;
+  const unitVariants = useMemo(
+    () => (product?.unitVariants ?? []) as UnitVariantOption[],
+    [product],
+  );
+  const hasUnitVariants = unitVariants.length > 0;
+
   useEffect(() => {
     setSelectedColorIndex(0);
     setSelectedSizeIndex(0);
     setQuantity(1);
-  }, [quickAddProduct?.id]);
+    setSelectedVariantId(pickDefaultVariantId(unitVariants));
+  }, [product?.id, unitVariants]);
 
-  const product = quickAddProduct;
+  const selectedVariant = hasUnitVariants
+    ? (unitVariants.find((v) => v.id === selectedVariantId) ?? unitVariants[0] ?? null)
+    : null;
 
-  const sizeOptions   = product ? (product.sizes ?? []).map(String) : [];
-  const hasSizes      = sizeOptions.length > 0;
+  const sizeOptions = product ? (product.sizes ?? []).map(String) : [];
+  const hasSizes = sizeOptions.length > 0;
   const selectedColor = product?.colors?.[selectedColorIndex];
-  const selectedSize  = sizeOptions[selectedSizeIndex] ?? null;
-  const displayPrice  = product?.price ?? 0;
-  const previewImage  = selectedColor?.img
+  const selectedSize = sizeOptions[selectedSizeIndex] ?? null;
+
+  const availableStock = hasUnitVariants
+    ? Number(selectedVariant?.stock ?? 0)
+    : Number(product?.stock ?? 0);
+  const isOutOfStock = availableStock <= 0;
+  const productFullyOut = hasUnitVariants
+    ? unitVariants.every((v) => Number(v.stock) <= 0)
+    : Number(product?.stock ?? 0) <= 0 || !!(product as { isStockOut?: boolean } | null)?.isStockOut;
+
+  const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
+  const displayPriceOld = selectedVariant?.priceOld ?? product?.priceOld;
+  const previewImage =
+    selectedVariant?.img
+    ?? selectedColor?.img
     ?? product?.img
     ?? product?.images?.[0]?.src
     ?? "/frontend/assets/images/product/product-1.jpg";
 
+  const alreadyInCart = product
+    ? isAddedToCartProducts(
+        product.id,
+        selectedVariant?.id ?? undefined,
+      )
+    : false;
+
   const handleAddToCart = async () => {
-    if (!product || adding) return;
-    if (isAddedToCartProducts(product.id)) return;
+    if (!product || adding || isOutOfStock || productFullyOut) return;
+    if (hasUnitVariants && !selectedVariant) return;
+    if (alreadyInCart) return;
+
+    const qty = Math.min(quantity, Math.max(1, availableStock));
     setAdding(true);
     try {
       await addLineToCart(
-        { ...product, selectedSize: selectedSize ?? undefined, selectedColor: selectedColor?.label },
-        quantity,
+        {
+          ...product,
+          price: displayPrice,
+          priceOld: displayPriceOld,
+          img: previewImage,
+          unit_label: selectedVariant?.label ?? product.unit_label,
+          selectedVariantId: selectedVariant?.id,
+          selectedSize: selectedSize ?? undefined,
+          selectedColor: selectedColor?.label,
+          stock: availableStock,
+          isStockOut: false,
+          inStock: true,
+        },
+        qty,
       );
       closeModal();
     } finally {
@@ -56,6 +111,12 @@ export default function QuickAdd() {
       <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
     </svg>
   );
+
+  const primaryLabel = productFullyOut || isOutOfStock
+    ? "Out of Stock"
+    : alreadyInCart
+      ? "Added"
+      : `Add to Cart - ${formatPrice(displayPrice * quantity)}`;
 
   return (
     <Modal isOpen={isOpen} onClose={closeModal} maxWidth="500px">
@@ -71,7 +132,6 @@ export default function QuickAdd() {
           </div>
         ) : (
           <div className="d-flex flex-column gap-4">
-            {/* Product Header */}
             <div className="d-flex gap-3 align-items-center">
               <Link to={`/product-detail/${product.id}`} onClick={closeModal}>
                 <img
@@ -93,16 +153,71 @@ export default function QuickAdd() {
                   <span style={{ fontSize: "15px", fontWeight: "600", color: "var(--modal-accent)" }}>
                     {formatPrice(displayPrice)}
                   </span>
-                  {product.priceOld != null && (
+                  {displayPriceOld != null && displayPriceOld > displayPrice && (
                     <span style={{ fontSize: "13px", color: "#94A3B8", textDecoration: "line-through" }}>
-                      {formatPrice(product.priceOld)}
+                      {formatPrice(displayPriceOld)}
                     </span>
                   )}
                 </div>
+                {selectedVariant?.label && (
+                  <span className="text-muted mt-1" style={{ fontSize: "12px" }}>
+                    Pack: {selectedVariant.label}
+                    {!isOutOfStock && availableStock > 0 ? ` · ${availableStock} available` : ""}
+                  </span>
+                )}
+                {(productFullyOut || isOutOfStock) && (
+                  <span className="text-danger fw-semibold mt-1" style={{ fontSize: "13px" }}>
+                    Out of stock
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Colors */}
+            {hasUnitVariants && (
+              <div>
+                <p className="mb-2" style={{ fontSize: "14px", fontWeight: "500" }}>
+                  Pack size:{" "}
+                  <span className="fw-semibold">{selectedVariant?.label ?? "Select"}</span>
+                </p>
+                <div className="d-flex gap-2 flex-wrap">
+                  {unitVariants.map((variant) => {
+                    const out = Number(variant.stock) <= 0;
+                    const active = selectedVariantId === variant.id;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        disabled={out}
+                        onClick={() => {
+                          setSelectedVariantId(variant.id);
+                          setQuantity(1);
+                        }}
+                        title={out ? `${variant.label} — Out of stock` : variant.label}
+                        style={{
+                          minWidth: "72px",
+                          padding: "10px 12px",
+                          border: active ? "2px solid var(--modal-primary)" : "1px solid var(--modal-border)",
+                          borderRadius: "8px",
+                          backgroundColor: active ? "var(--modal-primary)" : "white",
+                          color: out ? "#94A3B8" : active ? "white" : "var(--modal-secondary)",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          cursor: out ? "not-allowed" : "pointer",
+                          opacity: out ? 0.55 : 1,
+                          textDecoration: out ? "line-through" : "none",
+                        }}
+                      >
+                        {variant.label}
+                        <div style={{ fontSize: "11px", fontWeight: 500, marginTop: 2, opacity: 0.9 }}>
+                          {out ? "Out of stock" : formatPrice(variant.price)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {product.colors && product.colors.length > 0 && (
               <div>
                 <p className="mb-2" style={{ fontSize: "14px", fontWeight: "500" }}>
@@ -132,7 +247,6 @@ export default function QuickAdd() {
               </div>
             )}
 
-            {/* Sizes */}
             {hasSizes && (
               <div>
                 <p className="mb-2" style={{ fontSize: "14px", fontWeight: "500" }}>
@@ -164,26 +278,27 @@ export default function QuickAdd() {
               </div>
             )}
 
-            {/* Quantity */}
             <div>
               <p className="mb-2" style={{ fontSize: "14px", fontWeight: "500" }}>Quantity:</p>
               <div className="d-flex align-items-center" style={{ width: "fit-content", border: "1px solid var(--modal-border)", borderRadius: "8px", overflow: "hidden" }}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
+                  disabled={isOutOfStock}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px" }}
                 >
                   -
                 </button>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={quantity} 
-                  style={{ width: "40px", height: "40px", border: "none", borderLeft: "1px solid var(--modal-border)", borderRight: "1px solid var(--modal-border)", textAlign: "center", outline: "none", fontWeight: "600" }} 
+                <input
+                  type="text"
+                  readOnly
+                  value={quantity}
+                  style={{ width: "40px", height: "40px", border: "none", borderLeft: "1px solid var(--modal-border)", borderRight: "1px solid var(--modal-border)", textAlign: "center", outline: "none", fontWeight: "600" }}
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setQuantity((q) => q + 1)}
+                <button
+                  type="button"
+                  disabled={isOutOfStock || quantity >= availableStock}
+                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
                   style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px" }}
                 >
                   +
@@ -196,19 +311,22 @@ export default function QuickAdd() {
       {product && (
         <ModalFooter
           primaryAction={{
-            label: isAddedToCartProducts(product.id) ? "Added" : `Add to Cart - ${formatPrice(displayPrice * quantity)}`,
+            label: primaryLabel,
             onClick: handleAddToCart,
-            disabled: isAddedToCartProducts(product.id),
+            disabled: alreadyInCart || isOutOfStock || productFullyOut || adding,
             variant: "gold"
           }}
-          secondaryAction={{
-            label: "Buy It Now",
-            onClick: () => {
-              handleAddToCart();
-              // In real app, redirect to checkout
-              window.location.href = "/checkout";
-            }
-          }}
+          secondaryAction={
+            alreadyInCart || isOutOfStock || productFullyOut
+              ? undefined
+              : {
+                  label: "Buy It Now",
+                  onClick: async () => {
+                    await handleAddToCart();
+                    window.location.href = "/checkout";
+                  }
+                }
+          }
         />
       )}
     </Modal>
