@@ -266,6 +266,14 @@ export interface ApiUser {
   avatar?: string;
 }
 
+export type OtpAuthData = {
+  token: string;
+  user: ApiUser;
+  is_new?: boolean;
+  profile_complete?: boolean;
+  has_address?: boolean;
+};
+
 export interface ApiAddress {
   id: number;
   full_name: string;
@@ -285,6 +293,7 @@ export interface ApiAddress {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 type AuthResponse = { success: boolean; message: string; data: { token: string; user: ApiUser } };
+type OtpAuthResponse = { success: boolean; message: string; data: OtpAuthData };
 
 export const authAPI = {
   login: (data: { email: string; password: string }) =>
@@ -307,9 +316,9 @@ export const authAPI = {
   resetPassword: (data: { email: string; reset_token: string; password: string; password_confirmation: string }) =>
     http.post<{ success: boolean; message: string }>("/reset-password", data),
   otpRequest: (data: { phone: string }) =>
-    http.post<{ success: boolean; message: string }>("/otp-request", data),
-  otpVerify: (data: { phone: string; otp: string }) =>
-    http.post<AuthResponse>("/otp-verify", data),
+    http.post<{ success: boolean; message: string; data?: { test_otp?: string; dev_hint?: string } }>("/otp-request", data),
+  otpVerify: (data: { phone: string; otp: string; name?: string }) =>
+    http.post<OtpAuthResponse>("/otp-verify", data),
 };
 
 // ── Products ──────────────────────────────────────────────────────────────────

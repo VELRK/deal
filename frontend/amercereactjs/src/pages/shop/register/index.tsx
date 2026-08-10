@@ -1,21 +1,14 @@
-import Log from "@/components/shop/register/Log";
-import PageTitle from "@/components/shop/register/PageTitle";
-import { shopRouteMetadata } from "@/lib/metadata/shop";
-import PageMeta from "@/components/common/PageMeta";
+import { Navigate, useLocation } from "react-router-dom";
 
-const pageMeta = shopRouteMetadata(
-  "Register",
-  "Create your account to save favorites, checkout faster, and manage orders.",
-);
-
+/** Register is merged into phone-OTP login — send users there. */
 const RegisterPage = () => {
-  return (
-    <>
-      <PageMeta title={pageMeta.title} description={pageMeta.description} />
-      <PageTitle />
-      <Log />
-    </>
-  );
+  const location = useLocation();
+  const qs = location.search || "";
+  const redirect = new URLSearchParams(qs).get("redirect");
+  const to = redirect
+    ? `/login?redirect=${encodeURIComponent(redirect)}`
+    : "/login";
+  return <Navigate to={to} replace />;
 };
 
 export default RegisterPage;

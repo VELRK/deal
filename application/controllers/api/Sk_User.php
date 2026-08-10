@@ -30,15 +30,20 @@ class Sk_User extends Sk_Base_Api {
             if (strlen($data['password']) < 6) return $this->error('Password must be at least 6 characters.');
             $update['password'] = $data['password'];
         }
-        // Allow email update only when current email is a placeholder (OTP-only accounts)
+        // Allow email update when current email is a placeholder (OTP-only accounts)
         if (!empty($data['email'])) {
             $current = $this->Sk_User_model->get_by_id($this->user['user_id']);
-            if (strpos($current['email'], '@shopkart.app') !== false) {
+            $curEmail = strtolower((string) ($current['email'] ?? ''));
+            $isPlaceholder = strpos($curEmail, 'ph_') === 0
+                || strpos($curEmail, '@shopkart.app') !== false
+                || strpos($curEmail, '@2deal.app') !== false;
+            if ($isPlaceholder) {
                 $newEmail = trim($data['email']);
                 if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
                     return $this->error('Invalid email address.');
                 }
-                if ($this->Sk_User_model->get_by_email($newEmail)) {
+                $existing = $this->Sk_User_model->get_by_email($newEmail);
+                if ($existing && (int) $existing['id'] !== (int) $this->user['user_id']) {
                     return $this->error('This email is already in use.');
                 }
                 $update['email'] = $newEmail;

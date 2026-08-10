@@ -326,9 +326,11 @@ class Sk_Auth extends Sk_Base_Api {
         if (mb_strlen($nameInput) > 100) {
             $nameInput = mb_substr($nameInput, 0, 100);
         }
+        $isNew = false;
 
         if (!$user) {
-            // New user — auto-register with phone (prefer provided name over placeholder)
+            // New user — auto-register with phone (Flipkart/Amazon style OTP login)
+            $isNew = true;
             $digits = preg_replace('/\D/', '', $normalized);
             $displayName = $nameInput !== '' ? $nameInput : ('User ' . substr($digits, -4));
             $placeholder_email = 'ph_' . $digits . '@shopkart.app';
@@ -359,10 +361,26 @@ class Sk_Auth extends Sk_Base_Api {
         $this->Sk_User_model->update_last_login($user['id']);
         $token = $this->sk_jwt->encode(['user_id' => $user['id'], 'email' => $user['email']]);
 
+        $email = (string) ($user['email'] ?? '');
+        $name  = trim((string) ($user['name'] ?? ''));
+        $profileComplete = $name !== ''
+            && !preg_match('/^User\s+\d{2,6}$/i', $name)
+            && $email !== ''
+            && strpos($email, 'ph_') !== 0
+            && stripos($email, '@shopkart.app') === false
+            && stripos($email, '@2deal.app') === false;
+        $addrCount = 0;
+        if (method_exists($this->Sk_User_model, 'get_addresses')) {
+            $addrCount = count($this->Sk_User_model->get_addresses((int) $user['id']));
+        }
+
         $this->success([
-            'token' => $token,
-            'user'  => $this->_safe_user($user),
-        ], 'Login successful.');
+            'token'            => $token,
+            'user'             => $this->_safe_user($user),
+            'is_new'           => $isNew,
+            'profile_complete' => $profileComplete,
+            'has_address'      => $addrCount > 0,
+        ], $isNew ? 'Account created. Login successful.' : 'Login successful.');
     }
 
     /**

@@ -1,18 +1,6 @@
-﻿import AccountPageTitle from "@/components/account/AccountPageTitle";
-import AccountChangePassword from "@/components/account/account-password/AccountChangePassword";
-import PageMeta from "@/components/common/PageMeta";
+﻿import { Navigate } from "react-router-dom";
 
-const AccountPasswordPage = () => {
-  return (
-    <>
-      <PageMeta
-        title={"Change Password | 2Deal"}
-        description={"Update your account password"}
-      />
-      <AccountPageTitle heading="Change Password" description="Keep your account secure" />
-      <AccountChangePassword />
-    </>
-  );
-};
+/** Password login removed — redirect to account settings. */
+const AccountPasswordPage = () => <Navigate to="/account-setting" replace />;
 
 export default AccountPasswordPage;

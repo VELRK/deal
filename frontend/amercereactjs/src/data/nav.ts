@@ -146,11 +146,7 @@ export const navShop = [
       },
       {
         "href": "/login",
-        "text": "Login/Register"
-      },
-      {
-        "href": "/forget-password",
-        "text": "Forget Password"
+        "text": "Login"
       },
       {
         "href": "/track-order",

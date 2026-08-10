@@ -186,7 +186,7 @@ export default function AccountSetting() {
           {isPhoneOnly && (
             <div className="alert-custom warning">
               <span>📧</span>
-              <span>Your account doesn't have an email address yet. Add one below to enable email login.</span>
+              <span>Add your email for order updates. You still login with mobile OTP.</span>
             </div>
           )}
 
@@ -228,7 +228,7 @@ export default function AccountSetting() {
 
               <div className="col-12 mb-4">
                 <label className="form-label-custom">
-                  Email Address {isPhoneOnly ? <span className="text-muted fw-normal">(optional — enables email login)</span> : "(Read-only)"}
+                  Email Address {isPhoneOnly ? <span className="text-muted fw-normal">(optional)</span> : "(Read-only)"}
                 </label>
                 {isPhoneOnly ? (
                   <input

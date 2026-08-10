@@ -12,6 +12,7 @@ import type { ApiAddress, RoyaltyCartInfo } from "@/services/api";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
 import { removeLineFromCart } from "@/utils/cartSync";
+import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 
 /* Razorpay global type */
 declare global {
@@ -73,17 +74,24 @@ export default function Checkout() {
   /* ── Address form fields ── */
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  // Ignore system-generated placeholder emails (ph_PHONE@2Deal.app)
+  // Ignore system-generated placeholder emails (OTP auto-register)
   const realEmail = (email?: string) =>
-    email && !email.startsWith("ph_") ? email : "";
+    email && !isPlaceholderEmail(email) ? email : "";
   const [addrEmail, setAddrEmail] = useState(realEmail(user?.email));
   const [addrPhone, setAddrPhone] = useState(user?.phone ?? "");
+  const needsProfile = isProfileIncomplete(user);
+  const needsAddress = !addressLoading && addresses.length === 0;
 
-  // Sync phone/email when user logs in
+  // Sync phone/email/name when user logs in (new OTP users fill remaining details here)
   useEffect(() => {
     if (user?.phone && !addrPhone) setAddrPhone(user.phone);
     if (user?.email && !addrEmail) setAddrEmail(realEmail(user.email));
-  }, [user, addrPhone, addrEmail]);
+    if (user?.name && !isPlaceholderName(user.name) && !firstName && !lastName) {
+      const parts = user.name.trim().split(/\s+/);
+      setFirstName(parts[0] ?? "");
+      setLastName(parts.slice(1).join(" "));
+    }
+  }, [user, addrPhone, addrEmail, firstName, lastName]);
 
   const [addrCity, setAddrCity] = useState("");
   const [addrStreet, setAddrStreet] = useState("");
@@ -96,7 +104,7 @@ export default function Checkout() {
     const parts = addr.full_name.split(" ");
     setFirstName(parts[0] ?? "");
     setLastName(parts.slice(1).join(" "));
-    setAddrEmail(user?.email ?? "");
+    setAddrEmail(realEmail(user?.email));
     setAddrPhone(addr.phone ?? "");
     setAddrCity(addr.city ?? "");
     setAddrStreet(`${addr.line1}${addr.line2 ? ", " + addr.line2 : ""}`);
@@ -382,6 +390,21 @@ export default function Checkout() {
     e.preventDefault();
     setOrderError("");
 
+    if (!isLoggedIn) { setOrderError("Please log in to place an order."); return; }
+    if (cartProducts.length === 0) { setOrderError("Your cart is empty."); return; }
+
+    // New OTP users: collect name + email on first checkout
+    if (needsProfile || needsAddress) {
+      if (!firstName.trim()) {
+        setOrderError("Please enter your full name.");
+        return;
+      }
+      if (!addrEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addrEmail.trim())) {
+        setOrderError("Please enter a valid email address.");
+        return;
+      }
+    }
+
     const addr = getDeliveryAddress();
     const billing = getBillingAddress(addr);
     if (!addr.full_name || !addr.line1 || !addr.city || !addr.state || !addr.pincode) {
@@ -396,8 +419,6 @@ export default function Checkout() {
       }
     }
 
-    if (!isLoggedIn) { setOrderError("Please log in to place an order."); return; }
-    if (cartProducts.length === 0) { setOrderError("Your cart is empty."); return; }
     if (paymentMethod === "wallet") {
       if (!walletInfo?.enabled) { setOrderError("Wallet payments are not available."); return; }
       if (!walletBalanceOk) { setOrderError("Insufficient wallet balance for this order."); return; }
@@ -405,6 +426,41 @@ export default function Checkout() {
 
     setOrderPlacing(true);
     try {
+      // Save profile details for new OTP users before placing the order
+      if (needsProfile) {
+        const fullName = `${firstName} ${lastName}`.trim();
+        const profileRes = await userAPI.updateProfile({
+          name: fullName,
+          email: addrEmail.trim(),
+        });
+        const updated = (profileRes.data as { data?: typeof user })?.data;
+        if (updated) useAuthStore.getState().setUser(updated);
+      }
+
+      // Save first delivery address inline when none exist yet
+      if (needsAddress) {
+        const saveRes = await userAPI.saveAddress({
+          full_name: addr.full_name,
+          phone: addr.phone || user?.phone || "",
+          line1: addr.line1,
+          line2: addr.line2 ?? "",
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode,
+          country: addr.country || "Malaysia",
+          label: "Home",
+          is_default: 1,
+        });
+        const list = (saveRes.data as { data?: { addresses?: ApiAddress[] } })?.data?.addresses
+          ?? (await userAPI.getAddresses()).data?.data
+          ?? [];
+        setAddresses(list);
+        if (list.length > 0) {
+          setSelectedAddr(0);
+          applyAddress(list[0]);
+        }
+      }
+
       // 1. Sync local cart → backend cart (collect every stock failure)
       type StockIssue = { name?: string; available?: number; requested?: number };
       const stockMessages: string[] = [];
@@ -686,34 +742,142 @@ export default function Checkout() {
                 </div>
               )}
 
-              {!addressLoading && (addresses.length === 0) && (
-                <div className="address-no-data animate-fade-in">
-                  <div className="address-no-data-icon">📍</div>
-                  <h5 className="address-no-data-title">No Delivery Address Found</h5>
-                  <p className="address-no-data-desc">Please add a delivery address to your account to continue with your order.</p>
-                  <button
-                    type="button"
-                    className="tf-btn animate-btn w-100"
-                    onClick={() => navigate("/account-addresses?redirect=/checkout")}
-                  >
-                    + Add Delivery Address
-                  </button>
+              {!addressLoading && needsProfile && addresses.length > 0 && (
+                <div className="address-no-data animate-fade-in text-start mb-3">
+                  <h5 className="address-no-data-title mb-2">Complete your profile</h5>
+                  <p className="address-no-data-desc mb-3">
+                    Add your name and email once — we&apos;ll save them to your account.
+                  </p>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">First name *</label>
+                      <input
+                        className="premium-input"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        placeholder="First name"
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Last name</label>
+                      <input
+                        className="premium-input"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Last name"
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Email *</label>
+                      <input
+                        type="email"
+                        className="premium-input"
+                        value={addrEmail}
+                        onChange={(e) => setAddrEmail(e.target.value)}
+                        required
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {!addressLoading && addresses.length > 0 && showAddForm && (
-                <div className="address-no-data mb-4 animate-fade-in">
-                  <p className="address-no-data-desc mb-3">To add a new address, please use your account settings.</p>
-                  <button
-                    type="button"
-                    className="tf-btn btn-sm animate-btn"
-                    onClick={() => navigate("/account-addresses?redirect=/checkout")}
-                  >
-                    Manage Addresses
-                  </button>
-                  <button type="button" className="tf-btn btn-sm ms-2" style={{ background: 'transparent', color: 'var(--ck-ink-soft)' }} onClick={() => setShowAddForm(false)}>
-                    Cancel
-                  </button>
+              {!addressLoading && addresses.length === 0 && (
+                <div className="address-no-data animate-fade-in text-start">
+                  <h5 className="address-no-data-title mb-2">
+                    {needsProfile ? "Your details & delivery address" : "Delivery address"}
+                  </h5>
+                  <p className="address-no-data-desc mb-3">
+                    {needsProfile
+                      ? "Welcome! Add your name, email and delivery address to place your first order."
+                      : "Add a delivery address to continue."}
+                  </p>
+                  <div className="row g-3 mb-2">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">First name *</label>
+                      <input
+                        className="premium-input"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        placeholder="First name"
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Last name</label>
+                      <input
+                        className="premium-input"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Last name"
+                      />
+                    </div>
+                    {(needsProfile || isPlaceholderEmail(user?.email)) && (
+                      <div className="col-md-6">
+                        <label className="form-label small fw-semibold">Email *</label>
+                        <input
+                          type="email"
+                          className="premium-input"
+                          value={addrEmail}
+                          onChange={(e) => setAddrEmail(e.target.value)}
+                          required
+                          placeholder="you@example.com"
+                        />
+                      </div>
+                    )}
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Mobile *</label>
+                      <input
+                        className="premium-input"
+                        value={addrPhone}
+                        onChange={(e) => setAddrPhone(e.target.value)}
+                        required
+                        placeholder="Mobile number"
+                      />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small fw-semibold">Address line *</label>
+                      <input
+                        className="premium-input"
+                        value={addrStreet}
+                        onChange={(e) => setAddrStreet(e.target.value)}
+                        required
+                        placeholder="House / street / area"
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label small fw-semibold">City *</label>
+                      <input
+                        className="premium-input"
+                        value={addrCity}
+                        onChange={(e) => setAddrCity(e.target.value)}
+                        required
+                        placeholder="City"
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label small fw-semibold">State *</label>
+                      <input
+                        className="premium-input"
+                        value={addrState}
+                        onChange={(e) => setAddrState(e.target.value)}
+                        required
+                        placeholder="State"
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label small fw-semibold">Postcode *</label>
+                      <input
+                        className="premium-input"
+                        value={addrZip}
+                        onChange={(e) => setAddrZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                        required
+                        placeholder="12345"
+                        maxLength={5}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
               <textarea className="premium-input mt-4 mb-0" placeholder="Order notes" rows={2} value={orderNote} onChange={(e) => setOrderNote(e.target.value)} />

@@ -12,7 +12,7 @@ type ModalType =
   | "affiliateEnquiry"
   | "none";
 
-const AUTH_MODALS: ModalType[] = ["signIn", "register", "phoneOTP"];
+const AUTH_MODALS: ModalType[] = ["signIn", "register", "phoneOTP", "forgotPassword"];
 
 interface ModalState {
   activeModal: ModalType;
@@ -30,19 +30,20 @@ export const useModalStore = create<ModalState>((set, get) => ({
   redirectAfterAuth: null,
 
   openModal: (modal, opts) => {
+    // All auth entry points use phone-OTP SignIn (no email/password UI)
+    const resolved: ModalType = AUTH_MODALS.includes(modal) ? "signIn" : modal;
     if (AUTH_MODALS.includes(modal)) {
       const redirect = opts?.redirect?.trim() || null;
       if (redirect) {
         rememberAuthReturn(redirect);
-        set({ activeModal: modal, redirectAfterAuth: redirect });
+        set({ activeModal: resolved, redirectAfterAuth: redirect });
         return;
       }
-      // Keep existing redirect if switching between signIn ↔ register
       const existing = get().redirectAfterAuth;
-      set({ activeModal: modal, redirectAfterAuth: existing });
+      set({ activeModal: resolved, redirectAfterAuth: existing });
       return;
     }
-    set({ activeModal: modal });
+    set({ activeModal: resolved });
   },
 
   closeModal: () => set({ activeModal: "none" }),
