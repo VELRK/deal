@@ -230,11 +230,44 @@ class Sk_User_model extends CI_Model {
 
     // Wishlist
     public function get_wishlist($user_id) {
-        return $this->db->select('w.*, p.name, p.price, p.sale_price, p.thumbnail, p.slug')
+        $rows = $this->db->select('w.*, p.name, p.price, p.sale_price, p.thumbnail, p.slug, p.stock, p.status')
                         ->from('wishlist w')
                         ->join('products p', 'p.id = w.product_id')
                         ->where('w.user_id', $user_id)
                         ->get()->result_array();
+        if (empty($rows)) {
+            return $rows;
+        }
+        $this->load->model('Sk_Product_model');
+        foreach ($rows as &$row) {
+            $wishlistId = (int)($row['id'] ?? 0);
+            $product = [
+                'id'         => (int)($row['product_id'] ?? 0),
+                'stock'      => (int)($row['stock'] ?? 0),
+                'price'      => $row['price'] ?? null,
+                'sale_price' => $row['sale_price'] ?? null,
+                'thumbnail'  => $row['thumbnail'] ?? null,
+            ];
+            $this->Sk_Product_model->attach_variants($product);
+            $row['id'] = $wishlistId;
+            $row['stock'] = (int)($product['stock'] ?? 0);
+            $row['in_stock'] = !empty($product['in_stock']);
+            $row['is_out_of_stock'] = !empty($product['is_out_of_stock']);
+            $row['variants'] = $product['variants'] ?? [];
+            $row['default_variant_id'] = $product['default_variant_id'] ?? null;
+            $row['unit_label'] = $product['unit_label'] ?? null;
+            if (isset($product['price'])) {
+                $row['price'] = $product['price'];
+            }
+            if (array_key_exists('sale_price', $product)) {
+                $row['sale_price'] = $product['sale_price'];
+            }
+            if (!empty($product['thumbnail'])) {
+                $row['thumbnail'] = $product['thumbnail'];
+            }
+        }
+        unset($row);
+        return $rows;
     }
 
     public function wishlist_toggle($user_id, $product_id) {

@@ -188,7 +188,7 @@ $daily_checkouts = $daily_checkouts ?? $daily_clicks ?? [];
 
           <td><?= date('d M Y', strtotime($r['created_at'])) ?></td>
 
-          <td>#<?= (int)$r['order_id'] ?></td>
+          <td><?= htmlspecialchars($r['order_number'] ?? ('#' . (int)$r['order_id'])) ?></td>
 
           <td><?= htmlspecialchars($r['affiliate_name']) ?></td>
 
@@ -236,7 +236,7 @@ $daily_checkouts = $daily_checkouts ?? $daily_clicks ?? [];
 
           <td><?= date('d M Y', strtotime($r['created_at'])) ?></td>
 
-          <td>#<?= (int)$r['order_id'] ?></td>
+          <td><?= htmlspecialchars($r['order_number'] ?? ('#' . (int)$r['order_id'])) ?></td>
 
           <td><?= htmlspecialchars($r['affiliate_name']) ?></td>
 

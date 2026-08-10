@@ -281,6 +281,28 @@ class Sk_Product_model extends CI_Model {
         return $n;
     }
 
+    /**
+     * Product is sellable when any pack has stock (or product.stock when no variants).
+     * Top-level stock = sum of variant stocks so list/card OOS is not driven by one empty pack.
+     */
+    public function apply_stock_availability(array &$product): void {
+        $variants = $product['variants'] ?? null;
+        if (is_array($variants) && !empty($variants)) {
+            $total = 0;
+            foreach ($variants as $v) {
+                $total += max(0, (int)($v['stock'] ?? 0));
+            }
+            $product['stock'] = $total;
+            $product['in_stock'] = $total > 0;
+            $product['is_out_of_stock'] = $total <= 0;
+            return;
+        }
+        $stock = max(0, (int)($product['stock'] ?? 0));
+        $product['stock'] = $stock;
+        $product['in_stock'] = $stock > 0;
+        $product['is_out_of_stock'] = $stock <= 0;
+    }
+
     public function attach_variants(&$product) {
         if (empty($product['id'])) return;
         $variants = $this->variant_model()->get_by_product($product['id']);
@@ -293,17 +315,39 @@ class Sk_Product_model extends CI_Model {
             }
             if (!$default) $default = $variants[0];
 
-            $product['default_variant_id'] = (int)$default['id'];
-            $product['unit_label'] = $default['label'];
-            $product['unit_name'] = $default['unit_name'] ?? '';
-            $product['unit_symbol'] = $default['unit_symbol'] ?? '';
-            $product['unit_value'] = $default['unit_value'] ?? 1;
-            $product['price'] = (float)$default['price'];
-            $product['sale_price'] = $default['sale_price'] ?? null;
-            $product['stock'] = (int)$default['stock'];
-            if (!empty($default['sku'])) $product['sku'] = $default['sku'];
-            if (!empty($default['image'])) $product['thumbnail'] = $default['image'];
+            // Display / quick-add: prefer an in-stock pack when configured default is empty
+            $display = $default;
+            if ((int)($default['stock'] ?? 0) <= 0) {
+                foreach ($variants as $v) {
+                    if ((int)($v['stock'] ?? 0) > 0) {
+                        $display = $v;
+                        break;
+                    }
+                }
+            }
+
+            foreach ($variants as &$v) {
+                $v['is_default'] = ((int)$v['id'] === (int)$display['id']) ? 1 : 0;
+            }
+            unset($v);
+            $product['variants'] = $variants;
+
+            $product['default_variant_id'] = (int)$display['id'];
+            $product['unit_label'] = $display['label'];
+            $product['unit_name'] = $display['unit_name'] ?? '';
+            $product['unit_symbol'] = $display['unit_symbol'] ?? '';
+            $product['unit_value'] = $display['unit_value'] ?? 1;
+            $product['price'] = (float)$display['price'];
+            $product['sale_price'] = $display['sale_price'] ?? null;
+            $product['default_variant_stock'] = (int)($display['stock'] ?? 0);
+            if (!empty($display['sku'])) $product['sku'] = $display['sku'];
+            if (!empty($display['image'])) $product['thumbnail'] = $display['image'];
             $product['variant_count'] = count($variants);
+            $this->apply_stock_availability($product);
+        } else {
+            $product['variants'] = [];
+            $product['variant_count'] = 0;
+            $this->apply_stock_availability($product);
         }
     }
 
@@ -314,6 +358,8 @@ class Sk_Product_model extends CI_Model {
                         ->limit($limit)
                         ->get('products')->result_array();
         foreach ($rows as &$row) {
+            $this->_decode_json_fields($row);
+            $this->attach_variants($row);
             $this->apply_sale_timing($row);
         }
         return $rows;
@@ -493,10 +539,12 @@ class Sk_Product_model extends CI_Model {
         $product['unit_value'] = $chosen['unit_value'] ?? 1;
         $product['price'] = (float)$chosen['price'];
         $product['sale_price'] = $chosen['sale_price'] ?? null;
-        $product['stock'] = (int)$chosen['stock'];
+        $product['default_variant_stock'] = (int)($chosen['stock'] ?? 0);
         if (!empty($chosen['sku'])) $product['sku'] = $chosen['sku'];
         if (!empty($chosen['image'])) $product['thumbnail'] = $chosen['image'];
         $product['matched_variant_id'] = $variant_id;
+        // Keep product-level stock as total across packs (not the preferred pack alone)
+        $this->apply_stock_availability($product);
     }
 
     private function apply_sale_timing(&$product) {
@@ -561,18 +609,10 @@ class Sk_Product_model extends CI_Model {
         $this->db->order_by('p.stock', 'ASC')->order_by('p.name', 'ASC')->limit($limit, $offset);
         $rows = $this->db->get()->result_array();
         foreach ($rows as &$row) {
-            // Keep true products.stock — attach_variants overwrites with default variant stock
-            $productStock = (int)($row['stock'] ?? 0);
             $this->attach_variants($row);
-            $row['product_stock'] = $productStock;
-            $row['stock'] = $productStock;
-            if (!empty($row['variants'])) {
-                $sum = 0;
-                foreach ($row['variants'] as $v) {
-                    $sum += (int)($v['stock'] ?? 0);
-                }
-                $row['variant_stock_total'] = $sum;
-            }
+            // product.stock is now total available (sum of packs when variants exist)
+            $row['product_stock'] = (int)($row['stock'] ?? 0);
+            $row['variant_stock_total'] = (int)($row['stock'] ?? 0);
         }
         unset($row);
         return ['rows' => $rows, 'total' => $total];

@@ -502,9 +502,12 @@ class Sk_Affiliate_model extends CI_Model {
 
     public function get_commissions(int $affiliateId, int $limit = 20, int $offset = 0): array {
         $total = $this->db->where('affiliate_id', $affiliateId)->count_all_results('affiliate_commissions');
-        $rows  = $this->db->where('affiliate_id', $affiliateId)
-            ->order_by('created_at', 'DESC')->limit($limit, $offset)
-            ->get('affiliate_commissions')->result_array();
+        $rows  = $this->db->select('c.*, o.order_number')
+            ->from('affiliate_commissions c')
+            ->join('orders o', 'o.id = c.order_id', 'left')
+            ->where('c.affiliate_id', $affiliateId)
+            ->order_by('c.created_at', 'DESC')->limit($limit, $offset)
+            ->get()->result_array();
         return ['rows' => $rows, 'total' => $total];
     }
 
@@ -840,9 +843,10 @@ class Sk_Affiliate_model extends CI_Model {
         $from = $from ?: date('Y-m-01');
         $to   = $to ?: date('Y-m-d');
 
-        $this->db->select('c.order_id, c.order_total, c.commission_amount, c.status, c.created_at, a.name AS affiliate_name, a.promo_code')
+        $this->db->select('c.order_id, o.order_number, c.order_total, c.commission_amount, c.status, c.created_at, a.name AS affiliate_name, a.promo_code')
             ->from('affiliate_commissions c')
             ->join('affiliates a', 'a.id = c.affiliate_id')
+            ->join('orders o', 'o.id = c.order_id', 'left')
             ->where("DATE(c.created_at) BETWEEN '$from' AND '$to'", null, false)
             ->where_in('c.status', ['confirmed', 'paid']);
         if ($vendorId) {
@@ -855,9 +859,10 @@ class Sk_Affiliate_model extends CI_Model {
         $from = $from ?: date('Y-m-01');
         $to   = $to ?: date('Y-m-d');
 
-        $this->db->select('c.*, a.name AS affiliate_name, a.promo_code, a.commission_rate AS affiliate_rate')
+        $this->db->select('c.*, o.order_number, a.name AS affiliate_name, a.promo_code, a.commission_rate AS affiliate_rate')
             ->from('affiliate_commissions c')
             ->join('affiliates a', 'a.id = c.affiliate_id')
+            ->join('orders o', 'o.id = c.order_id', 'left')
             ->where("DATE(c.created_at) BETWEEN '$from' AND '$to'", null, false);
         if ($vendorId) {
             $this->db->where('c.vendor_id', $vendorId);
@@ -993,6 +998,11 @@ class Sk_Affiliate_model extends CI_Model {
             'updated_at'         => date('Y-m-d H:i:s'),
         ]);
 
+        $orderNumber = '';
+        if ($this->db->table_exists('orders') && $this->db->field_exists('order_number', 'orders')) {
+            $ord = $this->db->select('order_number')->where('id', $orderId)->get('orders')->row_array();
+            $orderNumber = trim((string)($ord['order_number'] ?? ''));
+        }
         $this->db->insert('affiliate_commission_ledger', [
             'affiliate_id'  => $affiliateId,
             'type'          => 'earn',
@@ -1000,7 +1010,7 @@ class Sk_Affiliate_model extends CI_Model {
             'balance_after' => $newPending,
             'reference_type'=> 'order',
             'reference_id'  => $orderId,
-            'description'   => 'Commission order #' . $orderId,
+            'description'   => 'Commission order ' . ($orderNumber !== '' ? $orderNumber : ('#' . $orderId)),
             'created_at'    => date('Y-m-d H:i:s'),
         ]);
 

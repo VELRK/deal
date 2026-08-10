@@ -388,6 +388,7 @@ class Products extends Sk_Base {
         }
 
         $this->Sk_Product_variant_model->replace_for_product((int)$product_id, $parsed);
+        $this->Sk_Product_model->sync_product_stock_from_variants((int)$product_id);
 
         if ($product_thumb) {
             $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $product_thumb]);

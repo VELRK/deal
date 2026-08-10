@@ -57,10 +57,14 @@ class Sk_JWT {
         return $m[1];
     }
 
-    public function get_user_from_request() {
+    public function get_payload_from_request() {
         $token = $this->get_token_from_request();
         if (!$token) return null;
-        $payload = $this->decode($token);
+        return $this->decode($token);
+    }
+
+    public function get_user_from_request() {
+        $payload = $this->get_payload_from_request();
         if (!$payload || empty($payload['user_id'])) {
             return null;
         }
@@ -73,6 +77,18 @@ class Sk_JWT {
             return null;
         }
 
+        return $payload;
+    }
+
+    /** Affiliate JWT payload (affiliate_id + type=affiliate). Not interchangeable with customer tokens. */
+    public function get_affiliate_from_request() {
+        $payload = $this->get_payload_from_request();
+        if (!$payload || empty($payload['affiliate_id'])) {
+            return null;
+        }
+        if (!empty($payload['type']) && $payload['type'] !== 'affiliate') {
+            return null;
+        }
         return $payload;
     }
 

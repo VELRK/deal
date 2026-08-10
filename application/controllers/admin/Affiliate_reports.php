@@ -116,7 +116,7 @@ class Affiliate_reports extends Sk_Base {
 
             foreach ($this->Sk_Affiliate_model->get_report_sales($vendorId, $from, $to, 5000) as $r) {
 
-                fputcsv($out, [$r['order_id'], $r['affiliate_name'], $r['promo_code'], $r['order_total'], $r['commission_amount'], $r['status'], $r['created_at']]);
+                fputcsv($out, [$r['order_number'] ?? $r['order_id'], $r['affiliate_name'], $r['promo_code'], $r['order_total'], $r['commission_amount'], $r['status'], $r['created_at']]);
 
             }
 
@@ -148,7 +148,7 @@ class Affiliate_reports extends Sk_Base {
 
             foreach ($this->Sk_Affiliate_model->get_report_commissions($vendorId, $from, $to, 5000) as $r) {
 
-                fputcsv($out, [$r['order_id'], $r['affiliate_name'], $r['promo_code'], $r['order_total'], $r['commission_rate'], $r['commission_amount'], $r['status'], $r['created_at']]);
+                fputcsv($out, [$r['order_number'] ?? $r['order_id'], $r['affiliate_name'], $r['promo_code'], $r['order_total'], $r['commission_rate'], $r['commission_amount'], $r['status'], $r['created_at']]);
 
             }
 

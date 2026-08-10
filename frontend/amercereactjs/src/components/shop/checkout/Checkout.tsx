@@ -225,45 +225,60 @@ export default function Checkout() {
     saveStoredPromo(null);
   };
 
-  /* Restore promo saved from cart or auto-apply affiliate ?ref= */
+  /* Restore promo code from cart storage or affiliate ?ref= (discount is refreshed below). */
   useEffect(() => {
     if (!isLoggedIn || appliedCode || totalPrice <= 0) return;
 
     const stored = loadStoredPromo();
-    if (stored) {
+    if (stored?.code) {
       setAppliedCode(stored.code);
-      setPromoDiscount(stored.discount);
       return;
     }
 
     const refCode = sessionStorage.getItem("sk_affiliate_ref");
     if (!refCode) return;
+    setAppliedCode(refCode.toUpperCase());
+  }, [isLoggedIn, appliedCode, totalPrice]);
+
+  /* Keep coupon discount (and wallet payable) in sync when cart total changes. */
+  useEffect(() => {
+    if (!isLoggedIn || !appliedCode || totalPrice <= 0) return;
 
     let cancelled = false;
-    setPromoInput(refCode);
-    setPromoLoading(true);
-    setPromoError("");
-    promoAPI.apply({ code: refCode, order_amount: totalPrice })
-      .then((res) => {
-        if (cancelled) return;
-        const r = res.data as { success?: boolean; data?: { discount: number; code: string; source?: string }; message?: string };
-        if (r.success && r.data) {
-          setAppliedCode(r.data.code);
-          setPromoDiscount(r.data.discount);
-          setPromoInput("");
-          saveStoredPromo({ code: r.data.code, discount: r.data.discount });
-        } else {
-          setPromoError(r.message ?? "Invalid affiliate promo code.");
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        setPromoError(msg ?? "Could not apply affiliate promo code.");
-      })
-      .finally(() => { if (!cancelled) setPromoLoading(false); });
+    const timer = window.setTimeout(() => {
+      setPromoLoading(true);
+      promoAPI.apply({ code: appliedCode, order_amount: totalPrice })
+        .then((res) => {
+          if (cancelled) return;
+          const r = res.data as { success?: boolean; data?: { discount: number; code: string }; message?: string };
+          if (r.success && r.data) {
+            setAppliedCode(r.data.code);
+            setPromoDiscount(Number(r.data.discount) || 0);
+            setPromoInput("");
+            setPromoError("");
+            saveStoredPromo({ code: r.data.code, discount: Number(r.data.discount) || 0 });
+          } else {
+            setAppliedCode("");
+            setPromoDiscount(0);
+            saveStoredPromo(null);
+            setPromoError(r.message ?? "Promo no longer valid for this cart.");
+          }
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setAppliedCode("");
+          setPromoDiscount(0);
+          saveStoredPromo(null);
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          setPromoError(msg ?? "Could not apply promo code.");
+        })
+        .finally(() => { if (!cancelled) setPromoLoading(false); });
+    }, 250);
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [isLoggedIn, appliedCode, totalPrice]);
 
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay" | "wallet">(() => {
@@ -926,10 +941,22 @@ export default function Checkout() {
                   <span>−{formatPrice(royaltyRm)}</span>
                 </div>
               )}
+              {paymentMethod === 'wallet' && (
+                <div className="summary-row fw-semibold text-success">
+                  <span>Wallet charge</span>
+                  <span>{formatPrice(walletPayable)}</span>
+                </div>
+              )}
 
               <div className="summary-total">
-                <span>{royaltyRm > 0 ? 'Amount due' : 'Total'}</span>
-                <span>{formatPrice(amountDue)}</span>
+                <span>
+                  {paymentMethod === 'wallet'
+                    ? 'Pay from wallet'
+                    : royaltyRm > 0
+                      ? 'Amount due'
+                      : 'Total'}
+                </span>
+                <span>{formatPrice(paymentMethod === 'wallet' ? walletPayable : amountDue)}</span>
               </div>
 
               {orderError && (
@@ -943,7 +970,7 @@ export default function Checkout() {
                     ? "Processing..."
                     : amountDue <= 0.009 && royaltyRm > 0
                       ? `Place Order • Paid with points`
-                      : `Place Order • ${formatPrice(amountDue)}`}
+                      : `Place Order • ${formatPrice(paymentMethod === "wallet" ? walletPayable : amountDue)}`}
                   {!orderPlacing && <i className="icon-arrow-right ms-2" />}
                 </button>
               ) : (

@@ -29,7 +29,7 @@
           <thead><tr><th>Order</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
             <?php foreach ($recent_commissions as $c): ?>
-            <tr><td>#<?= $c['order_id'] ?></td><td><?= $currency . number_format($c['commission_amount'], 2) ?></td><td><span class="badge bg-secondary"><?= $c['status'] ?></span></td></tr>
+            <tr><td><?= htmlspecialchars($c['order_number'] ?? ('#' . (int)$c['order_id'])) ?></td><td><?= $currency . number_format($c['commission_amount'], 2) ?></td><td><span class="badge bg-secondary"><?= $c['status'] ?></span></td></tr>
             <?php endforeach; ?>
             <?php if (empty($recent_commissions)): ?><tr><td colspan="3" class="text-muted text-center py-3">No commissions yet</td></tr><?php endif; ?>
           </tbody>

@@ -284,7 +284,7 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
     }
 
     private function _auth_affiliate(): array {
-        $payload = $this->sk_jwt->get_user_from_request();
+        $payload = $this->sk_jwt->get_affiliate_from_request();
         if (!$payload || empty($payload['affiliate_id'])) {
             $this->error('Unauthorized. Affiliate login required.', 401);
         }

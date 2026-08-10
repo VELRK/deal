@@ -7,7 +7,7 @@
       <tbody>
         <?php foreach ($commissions as $c): ?>
         <tr>
-          <td>#<?= $c['order_id'] ?></td>
+          <td><?= htmlspecialchars($c['order_number'] ?? ('#' . (int)$c['order_id'])) ?></td>
           <td><?= $currency . number_format($c['order_total'], 2) ?></td>
           <td><?= $c['commission_rate'] ?>%</td>
           <td class="fw-semibold"><?= $currency . number_format($c['commission_amount'], 2) ?></td>

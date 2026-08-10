@@ -12,21 +12,21 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
   </div>
   <div class="d-flex gap-2 flex-wrap">
     <?php if ($a['status']==='pending'): ?>
-    <a href="<?= site_url('admin/affiliates/approve/'.$a['id']) ?>" class="btn btn-success btn-sm">Approve</a>
-    <a href="<?= site_url('admin/affiliates/reject/'.$a['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Reject affiliate?')">Reject</a>
+    <a href="<?= site_url('shopkart/affiliates/approve/'.$a['id']) ?>" class="btn btn-success btn-sm">Approve</a>
+    <a href="<?= site_url('shopkart/affiliates/reject/'.$a['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Reject affiliate?')">Reject</a>
     <?php endif; ?>
     <?php if (!empty($a['must_set_password']) || in_array($a['status'], ['pending', 'approved'], true)): ?>
-    <form method="post" action="<?= site_url('admin/affiliates/resend_email/'.$a['id']) ?>" class="d-inline">
+    <form method="post" action="<?= site_url('shopkart/affiliates/resend_email/'.$a['id']) ?>" class="d-inline">
       <button type="submit" class="btn btn-outline-primary btn-sm" title="Resend invite, registration, or approval email">Resend Email</button>
     </form>
     <?php endif; ?>
     <?php if ($a['kyc_status']!=='verified'): ?>
-    <a href="<?= site_url('admin/affiliates/verify_kyc/'.$a['id']) ?>" class="btn btn-outline-success btn-sm">Verify KYC</a>
+    <a href="<?= site_url('shopkart/affiliates/verify_kyc/'.$a['id']) ?>" class="btn btn-outline-success btn-sm">Verify KYC</a>
     <?php endif; ?>
-    <a href="<?= site_url('admin/affiliates/login_as/'.$a['id']) ?>" class="btn btn-success btn-sm" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-in-right me-1"></i>Login as Affiliate</a>
-    <a href="<?= site_url('admin/affiliates/edit/'.$a['id']) ?>" class="btn btn-outline-secondary btn-sm">Edit</a>
-    <a href="<?= site_url('admin/affiliates/delete/'.$a['id']) ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this affiliate?')">Delete</a>
-    <a href="<?= site_url('admin/affiliates') ?>" class="btn btn-outline-dark btn-sm">Back</a>
+    <a href="<?= site_url('shopkart/affiliates/login_as/'.$a['id']) ?>" class="btn btn-success btn-sm" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-in-right me-1"></i>Login as Affiliate</a>
+    <a href="<?= site_url('shopkart/affiliates/edit/'.$a['id']) ?>" class="btn btn-outline-secondary btn-sm">Edit</a>
+    <a href="<?= site_url('shopkart/affiliates/delete/'.$a['id']) ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this affiliate?')">Delete</a>
+    <a href="<?= site_url('shopkart/affiliates') ?>" class="btn btn-outline-dark btn-sm">Back</a>
   </div>
 </div>
 
@@ -98,7 +98,7 @@ $status_badges = ['pending'=>'bg-warning text-dark','approved'=>'bg-success','re
           <thead><tr><th>Order</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
             <?php foreach ($commissions as $c): ?>
-            <tr><td>#<?= $c['order_id'] ?></td><td><?= $currency . number_format($c['commission_amount'],2) ?></td><td><?= $c['status'] ?></td></tr>
+            <tr><td><?= htmlspecialchars($c['order_number'] ?? ('#' . (int)$c['order_id'])) ?></td><td><?= $currency . number_format($c['commission_amount'],2) ?></td><td><?= $c['status'] ?></td></tr>
             <?php endforeach; ?>
           </tbody>
         </table>

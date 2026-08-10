@@ -55,11 +55,7 @@ class Inventory extends Sk_Base {
         }
         $this->assert_product_vendor_access($product);
 
-        // attach_variants overwrites stock with default pack — restore true product total
-        $stockRow = $this->db->select('stock')->where('id', $id)->get('products')->row();
-        if ($stockRow) {
-            $product['stock'] = (int)$stockRow->stock;
-        }
+        // attach_variants already sets stock to sum of packs (product availability)
 
         $page   = max(1, (int)$this->input->get('page'));
         $limit  = 20;
