@@ -14,9 +14,6 @@ function PageTitle() {
               <p className="text-caption-01">Login</p>
             </div>
             <h3 className="letter-space-0">Login</h3>
-            <p className="text-body-1 cl-text-2">
-              Sign in to access your personalized experience.
-            </p>
           </div>
         </div>
       </section>

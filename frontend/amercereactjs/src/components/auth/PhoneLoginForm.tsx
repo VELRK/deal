@@ -96,7 +96,7 @@ export default function PhoneLoginForm({
         const devHint = r.data?.dev_hint ?? r.data?.test_otp
           ? `Developer OTP: ${r.data?.test_otp ?? DEV_TEST_OTP}`
           : "";
-        setHint(devHint || "OTP sent via SMS. New and existing users can continue with the same code.");
+        setHint(devHint || "OTP sent via SMS.");
       } else {
         setError(r.message ?? "Failed to send OTP.");
       }
