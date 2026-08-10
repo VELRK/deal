@@ -160,6 +160,9 @@ export default function PhoneLoginForm({
       {step === "phone" ? (
         <form id={requestFormId} onSubmit={handleRequestOTP} noValidate>
           <div className="mb-3">
+            <label className="fw-medium mb-2 d-block" style={{ fontSize: "14px", color: "#0f172a" }}>
+              Enter phone number
+            </label>
             <div
               className="d-flex align-items-center"
               style={{ border: "1px solid #E2E8F0", borderRadius: "8px", overflow: "hidden" }}
