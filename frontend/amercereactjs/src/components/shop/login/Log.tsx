@@ -48,10 +48,7 @@ function Log() {
                 boxShadow: "0 8px 30px rgba(15,23,42,.04)",
               }}
             >
-              <h3 className="fw-semibold mb-1" style={{ fontSize: 24 }}>Login</h3>
-              <p className="text-muted mb-4" style={{ fontSize: 14 }}>
-                Enter your mobile number to login. If you are new, we will create your account automatically after OTP verification.
-              </p>
+              <h3 className="fw-semibold mb-3" style={{ fontSize: 24 }}>Login</h3>
               <PhoneLoginForm onSuccess={finishLogin} idPrefix="page-otp" variant="page" />
               <p className="text-center text-muted mt-4 mb-0" style={{ fontSize: 13 }}>
                 By continuing, you agree to our{" "}

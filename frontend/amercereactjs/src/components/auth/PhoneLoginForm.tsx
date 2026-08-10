@@ -194,9 +194,6 @@ export default function PhoneLoginForm({
                 style={{ width: "100%", padding: inputPad, border: "none", outline: "none" }}
               />
             </div>
-            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "8px", marginBottom: 0 }}>
-              Enter your mobile number. We will send an OTP to login or create your account.
-            </p>
             {IS_DEV && (
               <div
                 style={{

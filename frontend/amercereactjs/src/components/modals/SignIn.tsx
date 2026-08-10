@@ -39,7 +39,6 @@ export default function SignIn() {
     <Modal isOpen={isOpen} onClose={closeModal} maxWidth="420px">
       <ModalHeader
         title="Login"
-        subtitle="Enter your mobile number. New and existing customers use the same OTP login."
         onClose={closeModal}
         icon={icon}
       />
