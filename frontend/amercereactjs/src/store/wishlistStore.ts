@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { wishlistAPI } from "@/services/api";
+import { wishlistAPI, type ApiProduct } from "@/services/api";
 import { toProductCard } from "@/hooks/useApi";
 import type { ProductCardItem } from "@/types/productCard";
 
@@ -26,6 +26,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         const r = row as {
           product_id: number; name: string; slug: string;
           price: number; sale_price?: number; thumbnail?: string;
+          stock?: number; in_stock?: boolean; is_out_of_stock?: boolean;
+          variants?: ApiProduct["variants"];
+          default_variant_id?: number; unit_label?: string;
         };
         return toProductCard({
           id: r.product_id,
@@ -34,7 +37,12 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           price: r.price,
           sale_price: r.sale_price,
           thumbnail: r.thumbnail,
-          stock: 1,
+          stock: Number(r.stock ?? 0),
+          in_stock: r.in_stock,
+          is_out_of_stock: r.is_out_of_stock,
+          variants: r.variants,
+          default_variant_id: r.default_variant_id,
+          unit_label: r.unit_label,
           featured: 0,
           avg_rating: 0,
           review_count: 0,

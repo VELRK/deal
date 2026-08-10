@@ -283,8 +283,25 @@ export function useBlog(slug: string) {
   return { blog, loading, error };
 }
 
+/** Total sellable qty: sum of pack stocks when variants exist, else product.stock. */
+export function productAvailableStock(p: Pick<ApiProduct, "stock" | "variants">): number {
+  const variants = p.variants ?? [];
+  if (variants.length > 0) {
+    return variants.reduce((sum, v) => sum + Math.max(0, Number(v.stock ?? 0)), 0);
+  }
+  return Math.max(0, Number(p.stock ?? 0));
+}
+
+export function productIsInStock(p: ApiProduct): boolean {
+  if (typeof p.in_stock === "boolean") return p.in_stock;
+  if (typeof p.is_out_of_stock === "boolean") return !p.is_out_of_stock;
+  return productAvailableStock(p) > 0;
+}
+
 /** Map an ApiProduct to the ProductCardItem shape used by existing UI components. */
 export function toProductCard(p: ApiProduct) {
+  const stock = productAvailableStock(p);
+  const inStock = productIsInStock(p);
   return {
     id: p.id,
     slug: p.slug,
@@ -306,9 +323,9 @@ export function toProductCard(p: ApiProduct) {
     total_sold: p.total_sold ?? 0,
     rating: Math.round(p.avg_rating ?? 0),
     reviewsText: `(${p.review_count ?? 0} reviews)`,
-    stock: Number(p.stock ?? 0),
-    inStock: Number(p.stock ?? 0) > 0,
-    isStockOut: Number(p.stock ?? 0) === 0,
+    stock,
+    inStock,
+    isStockOut: !inStock,
     sku: p.sku,
     ean: p.ean,
     description: p.description ?? "",

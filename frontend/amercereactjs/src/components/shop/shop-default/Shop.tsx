@@ -55,19 +55,22 @@ export default function Shop({
 
   const liveProducts: ShopProduct[] = useMemo(() => {
     if (staticProducts) return staticProducts;
-    return apiProducts.map((p) => ({
-      ...toProductCard(p),
-      cardVariant: "" as const,
-      filterBrands: p.brand_name ? [p.brand_name] : [],
-      filterCategory: p.category_name ? [p.category_name] : [],
-      filterColor: p.color ? [p.color] : [],
-      filterSizes: [],
-      tags: p.tags ? p.tags.split(",").map((t) => t.trim()) : [],
-      inStock: (p.stock ?? 0) > 0,
-      isStockOut: (p.stock ?? 0) === 0,
-      services: ["Free Delivery"],
-      rating: Math.round(p.avg_rating ?? 0),
-    }));
+    return apiProducts.map((p) => {
+      const card = toProductCard(p);
+      return {
+        ...card,
+        cardVariant: "" as const,
+        filterBrands: p.brand_name ? [p.brand_name] : [],
+        filterCategory: p.category_name ? [p.category_name] : [],
+        filterColor: p.color ? [p.color] : [],
+        filterSizes: [],
+        tags: p.tags ? p.tags.split(",").map((t) => t.trim()) : [],
+        inStock: card.inStock,
+        isStockOut: card.isStockOut,
+        services: ["Free Delivery"],
+        rating: Math.round(p.avg_rating ?? 0),
+      };
+    });
   }, [staticProducts, apiProducts]);
 
   const sourceProducts = staticProducts ?? liveProducts;

@@ -74,7 +74,13 @@ export interface ApiProduct {
   model_name?: string;
   price: number;
   sale_price?: number;
+  /** Total available units (sum of variant stocks when packs exist). */
   stock: number;
+  /** True when any sellable pack (or product stock) has quantity > 0. */
+  in_stock?: boolean;
+  is_out_of_stock?: boolean;
+  /** Stock of the pack used for list/card price/thumbnail. */
+  default_variant_stock?: number;
   min_order_qty?: number;
   procurement_type?: string;
   procurement_sla?: number;
