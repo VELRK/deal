@@ -462,8 +462,8 @@ export default function Checkout() {
         if (updated) useAuthStore.getState().setUser(updated);
       }
 
-      // Save first delivery address inline when none exist yet
-      if (needsAddress) {
+      // Save delivery address for first order / newly added address (also appears under My Addresses)
+      if (needsAddress || showAddForm) {
         const saveRes = await userAPI.saveAddress({
           full_name: addr.full_name,
           phone: addr.phone || user?.phone || "",
@@ -474,15 +474,17 @@ export default function Checkout() {
           pincode: addr.pincode,
           country: addr.country || "Malaysia",
           label: "Home",
-          is_default: 1,
+          is_default: needsAddress ? 1 : 0,
         });
         const list = (saveRes.data as { data?: { addresses?: ApiAddress[] } })?.data?.addresses
           ?? (await userAPI.getAddresses()).data?.data
           ?? [];
         setAddresses(list);
+        setShowAddForm(false);
         if (list.length > 0) {
-          setSelectedAddr(0);
-          applyAddress(list[0]);
+          const idx = Math.max(0, list.length - 1);
+          setSelectedAddr(idx);
+          applyAddress(list[idx]);
         }
       }
 
@@ -611,6 +613,11 @@ export default function Checkout() {
       }
 
       const pd = payData.data;
+      // Same logo as storefront header/home (public/assets/logo/logo.png)
+      const checkoutLogo = new URL(
+        "assets/logo/logo.png",
+        window.location.origin + import.meta.env.BASE_URL,
+      ).href;
       const rzpOptions = {
         key: pd.key_id,
         amount: pd.amount,
@@ -618,7 +625,7 @@ export default function Checkout() {
         order_id: pd.razorpay_order_id,
         name: "2Deal",
         description: `Order #${pd.order_number}`,
-        image: "/frontend/assets/images/logo/logo.png",
+        image: checkoutLogo,
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
         // Do not pass method/config filters — Curlec only shows methods
@@ -761,13 +768,25 @@ export default function Checkout() {
                       );
                     })}
                   </div>
-                  <button type="button" className="tf-btn-line-2 link mt-3" onClick={() => navigate("/account-addresses")}>
+                  <button
+                    type="button"
+                    className="tf-btn-line-2 link mt-3"
+                    onClick={() => {
+                      setSelectedAddr(-1);
+                      setShowAddForm(true);
+                      setAddrStreet("");
+                      setAddrCity("");
+                      setAddrState("");
+                      setAddrZip("");
+                      setZipError(false);
+                    }}
+                  >
                     + Add New Address
                   </button>
                 </div>
               )}
 
-              {!addressLoading && needsProfile && addresses.length > 0 && (
+              {!addressLoading && needsProfile && addresses.length > 0 && !showAddForm && (
                 <div className="address-no-data animate-fade-in text-start mb-3">
                   <h5 className="address-no-data-title mb-2">Complete your profile</h5>
                   <p className="address-no-data-desc mb-3">
@@ -816,15 +835,38 @@ export default function Checkout() {
                 </div>
               )}
 
-              {!addressLoading && addresses.length === 0 && (
+              {!addressLoading && (addresses.length === 0 || showAddForm) && (
                 <div className="address-no-data animate-fade-in text-start">
-                  <h5 className="address-no-data-title mb-2">
-                    {needsProfile ? "Your details & delivery address" : "Delivery address"}
-                  </h5>
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <h5 className="address-no-data-title mb-0">
+                      {addresses.length === 0 && needsProfile
+                        ? "Your details & delivery address"
+                        : showAddForm
+                          ? "New delivery address"
+                          : "Delivery address"}
+                    </h5>
+                    {showAddForm && addresses.length > 0 && (
+                      <button
+                        type="button"
+                        className="tf-btn-line-2 link"
+                        onClick={() => {
+                          setShowAddForm(false);
+                          if (addresses[0]) {
+                            setSelectedAddr(0);
+                            applyAddress(addresses[0]);
+                          }
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                   <p className="address-no-data-desc mb-3">
-                    {needsProfile
+                    {addresses.length === 0 && needsProfile
                       ? "Welcome! Add your name, email and delivery address to place your first order."
-                      : "Add a delivery address to continue."}
+                      : showAddForm
+                        ? "This address is used for this order and saved to your account."
+                        : "Add a delivery address to continue."}
                   </p>
                   <div className="row g-3 mb-2">
                     <div className="col-md-6">

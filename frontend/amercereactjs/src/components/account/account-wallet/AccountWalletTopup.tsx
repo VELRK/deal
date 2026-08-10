@@ -44,7 +44,10 @@ export default function AccountWalletTopup() {
       order_id: d.razorpay_order_id,
       name: "2Deal",
       description: `Wallet top-up RM ${(d.amount_rm ?? numericAmount).toFixed(2)}`,
-      image: `${import.meta.env.BASE_URL}assets/logo/logo.png`,
+      image: new URL(
+        "assets/logo/logo.png",
+        window.location.origin + import.meta.env.BASE_URL,
+      ).href,
       prefill: d.prefill ?? {},
       theme: { color: "#3EC1BC" },
       // Do not pass method/config filters — Curlec only shows methods
