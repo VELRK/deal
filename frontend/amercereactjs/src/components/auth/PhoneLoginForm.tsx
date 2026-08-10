@@ -96,7 +96,7 @@ export default function PhoneLoginForm({
         const devHint = r.data?.dev_hint ?? r.data?.test_otp
           ? `Developer OTP: ${r.data?.test_otp ?? DEV_TEST_OTP}`
           : "";
-        setHint(devHint || "OTP sent via SMS.");
+        setHint(devHint);
       } else {
         setError(r.message ?? "Failed to send OTP.");
       }
@@ -160,9 +160,6 @@ export default function PhoneLoginForm({
       {step === "phone" ? (
         <form id={requestFormId} onSubmit={handleRequestOTP} noValidate>
           <div className="mb-3">
-            <label className="fw-medium mb-1 d-block" style={{ fontSize: "14px" }}>
-              Mobile Number <span style={{ color: "#DC2626" }}>*</span>
-            </label>
             <div
               className="d-flex align-items-center"
               style={{ border: "1px solid #E2E8F0", borderRadius: "8px", overflow: "hidden" }}
@@ -228,11 +225,8 @@ export default function PhoneLoginForm({
             <p style={{ color: "#0f766e", fontSize: "13px", marginBottom: "16px" }}>{hint}</p>
           )}
           <div className="text-center mb-3">
-            <p className="mb-1" style={{ fontSize: "15px" }}>
-              OTP sent to <strong>{formatMalaysiaIntl(sentPhone)}</strong>
-            </p>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: 0 }}>
-              Enter the 4-digit code
+            <p className="mb-0" style={{ fontSize: "14px", color: "#64748B" }}>
+              {formatMalaysiaIntl(sentPhone)}
             </p>
           </div>
           <div className="d-flex justify-content-center gap-3 mb-4" onPaste={handleOtpPaste}>
@@ -301,7 +295,7 @@ export default function PhoneLoginForm({
         }}
         style={{ minHeight: 48 }}
       >
-        {loading ? "Please wait…" : step === "phone" ? "Continue with OTP" : "Verify & Continue"}
+        {loading ? "Please wait…" : step === "phone" ? "Get OTP" : "Verify"}
       </button>
     </div>
   );

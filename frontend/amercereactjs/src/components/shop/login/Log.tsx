@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import PhoneLoginForm, { type OtpAuthResult } from "@/components/auth/PhoneLoginForm";
 import { sanitizeAuthRedirect, rememberAuthReturn } from "@/utils/authRedirect";
@@ -11,7 +11,7 @@ function Log() {
 
   const redirectTo = sanitizeAuthRedirect(
     new URLSearchParams(location.search).get("redirect"),
-    "/account-page",
+    "/",
   );
 
   useEffect(() => {
@@ -30,7 +30,6 @@ function Log() {
     } catch {
       /* ignore */
     }
-    // Return to where they came from; checkout asks for name/email/address if needed
     navigate(redirectTo, { replace: true });
   };
 
@@ -38,23 +37,17 @@ function Log() {
     <section className="flat-spacing">
       <div className="container">
         <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-5">
+          <div className="col-md-6 col-lg-4">
             <div
-              className="p-4 p-md-5"
+              className="p-4"
               style={{
                 background: "#fff",
-                borderRadius: 16,
+                borderRadius: 12,
                 border: "1px solid #eef2f7",
-                boxShadow: "0 8px 30px rgba(15,23,42,.04)",
               }}
             >
-              <h3 className="fw-semibold mb-3" style={{ fontSize: 24 }}>Login</h3>
+              <h3 className="fw-semibold mb-3" style={{ fontSize: 20 }}>Mobile number</h3>
               <PhoneLoginForm onSuccess={finishLogin} idPrefix="page-otp" variant="page" />
-              <p className="text-center text-muted mt-4 mb-0" style={{ fontSize: 13 }}>
-                By continuing, you agree to our{" "}
-                <Link to="/terms-of-use">Terms</Link> &{" "}
-                <Link to="/privacy-policy">Privacy Policy</Link>.
-              </p>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
+import { useModalStore } from "@/store/modalStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { rememberAuthReturn } from "@/utils/authRedirect";
 import { syncCartFromServer } from "@/utils/cartSync";
@@ -85,7 +86,15 @@ function PagesSectionRoute({ Page }: { Page: LazyPage }) {
   );
 }
 
-/** Wraps a ShopRoute and redirects unauthenticated users to /login?redirect=<current path> */
+/** Guest hit checkout → open phone OTP box on cart (not a full login page) */
+function CheckoutPhoneGate() {
+  useEffect(() => {
+    useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
+  }, []);
+  return <Navigate to="/view-cart" replace />;
+}
+
+/** Wraps a ShopRoute and redirects unauthenticated users to phone OTP (checkout) or /login */
 function AuthShopRoute({ Page }: { Page: LazyPage }) {
   const { isLoggedIn, token, hydrated } = useAuthStore();
   const location = useLocation();
@@ -94,6 +103,9 @@ function AuthShopRoute({ Page }: { Page: LazyPage }) {
   }
   if (!isLoggedIn || !token) {
     const ret = location.pathname + location.search;
+    if (location.pathname === "/checkout") {
+      return <CheckoutPhoneGate />;
+    }
     return <Navigate to={`/login?redirect=${encodeURIComponent(ret)}`} replace />;
   }
   return <ShopRoute Page={Page} />;
@@ -110,6 +122,9 @@ function AuthSessionGuard() {
 
   if (!hydrated || !onAccount) return null;
   if (!isLoggedIn || !token) {
+    if (location.pathname === "/checkout") {
+      return <CheckoutPhoneGate />;
+    }
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   }
   return null;

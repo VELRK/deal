@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useProduct } from "@/context/useProduct";
 import { useContextElement } from "@/context/Context";
@@ -23,7 +23,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
   const { isLoggedIn } = useAuthStore();
   const { openModal } = useModalStore();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const selectedVariant = unitVariants.find((v) => v.id === currentVariantId) ?? unitVariants[0];
   const variantId = selectedVariant?.id;
@@ -80,18 +79,17 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
 
   const handleBuyNow = async () => {
     if (adding || isOutOfStock) return;
-    if (!isLoggedIn) {
-      useModalStore.getState().openModal("signIn", {
-        redirect: location.pathname + location.search,
-      });
-      return;
-    }
     setAdding(true);
     try {
+      // Keep item in cart, then ask for phone OTP if guest (minimal box — not login page)
       if (isInCart) {
         await setCartLineQuantity(product.id, quantity, variantId);
       } else {
         await addLineToCart(selectedProduct(), quantity);
+      }
+      if (!isLoggedIn) {
+        useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
+        return;
       }
       navigate("/checkout");
     } finally {

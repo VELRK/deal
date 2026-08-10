@@ -7,6 +7,7 @@ import type { ProductId } from "@/context/store";
 import { apiImageUrl } from "@/hooks/useApi";
 import { formatPrice } from "@/utils/formatPrice";
 import { useAuthStore } from "@/store/authStore";
+import { useModalStore } from "@/store/modalStore";
 import { userAPI, cartAPI, ordersAPI, promoAPI, paymentAPI, siteSettingsAPI } from "@/services/api";
 import type { ApiAddress, RoyaltyCartInfo } from "@/services/api";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
@@ -62,12 +63,13 @@ export default function Checkout() {
       .finally(() => setAddressLoading(false));
   };
 
-  // Redirect to login if not authenticated — pass return URL so they come back here
+  // Guest checkout: open phone OTP box (not a full login page)
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate("/login?redirect=/checkout", { replace: true });
+      useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
+      navigate("/view-cart", { replace: true });
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => { loadAddresses(); }, [isLoggedIn]);
 
@@ -682,7 +684,7 @@ export default function Checkout() {
               </Link>
             </div>
 
-            {/* Not-logged-in users are redirected to /login?redirect=/checkout above */}
+            {/* Guests are sent to cart with the phone OTP box */}
 
             <div className="checkout-card">
               <div className="checkout-header">
