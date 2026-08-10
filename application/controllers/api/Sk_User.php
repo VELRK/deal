@@ -57,7 +57,10 @@ class Sk_User extends Sk_Base_Api {
 
     public function addresses() {
         $this->auth_required();
-        $addrs = $this->Sk_User_model->get_addresses($this->user['user_id']);
+        $uid = (int) $this->user['user_id'];
+        // New accounts that ordered before address-book save: recover from latest order
+        $this->Sk_User_model->backfill_address_from_latest_order($uid);
+        $addrs = $this->Sk_User_model->get_addresses($uid);
         $this->success($addrs);
     }
 

@@ -14,6 +14,7 @@ import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
 import { removeLineFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
+import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
 
 /* Razorpay global type */
 declare global {
@@ -462,29 +463,39 @@ export default function Checkout() {
         if (updated) useAuthStore.getState().setUser(updated);
       }
 
-      // Save delivery address for first order / newly added address (also appears under My Addresses)
-      if (needsAddress || showAddForm) {
-        const saveRes = await userAPI.saveAddress({
-          full_name: addr.full_name,
-          phone: addr.phone || user?.phone || "",
-          line1: addr.line1,
-          line2: addr.line2 ?? "",
-          city: addr.city,
-          state: addr.state,
-          pincode: addr.pincode,
-          country: addr.country || "Malaysia",
-          label: "Home",
-          is_default: needsAddress ? 1 : 0,
-        });
-        const list = (saveRes.data as { data?: { addresses?: ApiAddress[] } })?.data?.addresses
-          ?? (await userAPI.getAddresses()).data?.data
-          ?? [];
-        setAddresses(list);
-        setShowAddForm(false);
-        if (list.length > 0) {
-          const idx = Math.max(0, list.length - 1);
-          setSelectedAddr(idx);
-          applyAddress(list[idx]);
+      // Save delivery address into My Addresses (first order / new address form)
+      const shouldSaveAddress = addresses.length === 0 || showAddForm || selectedAddr < 0;
+      if (shouldSaveAddress) {
+        const phoneForSave = toMalaysiaE164(addr.phone || user?.phone || "");
+        try {
+          const saveRes = await userAPI.saveAddress({
+            full_name: addr.full_name,
+            phone: phoneForSave || addr.phone || user?.phone || "",
+            line1: addr.line1,
+            line2: addr.line2 ?? "",
+            city: addr.city,
+            state: addr.state,
+            pincode: addr.pincode,
+            country: addr.country || "Malaysia",
+            label: "Home",
+            address_type: "shipping",
+            is_default: addresses.length === 0 ? 1 : 0,
+          });
+          const list = (saveRes.data as { data?: { addresses?: ApiAddress[] } })?.data?.addresses
+            ?? (await userAPI.getAddresses()).data?.data
+            ?? [];
+          setAddresses(list);
+          setShowAddForm(false);
+          if (list.length > 0) {
+            const idx = Math.max(0, list.length - 1);
+            setSelectedAddr(idx);
+            applyAddress(list[idx]);
+          }
+        } catch (addrErr: unknown) {
+          // Backend checkout also persists the address; only block if we have no address book yet
+          // and the order path would leave My Addresses empty without a save.
+          const msg = (addrErr as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          console.warn("Checkout address save failed:", msg || addrErr);
         }
       }
 

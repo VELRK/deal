@@ -224,6 +224,63 @@ class Sk_User_model extends CI_Model {
         return $this->db->insert_id();
     }
 
+    /**
+     * Save first shipping address for a user when their address book is empty.
+     * Used after checkout / OTP so My Addresses matches the order delivery address.
+     */
+    public function ensure_default_shipping_address(int $user_id, array $addr) {
+        $this->ensure_address_schema();
+        $existing = $this->db->where('user_id', $user_id)
+            ->limit(1)
+            ->get('addresses')
+            ->row_array();
+        if ($existing) {
+            return (int) $existing['id'];
+        }
+        $line1 = trim((string) ($addr['line1'] ?? $addr['shipping_line1'] ?? ''));
+        $fullName = trim((string) ($addr['full_name'] ?? $addr['shipping_name'] ?? ''));
+        $phone = trim((string) ($addr['phone'] ?? $addr['shipping_phone'] ?? ''));
+        $city = trim((string) ($addr['city'] ?? $addr['shipping_city'] ?? ''));
+        $state = trim((string) ($addr['state'] ?? $addr['shipping_state'] ?? ''));
+        $pincode = trim((string) ($addr['pincode'] ?? $addr['shipping_pincode'] ?? ''));
+        if ($line1 === '' || $fullName === '' || $phone === '' || $city === '' || $state === '' || $pincode === '') {
+            return 0;
+        }
+        return (int) $this->save_address([
+            'user_id'      => $user_id,
+            'full_name'    => $fullName,
+            'company_name' => trim((string) ($addr['company_name'] ?? '')) ?: null,
+            'phone'        => $phone,
+            'line1'        => $line1,
+            'line2'        => trim((string) ($addr['line2'] ?? $addr['shipping_line2'] ?? '')),
+            'city'         => $city,
+            'state'        => $state,
+            'pincode'      => $pincode,
+            'country'      => trim((string) ($addr['country'] ?? $addr['shipping_country'] ?? 'Malaysia')) ?: 'Malaysia',
+            'label'        => 'Home',
+            'address_type' => 'shipping',
+            'is_default'   => 1,
+        ]);
+    }
+
+    /** If address book is empty, copy shipping details from the user's latest order. */
+    public function backfill_address_from_latest_order(int $user_id): bool {
+        $addrs = $this->get_addresses($user_id);
+        if (!empty($addrs)) {
+            return false;
+        }
+        $order = $this->db->where('user_id', $user_id)
+            ->where('shipping_line1 !=', '')
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('orders')
+            ->row_array();
+        if (!$order) {
+            return false;
+        }
+        return $this->ensure_default_shipping_address($user_id, $order) > 0;
+    }
+
     public function delete_address($id, $user_id) {
         return $this->db->where(['id' => $id, 'user_id' => $user_id])->delete('addresses');
     }

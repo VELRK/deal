@@ -323,6 +323,19 @@ class Sk_Order extends Sk_Base_Api {
         $order_data['billing_pincode']  = $bill['pincode'] ?? $addr['pincode'];
         $order_data['billing_country']  = $bill['country'] ?? ($addr['country'] ?? 'Malaysia');
 
+        // Keep My Addresses in sync for first-time checkout (OTP / new accounts)
+        $this->Sk_User_model->ensure_default_shipping_address($user_id, [
+            'full_name'    => $addr['full_name'],
+            'phone'        => $shippingPhone,
+            'line1'        => $addr['line1'],
+            'line2'        => $addr['line2'] ?? '',
+            'city'         => $addr['city'],
+            'state'        => $addr['state'],
+            'pincode'      => $addr['pincode'],
+            'country'      => $addr['country'] ?? ($settings['default_country'] ?? 'Malaysia'),
+            'company_name' => $addr['company_name'] ?? '',
+        ]);
+
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
         if ($wallet_amount > 0) {
