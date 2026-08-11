@@ -30,7 +30,7 @@ export default function ShoppingCart() {
 
   /* ── Site Settings ── */
   const [shippingCharge, setShippingCharge] = useState(50);
-  const [freeShippingAbove, setFreeShippingAbove] = useState(100);
+  const [freeShippingAbove] = useState(100);
 
   useMemo(() => {
     siteSettingsAPI.get().then(res => {

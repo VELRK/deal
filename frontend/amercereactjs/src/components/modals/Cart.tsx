@@ -19,12 +19,11 @@ export default function Cart() {
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "cart";
 
-  const [freeShippingAbove, setFreeShippingAbove] = useState(100);
+  const [freeShippingAbove] = useState(250);
 
   useEffect(() => {
     siteSettingsAPI.get().then((res) => {
       if (res.data.success && res.data.data) {
-        const s = res.data.data;
         // if (typeof s.free_shipping_above === 'number') {
         //   setFreeShippingAbove(s.free_shipping_above);
         // }
