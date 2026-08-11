@@ -24,7 +24,7 @@ export function ProductCardClassicView() {
       data-wow-delay={wowDelay}
       data-availability={shopMeta?.availability}
       data-brand={shopMeta?.brand}
-      style={{ borderColor: "#e5e5e5", overflow: "hidden" }}
+      style={{ borderColor: "#e5e5e5", overflow: "visible" }}
       onMouseEnter={() => setActiveImage(activeHoverImage)}
       onMouseLeave={() => setActiveImage(product.img ?? "")}
     >

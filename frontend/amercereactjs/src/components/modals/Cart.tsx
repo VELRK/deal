@@ -472,6 +472,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     backgroundColor: "#ffffff",
+    flexShrink: 0,
+    paddingBottom: "max(8px, env(safe-area-inset-bottom, 0px))",
   },
   summarySection: {
     padding: "14px 24px 8px",

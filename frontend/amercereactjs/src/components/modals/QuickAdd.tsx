@@ -179,7 +179,13 @@ export default function QuickAdd() {
                   Pack size:{" "}
                   <span className="fw-semibold">{selectedVariant?.label ?? "Select"}</span>
                 </p>
-                <div className="d-flex gap-2 flex-wrap">
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                    gap: "8px",
+                  }}
+                >
                   {unitVariants.map((variant) => {
                     const out = Number(variant.stock) <= 0;
                     const active = selectedVariantId === variant.id;
@@ -194,23 +200,39 @@ export default function QuickAdd() {
                         }}
                         title={out ? `${variant.label} — Out of stock` : variant.label}
                         style={{
-                          minWidth: "72px",
-                          padding: "10px 12px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          minWidth: "110px",
+                          width: "100%",
+                          padding: "12px 10px",
                           border: active ? "2px solid var(--modal-primary)" : "1px solid var(--modal-border)",
-                          borderRadius: "8px",
+                          borderRadius: "10px",
                           backgroundColor: active ? "var(--modal-primary)" : "white",
                           color: out ? "#94A3B8" : active ? "white" : "var(--modal-secondary)",
                           fontWeight: 600,
                           fontSize: "13px",
+                          lineHeight: 1.25,
                           cursor: out ? "not-allowed" : "pointer",
                           opacity: out ? 0.55 : 1,
                           textDecoration: out ? "line-through" : "none",
+                          textAlign: "center",
                         }}
                       >
-                        {variant.label}
-                        <div style={{ fontSize: "11px", fontWeight: 500, marginTop: 2, opacity: 0.9 }}>
+                        <span style={{ display: "block", width: "100%" }}>{variant.label}</span>
+                        <span
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            fontSize: "12px",
+                            fontWeight: 500,
+                            opacity: 0.9,
+                          }}
+                        >
                           {out ? "Out of stock" : formatPrice(variant.price)}
-                        </div>
+                        </span>
                       </button>
                     );
                   })}

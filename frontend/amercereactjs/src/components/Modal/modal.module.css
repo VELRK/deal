@@ -22,6 +22,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--modal-overlay);
   backdrop-filter: var(--modal-blur);
   -webkit-backdrop-filter: var(--modal-blur);
@@ -230,6 +231,8 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   position: fixed;
   top: 0;
   right: 0;
@@ -238,6 +241,7 @@
   overflow: hidden;
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1);
   z-index: 10000;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @keyframes slideInRight {
@@ -272,6 +276,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--modal-overlay);
   backdrop-filter: var(--modal-blur);
   -webkit-backdrop-filter: var(--modal-blur);

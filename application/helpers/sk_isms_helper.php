@@ -324,15 +324,28 @@ function sk_isms_normalize_phone($phone, array $settings = null) {
 /**
  * Contact for Razorpay Curlec prefill: +{country}{mobile} (e.g. +60123456789).
  * Returns empty string when the number is missing or invalid.
+ * Tolerates spaces, leading 0, 60 / +60, and admin-entered MY mobiles when iSMS parse fails.
  */
 function sk_razorpay_contact($phone, array $settings = null) {
     $normalized = sk_isms_normalize_phone($phone, $settings);
-    if ($normalized === '') {
+    $digits = preg_replace('/\D/', '', (string)($normalized !== '' ? $normalized : $phone));
+    if ($digits === '') {
         return '';
     }
-    $digits = preg_replace('/\D/', '', $normalized);
-    // Curlec MY: 60 + 9–10 digit mobile (min 11 digits total).
-    if (strlen($digits) < 11) {
+
+    // Manual MY normalize when library did not produce a usable value.
+    if ($normalized === '' || strpos($digits, '60') !== 0) {
+        if (strpos($digits, '60') === 0) {
+            // already country-prefixed
+        } elseif (strpos($digits, '0') === 0) {
+            $digits = '60' . substr($digits, 1);
+        } elseif (strlen($digits) >= 9 && strlen($digits) <= 10 && isset($digits[0]) && $digits[0] === '1') {
+            $digits = '60' . $digits;
+        }
+    }
+
+    // Curlec MY: 60 + mobile starting with 1, 9–10 digits after country (11–12 total).
+    if (!preg_match('/^60[1][0-9]{8,9}$/', $digits)) {
         return '';
     }
     return '+' . $digits;

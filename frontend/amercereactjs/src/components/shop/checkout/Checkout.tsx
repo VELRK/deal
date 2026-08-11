@@ -19,7 +19,10 @@ import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
 /* Razorpay global type */
 declare global {
   interface Window {
-    Razorpay: new (options: object) => { open(): void };
+    Razorpay: new (options: object) => {
+      open(): void;
+      on(event: string, handler: (response: unknown) => void): void;
+    };
   }
 }
 
@@ -687,7 +690,23 @@ export default function Checkout() {
         },
       };
 
-      new window.Razorpay(rzpOptions).open();
+      const rzp = new window.Razorpay(rzpOptions);
+      // Curlec often surfaces bank/auth failures as "Login Failed" inside its iframe —
+      // map them to a clear shop message so checkout is not a dead end.
+      rzp.on("payment.failed", (response: unknown) => {
+        const err = (response as {
+          error?: { description?: string; reason?: string; code?: string };
+        })?.error;
+        const desc = err?.description?.trim();
+        const reason = err?.reason?.trim();
+        setOrderError(
+          desc ||
+            reason ||
+            "Card / online payment failed. Check your phone number on the delivery address, try another card, or use Cash on Delivery. Your order is saved under My Orders."
+        );
+        setOrderPlacing(false);
+      });
+      rzp.open();
       return; // don't hit finally yet — Razorpay handler controls flow
 
     } catch (err: unknown) {

@@ -1,6 +1,9 @@
 declare global {
   interface Window {
-    Razorpay: new (options: object) => { open(): void };
+    Razorpay: new (options: object) => {
+      open(): void;
+      on(event: string, handler: (response: unknown) => void): void;
+    };
   }
 }
 

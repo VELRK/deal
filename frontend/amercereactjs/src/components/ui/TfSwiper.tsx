@@ -292,31 +292,36 @@ export function TfSwiper(props: TfSwiperProps) {
 
   const { space: s, spaceMd: sMd, spaceLg: sLg } = spacingResolved;
 
+  // Multi-row Swiper grids clip card bottoms on small screens (titles / price / ATC).
+  // Use a single row below tablet; restore configured rows from 768px up.
+  const mobileGridRows = 1;
+  const desktopGridRows = gridRows;
+
   const breakpoints = useMemo(
     () => ({
       575: {
         slidesPerView: mobileSm,
         spaceBetween: s,
         slidesPerGroup: perGroupSm,
-        grid: { rows: gridRows, fill: "row" as const },
+        grid: { rows: mobileGridRows, fill: "row" as const },
       },
       768: {
         slidesPerView: tablet,
         spaceBetween: sMd,
         slidesPerGroup: perGroupMd,
-        grid: { rows: gridRows, fill: "row" as const },
+        grid: { rows: desktopGridRows, fill: "row" as const },
       },
       1200: {
         slidesPerView: preview,
         spaceBetween: sLg,
         slidesPerGroup: perGroupLg,
-        grid: { rows: gridRows, fill: "row" as const },
+        grid: { rows: desktopGridRows, fill: "row" as const },
       },
       1600: {
         slidesPerView: laptop === 1 ? preview : laptop,
         spaceBetween: spaceXxlVal === 1 ? sLg : spaceXxlVal,
         slidesPerGroup: perGroupLg,
-        grid: { rows: gridRows, fill: "row" as const },
+        grid: { rows: desktopGridRows, fill: "row" as const },
       },
     }),
     [
@@ -331,7 +336,7 @@ export function TfSwiper(props: TfSwiperProps) {
       perGroupSm,
       perGroupMd,
       perGroupLg,
-      gridRows,
+      desktopGridRows,
     ],
   );
 
@@ -385,7 +390,7 @@ export function TfSwiper(props: TfSwiperProps) {
               }
             : false
         }
-        grid={{ rows: gridRows, fill: "row" }}
+        grid={{ rows: mobileGridRows, fill: "row" }}
         pagination={paginationDisabled ? false : paginationConfig}
         breakpoints={breakpoints}
         navigation={navigationConfig}
