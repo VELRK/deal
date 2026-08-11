@@ -70,7 +70,7 @@ export default function AccountWalletTopup() {
           if (verifyRes.data?.success) {
             setSuccessMsg(
               verifyRes.data.message ||
-                `RM ${numericAmount.toFixed(2)} added to your wallet.`,
+              `RM ${numericAmount.toFixed(2)} added to your wallet.`,
             );
             setTimeout(() => navigate("/account-wallet?topup=success"), 1200);
           } else {
@@ -141,7 +141,7 @@ export default function AccountWalletTopup() {
       if (d.credited || gateway === "sandbox") {
         setSuccessMsg(
           res.data.message ||
-            `RM ${numericAmount.toFixed(2)} added to your wallet.`,
+          `RM ${numericAmount.toFixed(2)} added to your wallet.`,
         );
         setLoading(false);
         setTimeout(() => navigate("/account-wallet?topup=success"), 1500);
@@ -166,13 +166,7 @@ export default function AccountWalletTopup() {
             background: #fff; border-radius: 20px; border: 1px solid rgba(193,16,105,.06);
             padding: 32px; box-shadow: 0 4px 24px rgba(193,16,105,.02); max-width: 600px;
           }
-          @media (max-width: 576px) {
-            .topup-card-custom { padding: 20px 16px; }
-            .presets-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            .preset-btn { width: 100%; text-align: center; }
-            .form-actions { flex-direction: column-reverse; gap: 10px; }
-            .btn-cancel, .btn-topup { width: 100%; text-align: center; justify-content: center; }
-          }
+          
           .form-group-custom { margin-bottom: 22px; }
           .form-group-custom label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
           .input-amount-wrapper { position: relative; display: flex; align-items: center; }
@@ -181,13 +175,17 @@ export default function AccountWalletTopup() {
             border: 1px solid #d1d5db; border-radius: 10px; outline: none;
           }
           .input-amount:focus { border-color: #3ec1bc; box-shadow: 0 0 0 4px rgba(62,193,188,.1); }
-          .presets-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+          
+          .presets-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
           .preset-btn {
-            background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; padding: 8px 16px;
-            font-size: 13px; font-weight: 600; border-radius: 999px; cursor: pointer;
+            background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; padding: 12px 16px;
+            font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer;
+            transition: all 0.2s ease;
           }
-          .preset-btn.selected { background: #f0fdfa; border-color: #3ec1bc; color: #0f766e; }
+          .preset-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+          .preset-btn.selected { background: #f0fdfa; border-color: #3ec1bc; color: #0f766e; box-shadow: 0 0 0 1px #3ec1bc; }
           .preset-btn:disabled { opacity: .6; cursor: not-allowed; }
+          
           .gateway-note {
             background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 10px; padding: 12px 14px;
             font-size: 13px; color: #115e59; margin-bottom: 20px;
@@ -197,11 +195,39 @@ export default function AccountWalletTopup() {
             border-top: 1px solid #f1f5f9; padding-top: 20px;
           }
           .btn-cancel, .btn-topup {
-            padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none !important;
+            padding: 12px 24px; font-size: 14.5px; font-weight: 600; border-radius: 8px; text-decoration: none !important;
+            display: inline-flex; align-items: center; justify-content: center;
           }
           .btn-cancel { background: #fff; border: 1px solid #d1d5db; color: #475569; }
-          .btn-topup { background: #3ec1bc; border: 1px solid #3ec1bc; color: #fff; cursor: pointer; }
+          .btn-cancel:hover { background: #f8fafc; color: #334155; }
+          .btn-topup { background: #3ec1bc; border: 1px solid #3ec1bc; color: #fff; cursor: pointer; transition: all 0.2s ease; }
+          .btn-topup:hover:not(:disabled) { background: #2bb0ab; border-color: #2bb0ab; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(62,193,188,.2); }
           .btn-topup:disabled { opacity: .7; cursor: not-allowed; }
+
+          @media (max-width: 767px) {
+            .topup-card-custom { padding: 24px 20px; border-radius: 16px; }
+            .presets-list { 
+              display: grid; 
+              grid-template-columns: repeat(2, 1fr); 
+              gap: 12px; 
+              margin-top: 16px;
+            }
+            .preset-btn { 
+              width: 100%; 
+              padding: 14px 10px; 
+              font-size: 14.5px; 
+              text-align: center;
+              border-radius: 12px;
+            }
+            .input-amount { height: 56px; font-size: 22px; }
+            .form-actions { flex-direction: column-reverse; gap: 12px; padding-top: 16px; margin-top: 20px; }
+            .btn-cancel, .btn-topup { width: 100%; padding: 14px 20px; font-size: 15px; }
+          }
+          
+          @media (max-width: 480px) {
+            .topup-card-custom { padding: 20px 16px; }
+            .gateway-note { font-size: 12.5px; padding: 10px 12px; }
+          }
         `}</style>
 
         <div className="topup-card-custom">
