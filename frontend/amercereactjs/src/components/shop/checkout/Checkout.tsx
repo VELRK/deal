@@ -1090,18 +1090,22 @@ export default function Checkout() {
                         Balance: {formatPrice(walletBalance)}
                         {walletPct > 0 && ` · Extra ${walletPct}% off`}
                         {walletFreeShipping && ' · Free delivery'}
-                        {' · Pays remaining balance in full'}
-                        {promoDiscount > 0 && appliedCode
-                          ? ` · After ${appliedCode}${useRoyalty && walletRoyaltyPreview > 0 ? ' + royalty' : ''}: ${formatPrice(walletPayablePreview)}`
-                          : useRoyalty && walletRoyaltyPreview > 0
-                            ? ` · After royalty: ${formatPrice(walletPayablePreview)}`
-                            : ` · Order total: ${formatPrice(walletPayablePreview)}`}
+                      </div>
+                      <div className="payment-card-desc fw-semibold text-dark mt-1">
+                        Payable: {formatPrice(walletPayablePreview)}
+                        {useRoyalty && walletRoyaltyPreview > 0
+                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% wallet off` : ""})`
+                          : promoDiscount > 0 && appliedCode
+                            ? ` (after ${appliedCode}${walletDiscountPreview > 0 ? ` · ${walletPct}% wallet off` : ""})`
+                            : walletDiscountPreview > 0
+                              ? ` (includes ${walletPct}% wallet off)`
+                              : ""}
                       </div>
                       {!walletBalanceOk && walletPayablePreview > 0 && (
                         <div className="payment-wallet-error">
                           {walletBalance <= 0
                             ? `Low balance in wallet. Add ${formatPrice(walletPayablePreview)} to pay this order with wallet.`
-                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (order ${formatPrice(walletPayablePreview)}).`}
+                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (payable ${formatPrice(walletPayablePreview)}).`}
                         </div>
                       )}
                     </div>
