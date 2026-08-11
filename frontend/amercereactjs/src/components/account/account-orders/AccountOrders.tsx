@@ -778,7 +778,7 @@ export default function AccountOrders() {
           }
 
           /* Mobile adjustments for filter, cards, and stepper */
-          @media (max-width: 576px) {
+          @media (max-width: 767px) {
             .classic-filter-row {
               gap: 10px;
               margin-bottom: 16px;
@@ -805,60 +805,161 @@ export default function AccountOrders() {
             }
             .date-select {
               width: 100%;
+              font-size: 13px;
+              padding: 7px 32px 7px 14px;
             }
             .card-top-strip {
-              padding: 10px 14px;
-              font-size: 12px;
+              padding: 8px 12px;
+              font-size: 11.5px;
             }
             .card-main-body {
-              padding: 14px;
-              gap: 12px;
+              padding: 12px;
+              gap: 10px;
             }
             .thumb-img-wrapper {
-              width: 56px;
-              height: 70px;
+              width: 48px;
+              height: 60px;
+              border-radius: 6px;
             }
             .order-id-label {
-              font-size: 13px;
-            }
-            .order-items-summary {
               font-size: 12.5px;
             }
+            .order-items-summary {
+              font-size: 11.5px;
+            }
             .order-total-price {
-              font-size: 14px;
+              font-size: 13px;
             }
-            .stepper-box {
-              padding: 14px 10px;
+            
+            /* Order Details view mobile app scaling */
+            .details-summary-banner {
+              padding: 12px 14px;
+              margin-bottom: 16px;
+              gap: 10px;
+              border-radius: 8px;
             }
-            .horizontal-stepper {
-              padding: 0 4px;
+            .summary-col {
+              min-width: 100px;
             }
-            .stepper-progress-line {
-              top: 11px;
-              left: 12px;
-              right: 12px;
-              height: 3px;
+            .summary-col-label {
+              font-size: 10.5px;
             }
-            .step-circle {
-              width: 24px;
-              height: 24px;
-              font-size: 10px;
+            .summary-col-value {
+              font-size: 13px;
             }
-            .step-circle svg {
-              width: 10px;
-              height: 10px;
-            }
-            .step-label {
-              margin-top: 6px;
-              font-size: 10px;
-              line-height: 1.2;
-            }
-            .step-date {
-              font-size: 9px;
+            .savings-pill {
+              font-size: 10.5px;
+              padding: 2px 6px;
+              margin-left: 6px;
             }
             .col-left-details, .col-right-details {
               flex: 1 1 100%;
               min-width: 100%;
+              padding: 6px 0;
+              gap: 16px;
+            }
+            .section-group-title {
+              font-size: 14px;
+              margin-bottom: 10px;
+            }
+            .stepper-box {
+              padding: 12px 10px;
+              border-radius: 8px;
+              margin-bottom: 12px;
+            }
+            .stepper-header {
+              font-size: 12.5px;
+              margin-bottom: 16px;
+            }
+            .horizontal-stepper {
+              padding: 0 2px;
+            }
+            .stepper-progress-line {
+              top: 10px;
+              left: 10px;
+              right: 10px;
+              height: 3px;
+            }
+            .step-circle {
+              width: 20px;
+              height: 20px;
+              font-size: 9px;
+              border-width: 1.5px;
+            }
+            .step-circle svg {
+              width: 9px;
+              height: 9px;
+            }
+            .step-label {
+              margin-top: 5px;
+              font-size: 9px;
+              line-height: 1.2;
+            }
+            .step-date {
+              font-size: 8.5px;
+            }
+            .shipment-items-box {
+              gap: 10px;
+              margin-top: 16px !important;
+            }
+            .product-detail-card {
+              border-radius: 8px;
+            }
+            .product-card-body {
+              padding: 10px 12px;
+              gap: 10px;
+            }
+            .product-card-body img {
+              width: 48px;
+              height: 60px;
+              border-radius: 5px;
+            }
+            .product-title {
+              font-size: 12.5px;
+            }
+            .product-meta-specs {
+              font-size: 11px;
+            }
+            .product-price-qty {
+              font-size: 12.5px;
+            }
+            .product-item-status {
+              font-size: 10px;
+              padding: 2px 6px;
+            }
+            .action-btn-flat {
+              padding: 8px 10px;
+              font-size: 11.5px;
+            }
+            .classic-panel-card, .payment-panel-card {
+              padding: 12px 14px;
+              border-radius: 8px;
+            }
+            .panel-card-title {
+              font-size: 13.5px;
+              margin-bottom: 10px;
+              padding-bottom: 6px;
+            }
+            .address-home-badge {
+              font-size: 10.5px;
+              margin-bottom: 4px;
+            }
+            .address-detail-text {
+              font-size: 11.5px;
+              line-height: 1.45;
+            }
+            .address-phone-strip {
+              font-size: 11.5px;
+              margin-top: 10px;
+              gap: 6px;
+            }
+            .summary-item-row {
+              font-size: 11.5px;
+            }
+            .summary-item-row.total-row {
+              font-size: 14px;
+              margin-top: 8px;
+              padding-top: 10px;
             }
           }
 

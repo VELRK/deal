@@ -134,21 +134,60 @@ export default function AccountWallet() {
             gap: 20px;
           }
 
-          @media (max-width: 576px) {
+          @media (max-width: 767px) {
             .wallet-card-custom {
-              padding: 20px 16px;
-              gap: 16px;
+              padding: 16px 14px;
+              gap: 14px;
+              border-radius: 14px;
+            }
+            .wallet-info-part h4 {
+              font-size: 11.5px;
+              margin-bottom: 4px;
             }
             .wallet-balance {
-              font-size: 28px !important;
+              font-size: 26px !important;
+            }
+            .topup-btn-custom {
+              font-size: 11.5px;
+              padding: 5px 12px;
+            }
+            .wallet-status-badge {
+              font-size: 11px;
+              padding: 3px 8px;
             }
             .wallet-benefit-card {
               max-width: 100% !important;
               width: 100%;
+              padding: 12px 14px;
+              border-radius: 10px;
+            }
+            .wallet-benefit-card h5 {
+              font-size: 13px;
+            }
+            .wallet-benefit-card p {
+              font-size: 11.5px;
             }
             .tx-history-title {
-              font-size: 17px !important;
-              margin-bottom: 14px;
+              font-size: 16px !important;
+              margin-bottom: 10px;
+            }
+            .tx-table th {
+              padding: 10px 12px;
+              font-size: 11.5px;
+            }
+            .tx-table td {
+              padding: 10px 12px;
+              font-size: 12px;
+            }
+            .tx-type-badge {
+              font-size: 11px;
+              padding: 2px 6px;
+            }
+            .tx-amount {
+              font-size: 13px;
+            }
+            .tx-ref, .tx-date {
+              font-size: 11px;
             }
           }
 
