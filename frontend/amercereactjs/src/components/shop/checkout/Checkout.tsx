@@ -359,16 +359,18 @@ export default function Checkout() {
     : 0;
   const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → wallet / COD / online
 
-  // Preview payable if user switches to wallet (after promo + wallet extras − royalty).
+  // Wallet charge if user selects wallet (promo + wallet % + free ship − royalty).
   const walletBillPreview = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
   const walletRoyaltyPreview = useRoyalty && royaltyEligible
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), walletBillPreview)
     : 0;
   const walletPayablePreview = Math.round(Math.max(0, walletBillPreview - walletRoyaltyPreview) * 100) / 100;
-  const walletPayable = paymentMethod === "wallet" ? amountDue : walletPayablePreview;
+  // Shown payable always matches order summary for the selected method.
+  // COD/online → amountDue; wallet selected → same amountDue (includes wallet %).
+  const walletPayable = amountDue;
   const walletBalance = Number(walletInfo?.balance || 0);
   const walletShortfall = Math.max(0, Math.round((walletPayablePreview - walletBalance) * 100) / 100);
-  // Enable wallet when balance covers full remainder after promo/royalty.
+  // Enable wallet when balance covers full wallet charge (after promo/royalty + wallet extras).
   const walletBalanceOk =
     !!walletInfo?.enabled
     && walletPayablePreview > 0
@@ -1092,15 +1094,27 @@ export default function Checkout() {
                         {walletFreeShipping && ' · Free delivery'}
                       </div>
                       <div className="payment-card-desc fw-semibold text-dark mt-1">
-                        Payable: {formatPrice(walletPayablePreview)}
-                        {useRoyalty && walletRoyaltyPreview > 0
-                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% wallet off` : ""})`
-                          : promoDiscount > 0 && appliedCode
-                            ? ` (after ${appliedCode}${walletDiscountPreview > 0 ? ` · ${walletPct}% wallet off` : ""})`
-                            : walletDiscountPreview > 0
+                        Payable: {formatPrice(amountDue)}
+                        {paymentMethod === "wallet"
+                          ? (useRoyalty && royaltyRm > 0
+                            ? ` (after royalty −${formatPrice(royaltyRm)}${walletDiscount > 0 ? ` · ${walletPct}% wallet off` : ""})`
+                            : walletDiscount > 0
                               ? ` (includes ${walletPct}% wallet off)`
-                              : ""}
+                              : promoDiscount > 0 && appliedCode
+                                ? ` (after ${appliedCode})`
+                                : "")
+                          : (useRoyalty && royaltyRm > 0
+                            ? ` (after royalty −${formatPrice(royaltyRm)})`
+                            : promoDiscount > 0 && appliedCode
+                              ? ` (after ${appliedCode})`
+                              : "")}
                       </div>
+                      {paymentMethod !== "wallet" && walletBalanceOk && Math.abs(walletPayablePreview - amountDue) > 0.009 && (
+                        <div className="payment-card-desc mt-1" style={{ color: "#0f766e" }}>
+                          Select wallet → pay {formatPrice(walletPayablePreview)}
+                          {walletDiscountPreview > 0 ? ` with ${walletPct}% off` : ""}.
+                        </div>
+                      )}
                       {!walletBalanceOk && walletPayablePreview > 0 && (
                         <div className="payment-wallet-error">
                           {walletBalance <= 0
