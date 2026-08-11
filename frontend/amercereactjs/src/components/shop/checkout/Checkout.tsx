@@ -43,7 +43,6 @@ export default function Checkout() {
   const { cartProducts, setCartProducts, updateQuantity, totalPrice } = useContextElement();
   const { isLoggedIn, user } = useAuthStore();
   const navigate = useNavigate();
-  const [itemsExpanded, setItemsExpanded] = useState(false);
 
   /* ── Saved addresses ── */
   const [addresses, setAddresses] = useState<ApiAddress[]>([]);
@@ -1169,36 +1168,22 @@ export default function Checkout() {
           {/* ── RIGHT: order summary ── */}
           <div className="col-lg-5 animate-fade-in-up delay-200">
             <div className="summary-card">
-              <div
-                className="d-flex align-items-center justify-content-between summary-card-header-toggle mb-3"
-                onClick={() => setItemsExpanded(!itemsExpanded)}
-                style={{ cursor: "pointer", userSelect: "none" }}
-              >
-                <h3 className="summary-card-title mb-0">
-                  Order Summary ({cartProducts.reduce((sum, p) => sum + p.quantity, 0)}{" "}
-                  {cartProducts.reduce((sum, p) => sum + p.quantity, 0) === 1 ? "item" : "items"})
-                </h3>
-                <span className="summary-expand-badge">
-                  {itemsExpanded ? "Hide ▲" : "Show ▼"}
-                </span>
-              </div>
+              <h3 className="summary-card-title">Order Summary</h3>
 
-              {itemsExpanded && (
-                <div className="order-items-list mb-4 animate-fade-in">
-                  {cartProducts.length === 0 ? (
-                    <div className="text-center py-4 text-muted fw-semibold">Your cart is empty</div>
-                  ) : (
-                    cartProducts.map((item, idx) => (
-                      <CheckoutOrderItemPremium
-                        key={`${item.id}-${item.selectedVariantId ?? "base"}-${idx}`}
-                        item={item}
-                        onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
-                        onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
+              <div className="order-items-list mb-4">
+                {cartProducts.length === 0 ? (
+                  <div className="text-center py-4 text-muted fw-semibold">Your cart is empty</div>
+                ) : (
+                  cartProducts.map((item, idx) => (
+                    <CheckoutOrderItemPremium
+                      key={`${item.id}-${item.selectedVariantId ?? "base"}-${idx}`}
+                      item={item}
+                      onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
+                      onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
+                    />
+                  ))
+                )}
+              </div>
 
               {appliedCode ? (
                 <div className="premium-applied-promo-alert animate-fade-in">

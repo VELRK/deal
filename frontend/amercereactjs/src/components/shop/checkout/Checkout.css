@@ -383,24 +383,8 @@
   font-size: 17px;
   font-weight: 700;
   color: var(--ck-ink);
-  margin-bottom: 0px;
+  margin-bottom: 20px;
   letter-spacing: -0.2px;
-}
-
-.summary-expand-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ck-teal-dark);
-  background: var(--ck-teal-wash);
-  border: 1px solid rgba(62, 193, 188, 0.3);
-  padding: 3px 10px;
-  border-radius: 20px;
-  transition: all 0.2s ease;
-}
-
-.summary-card-header-toggle:hover .summary-expand-badge {
-  background: var(--ck-teal);
-  color: #ffffff;
 }
 
 .order-items-list {
