@@ -68,17 +68,9 @@ export default function QuickAdd() {
     ?? product?.images?.[0]?.src
     ?? "/frontend/assets/images/product/product-1.jpg";
 
-  const alreadyInCart = product
-    ? isAddedToCartProducts(
-        product.id,
-        selectedVariant?.id ?? undefined,
-      )
-    : false;
-
   const handleAddToCart = async () => {
     if (!product || adding || isOutOfStock || productFullyOut) return;
     if (hasUnitVariants && !selectedVariant) return;
-    if (alreadyInCart) return;
 
     const qty = Math.min(quantity, Math.max(1, availableStock));
     setAdding(true);
@@ -114,9 +106,7 @@ export default function QuickAdd() {
 
   const primaryLabel = productFullyOut || isOutOfStock
     ? "Out of Stock"
-    : alreadyInCart
-      ? "Added"
-      : `Add to Cart - ${formatPrice(displayPrice * quantity)}`;
+    : `Add to Cart - ${formatPrice(displayPrice * quantity)}`;
 
   return (
     <Modal isOpen={isOpen} onClose={closeModal} maxWidth="500px">
@@ -307,7 +297,7 @@ export default function QuickAdd() {
                   type="button"
                   disabled={isOutOfStock}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px" }}
+                  style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
                 >
                   -
                 </button>
@@ -315,13 +305,13 @@ export default function QuickAdd() {
                   type="text"
                   readOnly
                   value={quantity}
-                  style={{ width: "40px", height: "40px", border: "none", borderLeft: "1px solid var(--modal-border)", borderRight: "1px solid var(--modal-border)", textAlign: "center", outline: "none", fontWeight: "600" }}
+                  style={{ width: "40px", height: "40px", border: "none", borderLeft: "1px solid var(--modal-border)", borderRight: "1px solid var(--modal-border)", textAlign: "center", outline: "none", fontWeight: "600", padding: 0, margin: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                 />
                 <button
                   type="button"
                   disabled={isOutOfStock || quantity >= availableStock}
                   onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                  style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px" }}
+                  style={{ width: "40px", height: "40px", border: "none", backgroundColor: "white", cursor: "pointer", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
                 >
                   +
                 </button>
@@ -335,11 +325,11 @@ export default function QuickAdd() {
           primaryAction={{
             label: primaryLabel,
             onClick: handleAddToCart,
-            disabled: alreadyInCart || isOutOfStock || productFullyOut || adding,
+            disabled: isOutOfStock || productFullyOut || adding,
             variant: "gold"
           }}
           secondaryAction={
-            alreadyInCart || isOutOfStock || productFullyOut
+            isOutOfStock || productFullyOut
               ? undefined
               : {
                   label: "Buy It Now",
