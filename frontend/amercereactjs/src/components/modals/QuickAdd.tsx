@@ -18,7 +18,7 @@ function pickDefaultVariantId(variants: UnitVariantOption[]): number | null {
 }
 
 export default function QuickAdd() {
-  const { quickAddProduct, isAddedToCartProducts } = useContextElement();
+  const { quickAddProduct } = useContextElement();
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "quickAdd";
 
