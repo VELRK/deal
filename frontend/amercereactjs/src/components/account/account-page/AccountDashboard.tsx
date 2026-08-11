@@ -80,7 +80,7 @@ export default function AccountDashboard() {
       .then(([dashRes, ordersRes]) => {
         if (!dashRes) return;
         const d = (dashRes.data as { data?: { stats: DashStats; recent_orders: RecentOrder[] } }).data;
-        if (d) { 
+        if (d) {
           const updatedStats = { ...d.stats };
           if (ordersRes && ordersRes.data) {
             const allOrders = (ordersRes.data as { data?: { status: string }[] }).data || [];
@@ -97,11 +97,11 @@ export default function AccountDashboard() {
               return s === "delivered";
             }).length;
           }
-          setStats(updatedStats); 
+          setStats(updatedStats);
           setRecent(d.recent_orders.filter(o => {
             const s = o.status?.toLowerCase();
             return s !== "payment_attempt" && s !== "abandoned";
-          })); 
+          }));
         }
       })
       .finally(() => setLoading(false));
