@@ -4,10 +4,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Sk_Order_model extends CI_Model {
 
     public function create($data, $items) {
-        $data['order_number'] = $this->generate_order_number();
-        $data['created_at']   = date('Y-m-d H:i:s');
+        $data['created_at'] = date('Y-m-d H:i:s');
+        // Temporary unique value until we have insert_id for G2D10001-style number.
+        $data['order_number'] = 'TMP' . strtoupper(substr(md5(uniqid((string)mt_rand(), true)), 0, 12));
         $this->db->insert('orders', $data);
-        $order_id = $this->db->insert_id();
+        $order_id = (int)$this->db->insert_id();
+
+        $order_number = $this->format_order_number($order_id);
+        $this->db->where('id', $order_id)->update('orders', ['order_number' => $order_number]);
 
         foreach ($items as $item) {
             $item['order_id'] = $order_id;
@@ -327,8 +331,13 @@ class Sk_Order_model extends CI_Model {
                         ->limit($limit)->get()->result_array();
     }
 
-    private function generate_order_number() {
-        return 'SK' . strtoupper(substr(md5(microtime()), 0, 8));
+    /**
+     * Storefront order number: G2D10001, G2D10002, …
+     * (order id 1 → G2D10001)
+     */
+    private function format_order_number($order_id) {
+        $id = max(1, (int)$order_id);
+        return 'G2D' . (10000 + $id);
     }
 
     /**

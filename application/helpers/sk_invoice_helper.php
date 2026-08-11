@@ -243,9 +243,10 @@ function sk_invoice_seller_from_vendor(array $vendor, array $store, array $setti
 
 function sk_invoice_number(array $order, array $seller): string {
     $prefix = preg_replace('/[^A-Z0-9\-]/i', '', $seller['invoice_prefix'] ?? 'INV') ?: 'INV';
-    $id     = (int)($order['id'] ?? 0);
-    $date   = date('Ymd', strtotime($order['created_at'] ?? 'now'));
-    return strtoupper($prefix) . '-' . $date . '-' . str_pad((string)$id, 5, '0', STR_PAD_LEFT);
+    $id     = max(1, (int)($order['id'] ?? 0));
+    // Sequential display: order #1 → INV-100001, #2 → INV-100002, …
+    $seq    = 100000 + $id;
+    return strtoupper($prefix) . '-' . $seq;
 }
 
 /** Build one or more discount rows for invoices/emails/admin views. */
