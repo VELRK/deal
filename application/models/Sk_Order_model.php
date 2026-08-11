@@ -532,14 +532,17 @@ class Sk_Order_model extends CI_Model {
 
         if ($royaltyRefundPts > 0 && $royaltyRefundRm > 0) {
             $this->load->model('Sk_Royalty_model');
-            $this->Sk_Royalty_model->credit(
-                (int)$order['user_id'],
-                $royaltyRefundPts,
-                $royaltyRefundRm,
-                'ORD-' . $orderId . '-ROYALTY-REFUND',
-                'Royalty refund ' . $royaltyRefundPts . ' pts (RM ' . number_format($royaltyRefundRm, 2) . ') for cancelled order #' . $orderId,
-                $orderId
-            );
+            // Only restore points if they were actually redeemed (confirmed orders).
+            if ($this->Sk_Royalty_model->was_redeemed_for_order((int)$order['user_id'], $orderId)) {
+                $this->Sk_Royalty_model->credit(
+                    (int)$order['user_id'],
+                    $royaltyRefundPts,
+                    $royaltyRefundRm,
+                    'ORD-' . $orderId . '-ROYALTY-REFUND',
+                    'Royalty refund ' . $royaltyRefundPts . ' pts (RM ' . number_format($royaltyRefundRm, 2) . ') for cancelled order #' . $orderId,
+                    $orderId
+                );
+            }
         }
 
         $this->restore_stock_for_order($orderId);

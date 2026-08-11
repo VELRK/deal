@@ -119,6 +119,14 @@ class Orders extends Sk_Base {
         if ($tracking) {
             $this->db->where('id', $id)->update('orders', ['tracking_number' => $tracking]);
         }
+        // Confirming a previously unpaid/abandoned order → redeem royalty now.
+        if ($status === 'confirmed' && ($orderBefore['status'] ?? '') !== 'confirmed') {
+            $orderForRoyalty = $this->Sk_Order_model->get_by_id($id);
+            if ($orderForRoyalty) {
+                $this->load->helper('sk_royalty');
+                sk_royalty_debit_for_order($orderForRoyalty);
+            }
+        }
         $jtNotes = $this->_jt_handle_status_change((int)$id, $status, $orderBefore);
         $order = $this->Sk_Order_model->get_by_id($id);
         if ($order) {

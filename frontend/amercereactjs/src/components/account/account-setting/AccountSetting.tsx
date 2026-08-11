@@ -219,7 +219,7 @@ export default function AccountSetting() {
                     className="form-input-custom"
                     type="tel"
                     value={formatMalaysiaDisplay(phone)}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="12-345 6789"
                     style={{ border: "none", borderRadius: 0 }}
                   />

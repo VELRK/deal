@@ -110,7 +110,7 @@ function Log() {
                         maxLength={12}
                         placeholder="12-345 6789"
                         value={formatMalaysiaDisplay(phone)}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                         required
                         style={{ border: "none", outline: "none", width: "100%", padding: "10px 12px" }}
                       />
