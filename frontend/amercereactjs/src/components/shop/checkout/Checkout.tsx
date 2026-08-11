@@ -331,34 +331,21 @@ export default function Checkout() {
     ? 0
     : (subtotalAfterPromo >= freeShippingAbove ? 0 : shippingCharge);
   // Wallet is a separate full-pay method: optional % off + optional free delivery (admin setting).
+  // Works alone or together with coupon / affiliate / royalty (wallet covers the remainder).
   const walletPct = walletInfo?.discount_percent ?? 0;
   const walletDiscountPreview = walletInfo?.enabled && walletPct > 0
     ? Math.round(subtotalAfterPromo * walletPct / 100 * 100) / 100
     : 0;
   const walletFreeShipping = !!walletInfo?.enabled && walletFreeShippingSetting;
   const walletShippingCost = walletFreeShipping ? 0 : baseShippingCost;
-  // Payable after promo/affiliate + wallet extras — updates when coupon/affiliate changes
-  const walletPayable = Math.round((Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost) * 100) / 100;
-  const walletBalance = Number(walletInfo?.balance || 0);
-  const walletShortfall = Math.max(0, Math.round((walletPayable - walletBalance) * 100) / 100);
-  // Enable wallet only when balance covers the full wallet payable (no gateway top-up).
-  const walletBalanceOk = !!walletInfo?.enabled && walletBalance + 0.009 >= walletPayable && walletPayable > 0;
-
-  // If wallet was selected but balance no longer covers full payable, fall back to COD.
-  useEffect(() => {
-    if (paymentMethod === "wallet" && !walletBalanceOk) {
-      setPaymentMethod("cod");
-    }
-  }, [paymentMethod, walletBalanceOk]);
 
   const walletDiscount = paymentMethod === "wallet" ? walletDiscountPreview : 0;
   const shippingCost = paymentMethod === "wallet" ? walletShippingCost : baseShippingCost;
-  // TESTING: show Apply whenever customer has any royalty points
   const billTotal = Math.max(0, subtotalAfterPromo - walletDiscount) + shippingCost;
+
   const royaltyEligible =
     !!royaltyInfo
     && royaltyInfo.enabled !== false
-    && paymentMethod !== "wallet"
     && (
       !!royaltyInfo.show_on_cart
       || !!royaltyInfo.can_redeem
@@ -370,8 +357,29 @@ export default function Checkout() {
   const royaltyRm = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), billTotal)
     : 0;
-  const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → COD / online
+  const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → wallet / COD / online
 
+  // Preview payable if user switches to wallet (after promo + wallet extras − royalty).
+  const walletBillPreview = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
+  const walletRoyaltyPreview = useRoyalty && royaltyEligible
+    ? Math.min(Number(royaltyInfo?.balance_rm || 0), walletBillPreview)
+    : 0;
+  const walletPayablePreview = Math.round(Math.max(0, walletBillPreview - walletRoyaltyPreview) * 100) / 100;
+  const walletPayable = paymentMethod === "wallet" ? amountDue : walletPayablePreview;
+  const walletBalance = Number(walletInfo?.balance || 0);
+  const walletShortfall = Math.max(0, Math.round((walletPayablePreview - walletBalance) * 100) / 100);
+  // Enable wallet when balance covers full remainder after promo/royalty.
+  const walletBalanceOk =
+    !!walletInfo?.enabled
+    && walletPayablePreview > 0
+    && walletBalance + 0.009 >= walletPayablePreview;
+
+  // If wallet was selected but balance no longer covers full payable, fall back to COD.
+  useEffect(() => {
+    if (paymentMethod === "wallet" && !walletBalanceOk) {
+      setPaymentMethod("cod");
+    }
+  }, [paymentMethod, walletBalanceOk]);
   /* ── Place order ── */
   const [orderError, setOrderError] = useState("");
   const [orderPlacing, setOrderPlacing] = useState(false);
@@ -571,8 +579,8 @@ export default function Checkout() {
         billing_address: billing,
         payment_method: paymentMethod,
         use_wallet: paymentMethod === "wallet" ? 1 : 0,
-        use_royalty: paymentMethod !== "wallet" && useRoyalty && royaltyRm > 0 ? 1 : 0,
-        apply_royalty: paymentMethod !== "wallet" && useRoyalty && royaltyRm > 0 ? 1 : 0,
+        use_royalty: useRoyalty && royaltyRm > 0 ? 1 : 0,
+        apply_royalty: useRoyalty && royaltyRm > 0 ? 1 : 0,
         promo_code: appliedCode || undefined,
         coupon: appliedCode || undefined,
         coupon_code: appliedCode || undefined,
@@ -1069,7 +1077,6 @@ export default function Checkout() {
                   onClick={() => {
                     if (walletBalanceOk) {
                       setPaymentMethod("wallet");
-                      if (useRoyalty) toggleRoyalty(false);
                     }
                   }}
                 >
@@ -1083,22 +1090,18 @@ export default function Checkout() {
                         Balance: {formatPrice(walletBalance)}
                         {walletPct > 0 && ` · Extra ${walletPct}% off`}
                         {walletFreeShipping && ' · Free delivery'}
-                        {' · Full payment only (no gateway)'}
+                        {' · Pays remaining balance in full'}
                         {promoDiscount > 0 && appliedCode
-                          ? ` · After ${appliedCode}: ${formatPrice(walletPayable)}`
-                          : ` · Order total: ${formatPrice(walletPayable)}`}
+                          ? ` · After ${appliedCode}${useRoyalty && walletRoyaltyPreview > 0 ? ' + royalty' : ''}: ${formatPrice(walletPayablePreview)}`
+                          : useRoyalty && walletRoyaltyPreview > 0
+                            ? ` · After royalty: ${formatPrice(walletPayablePreview)}`
+                            : ` · Order total: ${formatPrice(walletPayablePreview)}`}
                       </div>
-                      {useRoyalty && (
-                        <div className="payment-wallet-error">
-                          Remove royalty points to pay with wallet
-                          {walletPayable > 0 ? ` (needs ${formatPrice(walletPayable)} after discounts)` : ""}.
-                        </div>
-                      )}
-                      {!useRoyalty && !walletBalanceOk && walletPayable > 0 && (
+                      {!walletBalanceOk && walletPayablePreview > 0 && (
                         <div className="payment-wallet-error">
                           {walletBalance <= 0
-                            ? `Low balance in wallet. Add ${formatPrice(walletPayable)} to pay this order with wallet.`
-                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (order ${formatPrice(walletPayable)}).`}
+                            ? `Low balance in wallet. Add ${formatPrice(walletPayablePreview)} to pay this order with wallet.`
+                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (order ${formatPrice(walletPayablePreview)}).`}
                         </div>
                       )}
                     </div>
@@ -1119,8 +1122,10 @@ export default function Checkout() {
                         {billTotal <= 0
                           ? ' · Add items to apply'
                           : useRoyalty && royaltyRm > 0
-                            ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${paymentMethod === 'cod' ? 'COD' : 'online'}`
-                            : ' · Deducts from bill; pay remainder with COD / online'}
+                            ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${
+                                paymentMethod === 'wallet' ? 'wallet' : paymentMethod === 'cod' ? 'COD' : 'online'
+                              }`
+                            : ' · Deducts from bill; pay remainder with wallet / COD / online'}
                       </div>
                     </div>
                     {useRoyalty ? (

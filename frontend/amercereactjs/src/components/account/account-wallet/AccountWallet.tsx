@@ -440,7 +440,7 @@ export default function AccountWallet() {
               <div className="wallet-benefit-card">
                 <h5>👛 Wallet Pay Benefit</h5>
                 <p>
-                  Pay with wallet during checkout and receive an extra{" "}
+                  Pay with wallet during checkout (alone or with coupon / affiliate / royalty) and receive an extra{" "}
                   <strong>{wallet.discount_percent}% off</strong> on your entire purchase!
                 </p>
               </div>

@@ -5,6 +5,7 @@ import { paymentAPI, userAPI } from "@/services/api";
 import { loadRazorpayScript } from "@/utils/razorpay";
 
 const PRESETS = [100, 150, 200, 250] as const;
+const MIN_TOPUP_RM = 100;
 
 export default function AccountWalletTopup() {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ export default function AccountWalletTopup() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const numericAmount = parseFloat(amount);
+  const amountTooLow =
+    amount.trim() !== "" && (!Number.isFinite(numericAmount) || numericAmount < MIN_TOPUP_RM);
 
   function handlePresetClick(val: number) {
     setAmount(String(val));
@@ -95,8 +98,12 @@ export default function AccountWalletTopup() {
     setError(null);
     setSuccessMsg(null);
 
-    if (isNaN(numericAmount) || numericAmount < 1) {
-      setError("Enter at least RM 1.00 to top up.");
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      setError("Enter a valid amount to top up.");
+      return;
+    }
+    if (numericAmount < MIN_TOPUP_RM) {
+      setError(`Minimum top-up is RM ${MIN_TOPUP_RM.toFixed(2)}. Please enter RM ${MIN_TOPUP_RM} or more.`);
       return;
     }
 
@@ -214,15 +221,23 @@ export default function AccountWalletTopup() {
                   type="number"
                   id="amount"
                   className="input-amount"
-                  placeholder="0.00"
+                  placeholder="100.00"
                   value={amount}
                   onChange={(e) => { setAmount(e.target.value); setError(null); }}
                   required
-                  min="1"
+                  min={MIN_TOPUP_RM}
                   step="0.01"
                   disabled={loading}
                 />
               </div>
+              <p style={{ margin: "8px 0 0", fontSize: 13, color: amountTooLow ? "#b91c1c" : "#64748b" }}>
+                Minimum top-up is RM {MIN_TOPUP_RM.toFixed(2)}. Amounts below this cannot be paid.
+              </p>
+              {amountTooLow && (
+                <p style={{ margin: "6px 0 0", fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+                  Enter RM {MIN_TOPUP_RM} or more to continue.
+                </p>
+              )}
               <div className="presets-list">
                 {PRESETS.map((val) => (
                   <button
@@ -240,7 +255,11 @@ export default function AccountWalletTopup() {
 
             <div className="form-actions">
               <Link to="/account-wallet" className="btn-cancel">Cancel</Link>
-              <button type="submit" className="btn-topup" disabled={loading}>
+              <button
+                type="submit"
+                className="btn-topup"
+                disabled={loading || amountTooLow || !amount.trim()}
+              >
                 {loading ? "Opening payment…" : "Pay & Add to Wallet"}
               </button>
             </div>

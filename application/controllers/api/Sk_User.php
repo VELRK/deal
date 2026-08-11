@@ -218,7 +218,7 @@ class Sk_User extends Sk_Base_Api {
         $data = $this->body();
         $amountRm = (float)($data['amount'] ?? 0);
         if ($amountRm <= 0) return $this->error('Enter a valid amount in RM.');
-        if ($amountRm < 1) return $this->error('Minimum top-up is RM 1.');
+        if ($amountRm < 100) return $this->error('Minimum top-up is RM 100. Please enter RM 100 or more.');
 
         $settings = $this->get_settings();
         $ref = $this->Sk_Customer_wallet_model->create_topup_intent($this->user['user_id'], $amountRm);

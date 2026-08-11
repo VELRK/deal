@@ -659,8 +659,8 @@ export default function ShoppingCart() {
                               {billTotal <= 0
                                 ? " · Add items to apply"
                                 : useRoyalty && royaltyRm > 0
-                                  ? ` · Pays ${formatPrice(royaltyRm)}; due ${formatPrice(amountDue)}`
-                                  : " · Deducts from bill at checkout"}
+                                  ? ` · Pays ${formatPrice(royaltyRm)}; due ${formatPrice(amountDue)} (wallet / COD / online at checkout)`
+                                  : " · Deducts from bill; pay remainder with wallet / COD / online at checkout"}
                             </div>
                           </div>
                           {useRoyalty ? (

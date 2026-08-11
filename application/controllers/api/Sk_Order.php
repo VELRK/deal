@@ -166,9 +166,6 @@ class Sk_Order extends Sk_Base_Api {
         if ($payment_method === 'wallet' && !$wallet_enabled) {
             return $this->error('Wallet payments are not enabled.');
         }
-        if ($payment_method === 'wallet' && (!empty($data['use_royalty']) || !empty($data['apply_royalty']))) {
-            return $this->error('Wallet and royalty cannot be combined. Pay the full order with wallet only.');
-        }
 
         $code_discount = $discount;
 
@@ -197,8 +194,8 @@ class Sk_Order extends Sk_Base_Api {
         $tax      = 0;
         $total    = round($taxable_amount + $shipping + $tax, 2);
 
-        // Royalty pays bill (up to balance). Not allowed with wallet full-pay method.
-        if ($use_royalty && $royalty_enabled && $payment_method !== 'wallet') {
+        // Royalty can stack with coupon/affiliate and wallet; remainder is paid by wallet / COD / online.
+        if ($use_royalty && $royalty_enabled) {
             $availPts = $this->Sk_Royalty_model->get_points($user_id);
             $availRm = $this->Sk_Royalty_model->points_to_rm($availPts);
             $testUnlock = sk_royalty_test_unlock($settingsAll);
@@ -230,11 +227,12 @@ class Sk_Order extends Sk_Base_Api {
         if ($uses_wallet && $dueAfterRoyalty > 0) {
             $walletInfo = $this->Sk_Customer_wallet_model->get_checkout_info($user_id);
             $balance = round((float)($walletInfo['balance'] ?? 0), 2);
-            // Full payment only: balance must cover the entire order total.
+            // Wallet method: balance must cover the remainder after royalty (and any promo).
             if ($balance + 0.009 < $dueAfterRoyalty) {
                 return $this->error(
                     'Insufficient wallet balance. Need RM ' . number_format($dueAfterRoyalty, 2)
-                    . ' (you have RM ' . number_format($balance, 2) . '). Wallet pays the full order only — no payment gateway.'
+                    . ' (you have RM ' . number_format($balance, 2) . ').'
+                    . ($royalty_used_rm > 0 ? ' After royalty, wallet must cover the remaining amount.' : ' Wallet pays the full order only — no payment gateway.')
                 );
             }
             $wallet_amount = $dueAfterRoyalty;
