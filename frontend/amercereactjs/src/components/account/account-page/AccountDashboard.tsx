@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AccountSection } from "@/components/account/AccountSection";
-import { userAPI } from "@/services/api";
+import { userAPI, ordersAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { formatPrice } from "@/utils/formatPrice";
 
@@ -73,12 +73,37 @@ export default function AccountDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    userAPI.dashboard()
-      .then((res) => {
-        const d = (res.data as { data?: { stats: DashStats; recent_orders: RecentOrder[] } }).data;
-        if (d) { setStats(d.stats); setRecent(d.recent_orders); }
+    Promise.all([
+      userAPI.dashboard().catch(() => null),
+      ordersAPI.getAll().catch(() => null)
+    ])
+      .then(([dashRes, ordersRes]) => {
+        if (!dashRes) return;
+        const d = (dashRes.data as { data?: { stats: DashStats; recent_orders: RecentOrder[] } }).data;
+        if (d) { 
+          const updatedStats = { ...d.stats };
+          if (ordersRes && ordersRes.data) {
+            const allOrders = (ordersRes.data as { data?: { status: string }[] }).data || [];
+            updatedStats.total_orders = allOrders.filter(o => {
+              const s = o.status?.toLowerCase();
+              return s !== "payment_attempt" && s !== "abandoned";
+            }).length;
+            updatedStats.pending = allOrders.filter(o => {
+              const s = o.status?.toLowerCase();
+              return ["pending", "confirmed", "processing", "shipped"].includes(s || "");
+            }).length;
+            updatedStats.delivered = allOrders.filter(o => {
+              const s = o.status?.toLowerCase();
+              return s === "delivered";
+            }).length;
+          }
+          setStats(updatedStats); 
+          setRecent(d.recent_orders.filter(o => {
+            const s = o.status?.toLowerCase();
+            return s !== "payment_attempt" && s !== "abandoned";
+          })); 
+        }
       })
-      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 

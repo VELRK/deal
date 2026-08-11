@@ -44,7 +44,6 @@ interface Order {
 const TABS = [
   { id: "all", label: "All" },
   { id: "in-progress", label: "In Progress" },
-  { id: "abandoned", label: "Abandoned" },
   { id: "delivered", label: "Delivered" },
   { id: "cancelled", label: "Cancelled" },
 ];
