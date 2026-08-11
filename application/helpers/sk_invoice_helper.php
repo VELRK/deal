@@ -200,12 +200,64 @@ function sk_invoice_resolve_seller(array $order, array $settings): array {
     return sk_invoice_seller_from_settings($settings);
 }
 
-function sk_invoice_seller_from_settings(array $settings): array {
+/** Resolve invoice logo: admin site_logo if file exists, else website storefront logo. */
+function sk_invoice_logo_paths(?string $preferred = null): array {
+    $candidates = [];
+    $pref = trim((string)$preferred);
+    if ($pref !== '') {
+        if (preg_match('#^https?://#i', $pref)) {
+            return ['url' => $pref, 'path' => '', 'rel' => ''];
+        }
+        $candidates[] = ltrim(str_replace('\\', '/', $pref), '/');
+    }
+    $candidates[] = 'frontend/assets/logo/logo.png';
+    $candidates[] = 'frontend/amercereactjs/public/assets/logo/logo.png';
+    $candidates[] = 'assets/logo/logo.png';
+
+    $root = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, FCPATH), DIRECTORY_SEPARATOR);
+    foreach ($candidates as $rel) {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        $abs = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        if (is_file($abs)) {
+            return [
+                'url'  => base_url($rel),
+                'path' => $abs,
+                'rel'  => $rel,
+            ];
+        }
+    }
+
+    $fallbackRel = 'frontend/assets/logo/logo.png';
     return [
-        'name'            => $settings['company_legal_name'] ?? $settings['site_name'] ?? '2DEAL',
-        'logo'            => $settings['site_logo'] ?? '',
+        'url'  => base_url($fallbackRel),
+        'path' => '',
+        'rel'  => $fallbackRel,
+    ];
+}
+
+function sk_invoice_seller_from_settings(array $settings): array {
+    $regParts = array_filter([
+        trim((string)($settings['gstin'] ?? '')),
+        trim((string)($settings['pan_no'] ?? '')),
+    ]);
+    // Format like sample: "202101029427 (1429727-A)" when both Tax ID + PAN set.
+    $registration = '';
+    if (count($regParts) === 2) {
+        $registration = $regParts[0] . ' (' . $regParts[1] . ')';
+    } elseif (count($regParts) === 1) {
+        $registration = $regParts[0];
+    }
+
+    $logo = sk_invoice_logo_paths($settings['site_logo'] ?? null);
+
+    return [
+        'name'            => $settings['company_legal_name'] ?? $settings['site_name'] ?? 'GOLDEN 2 DEAL (M) SDN. BHD.',
+        'logo'            => $logo['rel'] !== '' ? $logo['rel'] : ($settings['site_logo'] ?? ''),
+        'logo_url'        => $logo['url'],
+        'logo_path'       => $logo['path'],
         'gstin'           => $settings['gstin'] ?? '',
         'pan'             => $settings['pan_no'] ?? '',
+        'registration'    => $registration,
         'state_code'      => $settings['state_code'] ?? '',
         'email'           => $settings['site_email'] ?? '',
         'phone'           => $settings['site_phone'] ?? '',
@@ -221,14 +273,19 @@ function sk_invoice_seller_from_vendor(array $vendor, array $store, array $setti
         $store['pickup_line1'] ?? '',
         $store['pickup_line2'] ?? '',
         trim(($store['pickup_city'] ?? '') . ', ' . ($store['pickup_state'] ?? '') . ' - ' . ($store['pickup_pincode'] ?? '')),
-        $store['pickup_country'] ?? 'India',
+        $store['pickup_country'] ?? 'Malaysia',
     ]);
+
+    $logo = sk_invoice_logo_paths(!empty($store['logo']) ? $store['logo'] : ($settings['site_logo'] ?? null));
 
     return [
         'name'           => $store['store_name'] ?? $vendor['business_name'] ?? 'Vendor',
-        'logo'           => $store['logo'] ?? ($settings['site_logo'] ?? ''),
+        'logo'           => $logo['rel'] !== '' ? $logo['rel'] : ($store['logo'] ?? ''),
+        'logo_url'       => $logo['url'],
+        'logo_path'      => $logo['path'],
         'gstin'          => $store['gst_vat'] ?? '',
         'pan'            => $store['pan_no'] ?? '',
+        'registration'   => trim((string)($store['gst_vat'] ?? '')),
         'state_code'     => $store['state_code'] ?? ($store['pickup_state'] ?? ''),
         'state'          => $store['pickup_state'] ?? '',
         'email'          => $store['contact_email'] ?? $vendor['email'] ?? '',
@@ -298,10 +355,14 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
     $b = $invoice['buyer'];
     $cur = htmlspecialchars($invoice['currency']);
     $logoHtml = '';
-    if (!empty($s['logo'])) {
+    $logoUrl = !empty($s['logo_url']) ? $s['logo_url'] : '';
+    if ($logoUrl === '' && !empty($s['logo'])) {
         $logoUrl = strpos($s['logo'], 'http') === 0 ? $s['logo'] : base_url($s['logo']);
-        $logoHtml = "<img src='" . htmlspecialchars($logoUrl) . "' alt='Logo' style='max-height:56px;max-width:180px;object-fit:contain;'>";
     }
+    if ($logoUrl === '') {
+        $logoUrl = base_url('frontend/assets/logo/logo.png');
+    }
+    $logoHtml = "<img src='" . htmlspecialchars($logoUrl) . "' alt='Logo' style='max-height:64px;max-width:200px;object-fit:contain;margin-bottom:10px;display:block;'>";
 
     $itemsRows = '';
     foreach ($invoice['items'] as $i => $item) {
@@ -333,11 +394,14 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
     $shipLabel = $invoice['shipping'] == 0 ? '<span style="color:#16a34a;">Free</span>' : $cur . number_format($invoice['shipping'], 2);
 
     $sellerMeta = array_filter([
-        $s['gstin'] ? 'Tax ID: ' . htmlspecialchars($s['gstin']) : '',
-        $s['email'] ? htmlspecialchars($s['email']) : '',
-        $s['phone'] ? htmlspecialchars($s['phone']) : '',
+        !empty($s['phone']) ? htmlspecialchars($s['phone']) : '',
+        !empty($s['email']) ? htmlspecialchars($s['email']) : '',
     ]);
-    $sellerMetaHtml = implode(' &nbsp;|&nbsp; ', $sellerMeta);
+    $sellerMetaHtml = implode(' &nbsp;&nbsp; ', $sellerMeta);
+    $companyLine = htmlspecialchars($s['name']);
+    if (!empty($s['registration'])) {
+        $companyLine .= ' ' . htmlspecialchars($s['registration']);
+    }
 
     $buyerNameLines = [];
     if (!empty($b['company'])) {
@@ -404,17 +468,19 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 </style></head><body>
 {$printBtns}
 <div class='wrap'>
-  <div style='background:#0f172a;color:#fff;padding:28px 32px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;'>
-    <div>{$logoHtml}<div style='margin-top:10px;font-size:18px;font-weight:700;'>" . htmlspecialchars($s['name']) . "</div>"
-    . ($sellerMetaHtml ? "<div style='margin-top:6px;font-size:12px;color:#94a3b8;'>{$sellerMetaHtml}</div>" : '')
-    . (!empty($s['address']) ? "<div style='margin-top:8px;font-size:12px;color:#cbd5e1;line-height:1.6;white-space:pre-line;'>" . htmlspecialchars($s['address']) . '</div>' : '')
-    . "</div>
-    <div style='text-align:right;'>
-      <div style='font-size:26px;font-weight:700;letter-spacing:1px;'>TAX INVOICE</div>
-      <div style='margin-top:12px;font-size:13px;color:#94a3b8;'>Invoice No.</div>
-      <div style='font-size:16px;font-weight:700;'>" . htmlspecialchars($invoice['invoice_no']) . "</div>
-      <div style='margin-top:8px;font-size:13px;color:#94a3b8;'>Order: " . htmlspecialchars($invoice['order_number']) . "</div>
-      <div style='font-size:13px;color:#cbd5e1;'>" . htmlspecialchars($invoice['invoice_date']) . "</div>
+  <div style='background:#fff;color:#111;padding:24px 32px 18px;border-bottom:2px solid #111;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;'>
+    <div style='flex:1;min-width:260px;'>
+      {$logoHtml}
+      <div style='font-size:16px;font-weight:700;letter-spacing:.2px;text-transform:uppercase;'>{$companyLine}</div>
+      " . (!empty($s['address']) ? "<div style='margin-top:6px;font-size:12px;color:#333;line-height:1.55;white-space:pre-line;'>" . htmlspecialchars($s['address']) . '</div>' : '') . "
+      " . ($sellerMetaHtml ? "<div style='margin-top:6px;font-size:12px;color:#333;'>{$sellerMetaHtml}</div>" : '') . "
+    </div>
+    <div style='text-align:right;min-width:180px;'>
+      <div style='font-size:22px;font-weight:700;letter-spacing:1px;'>INVOICE</div>
+      <div style='margin-top:10px;font-size:12px;color:#555;'>INVOICE NO:</div>
+      <div style='font-size:15px;font-weight:700;'>" . htmlspecialchars($invoice['invoice_no']) . "</div>
+      <div style='margin-top:8px;font-size:12px;color:#555;'>Order: " . htmlspecialchars($invoice['order_number']) . "</div>
+      <div style='font-size:12px;color:#333;'>" . htmlspecialchars($invoice['invoice_date']) . "</div>
     </div>
   </div>
 

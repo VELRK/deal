@@ -72,6 +72,45 @@ function sk_invoice_pdf_text_center(float $cx, float $y, string $text, float $si
     return sk_invoice_pdf_text($cx - ($w / 2), $y, $text, $size, $font);
 }
 
+/**
+ * Convert logo file to JPEG bytes for PDF embedding (PNG/WebP/GIF/JPEG supported via GD).
+ * @return array{data:string,w:int,h:int}|null
+ */
+function sk_invoice_pdf_logo_jpeg(?string $absPath): ?array {
+    if ($absPath === null || $absPath === '' || !is_file($absPath) || !function_exists('imagecreatefromstring')) {
+        return null;
+    }
+    $raw = @file_get_contents($absPath);
+    if ($raw === false || $raw === '') {
+        return null;
+    }
+    $img = @imagecreatefromstring($raw);
+    if (!$img) {
+        return null;
+    }
+    $w = imagesx($img);
+    $h = imagesy($img);
+    if ($w < 1 || $h < 1) {
+        imagedestroy($img);
+        return null;
+    }
+    // Flatten transparency onto white for JPEG.
+    $canvas = imagecreatetruecolor($w, $h);
+    $white = imagecolorallocate($canvas, 255, 255, 255);
+    imagefilledrectangle($canvas, 0, 0, $w, $h, $white);
+    imagecopy($canvas, $img, 0, 0, 0, 0, $w, $h);
+    imagedestroy($img);
+
+    ob_start();
+    imagejpeg($canvas, null, 85);
+    $jpeg = ob_get_clean();
+    imagedestroy($canvas);
+    if ($jpeg === false || $jpeg === '') {
+        return null;
+    }
+    return ['data' => $jpeg, 'w' => $w, 'h' => $h];
+}
+
 function sk_invoice_pdf_line(float $x1, float $y1, float $x2, float $y2, float $width = 0.6): string {
     return sprintf("%.2f w %.2f %.2f m %.2f %.2f l S\n", $width, $x1, $y1, $x2, $y2);
 }
@@ -121,33 +160,61 @@ function sk_invoice_build_pdf(array $invoice): string {
         }
     };
 
-    // ── Dark header (like HTML) ──
-    $headerH = 78;
-    $ops .= sk_invoice_pdf_rect($L - 4, $y - $headerH + 18, $W + 8, $headerH, '0.06 0.09 0.16', true);
-    $ops .= "1 1 1 rg\n";
-    $ops .= sk_invoice_pdf_text($L + 8, $y - 4, (string)($seller['name'] ?? 'Store'), 13, 'F2');
-    $ops .= sk_invoice_pdf_text_right($R - 8, $y - 2, 'TAX INVOICE', 16, 'F2');
+    // ── Letterhead header (website logo + company + address) ──
+    $companyName = sk_invoice_pdf_sanitize((string)($seller['name'] ?? 'GOLDEN 2 DEAL (M) SDN. BHD.'));
+    $registration = sk_invoice_pdf_sanitize((string)($seller['registration'] ?? ''));
+    $companyLine = $registration !== '' ? ($companyName . ' ' . $registration) : $companyName;
+
+    $logoJpeg = null;
+    $logoPath = (string)($seller['logo_path'] ?? '');
+    if ($logoPath === '' && function_exists('sk_invoice_logo_paths')) {
+        $lp = sk_invoice_logo_paths($seller['logo'] ?? null);
+        $logoPath = (string)($lp['path'] ?? '');
+    }
+    $logoJpeg = sk_invoice_pdf_logo_jpeg($logoPath !== '' ? $logoPath : null);
+    $hasLogo = is_array($logoJpeg);
+
+    if ($hasLogo) {
+        // Fit logo into ~120x36 pt box, keep aspect ratio.
+        $maxW = 120.0;
+        $maxH = 36.0;
+        $scale = min($maxW / max(1, $logoJpeg['w']), $maxH / max(1, $logoJpeg['h']));
+        $drawW = $logoJpeg['w'] * $scale;
+        $drawH = $logoJpeg['h'] * $scale;
+        $ops .= sprintf("q %.2f 0 0 %.2f %.2f %.2f cm /ImLogo Do Q\n", $drawW, $drawH, $L, $y - $drawH + 8);
+        $y -= ($drawH + 6);
+    }
+
+    $ops .= sk_invoice_pdf_text($L, $y, $companyLine, 12, 'F2');
+    $ops .= sk_invoice_pdf_text_right($R, $y, 'INVOICE', 14, 'F2');
+    $y -= 14;
+
+    $addrLines = preg_split("/\r\n|\n|\r/", (string)($seller['address'] ?? ''));
+    $addrLines = array_values(array_filter(array_map('trim', $addrLines ?: [])));
+    if ($addrLines) {
+        $ops .= sk_invoice_pdf_text($L, $y, sk_invoice_pdf_sanitize($addrLines[0]), 8);
+    }
+    $ops .= sk_invoice_pdf_text_right($R, $y, 'INVOICE NO:', 8);
+    $y -= 11;
+    if (!empty($addrLines[1])) {
+        $ops .= sk_invoice_pdf_text($L, $y, sk_invoice_pdf_sanitize($addrLines[1]), 8);
+    }
+    $ops .= sk_invoice_pdf_text_right($R, $y, (string)($invoice['invoice_no'] ?? ''), 11, 'F2');
+    $y -= 11;
+
+    $contactBits = array_filter([
+        trim((string)($seller['phone'] ?? '')),
+        trim((string)($seller['email'] ?? '')),
+    ]);
+    if ($contactBits) {
+        $ops .= sk_invoice_pdf_text($L, $y, sk_invoice_pdf_sanitize(implode('    ', $contactBits)), 8);
+    }
+    $ops .= sk_invoice_pdf_text_right($R, $y, 'Order: ' . (string)($invoice['order_number'] ?? ''), 9);
+    $y -= 11;
+    $ops .= sk_invoice_pdf_text_right($R, $y, (string)($invoice['invoice_date'] ?? ''), 9);
+    $y -= 8;
+    $ops .= sk_invoice_pdf_line($L, $y, $R, $y, 1.2);
     $y -= 18;
-    $meta = [];
-    if (!empty($seller['gstin'])) $meta[] = 'Tax ID: ' . $seller['gstin'];
-    if (!empty($seller['phone'])) $meta[] = (string)$seller['phone'];
-    if (!empty($seller['email'])) $meta[] = (string)$seller['email'];
-    if ($meta) {
-        $ops .= sk_invoice_pdf_text($L + 8, $y, implode('  |  ', $meta), 8);
-    }
-    $ops .= sk_invoice_pdf_text_right($R - 8, $y, 'Invoice No.', 8);
-    $y -= 12;
-    if (!empty($seller['address'])) {
-        $addr1 = preg_split("/\r\n|\n|\r/", (string)$seller['address']);
-        $ops .= sk_invoice_pdf_text($L + 8, $y, trim((string)($addr1[0] ?? '')), 8);
-    }
-    $ops .= sk_invoice_pdf_text_right($R - 8, $y, (string)($invoice['invoice_no'] ?? ''), 11, 'F2');
-    $y -= 12;
-    $ops .= sk_invoice_pdf_text_right($R - 8, $y, 'Order: ' . (string)($invoice['order_number'] ?? ''), 9);
-    $y -= 12;
-    $ops .= sk_invoice_pdf_text_right($R - 8, $y, (string)($invoice['invoice_date'] ?? ''), 9);
-    $ops .= "0 g\n";
-    $y -= 28;
 
     // ── Bill To + Payment cards ──
     $need(70);
@@ -321,6 +388,18 @@ function sk_invoice_build_pdf(array $invoice): string {
     $objects[6] = "6 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>endobj\n";
     $objects[7] = "7 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>endobj\n";
 
+    $logoObjNum = null;
+    if (!empty($hasLogo) && is_array($logoJpeg)) {
+        $logoObjNum = 5;
+        $jpeg = $logoJpeg['data'];
+        $jw = (int)$logoJpeg['w'];
+        $jh = (int)$logoJpeg['h'];
+        $jlen = strlen($jpeg);
+        $objects[5] = "5 0 obj<< /Type /XObject /Subtype /Image /Width {$jw} /Height {$jh} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {$jlen} >>stream\n"
+            . $jpeg
+            . "\nendstream endobj\n";
+    }
+
     $kids = [];
     $objNum = 8;
     $pageObjs = [];
@@ -336,7 +415,8 @@ function sk_invoice_build_pdf(array $invoice): string {
         $len = strlen($content);
         $p = $pageObjs[$i];
         $c = $contentObjs[$i];
-        $objects[$p] = "{$p} 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {$pageW} {$pageH}] /Contents {$c} 0 R /Resources << /Font << /F1 6 0 R /F2 7 0 R >> >> >>endobj\n";
+        $xobjects = ($logoObjNum !== null) ? " /XObject << /ImLogo {$logoObjNum} 0 R >>" : '';
+        $objects[$p] = "{$p} 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {$pageW} {$pageH}] /Contents {$c} 0 R /Resources << /Font << /F1 6 0 R /F2 7 0 R >>{$xobjects} >> >>endobj\n";
         $objects[$c] = "{$c} 0 obj<< /Length {$len} >>stream\n{$content}\nendstream endobj\n";
     }
 
