@@ -19,7 +19,7 @@ export default function Cart() {
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "cart";
 
-  const [freeShippingAbove] = useState(250);
+  const [freeShippingAbove] = useState(100);
 
   useEffect(() => {
     siteSettingsAPI.get().then((res) => {
