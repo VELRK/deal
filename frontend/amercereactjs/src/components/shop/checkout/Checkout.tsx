@@ -150,7 +150,6 @@ export default function Checkout() {
   /* ── Site Settings (shipping only; GST hidden on storefront) ── */
   const [shippingCharge, setShippingCharge] = useState(50);
   const [freeShippingAbove, setFreeShippingAbove] = useState(999);
-  const [walletFreeShippingSetting, setWalletFreeShippingSetting] = useState(true);
 
   useEffect(() => {
     siteSettingsAPI.get().then(res => {
@@ -158,7 +157,6 @@ export default function Checkout() {
         const s = res.data.data;
         if (typeof s.shipping_charge === 'number') setShippingCharge(s.shipping_charge);
         if (typeof s.free_shipping_above === 'number') setFreeShippingAbove(s.free_shipping_above);
-        if (typeof s.wallet_free_shipping === 'boolean') setWalletFreeShippingSetting(s.wallet_free_shipping);
       }
     }).catch(err => console.error("Failed to load site settings", err));
   }, []);
@@ -193,9 +191,6 @@ export default function Checkout() {
           const d = res.data?.data;
           if (d) {
             setWalletInfo(d);
-            if (typeof d.free_shipping === 'boolean') {
-              setWalletFreeShippingSetting(d.free_shipping);
-            }
             const roy = d.royalty;
             if (roy && !roy.can_redeem && useRoyalty) {
               setUseRoyalty(false);
@@ -330,13 +325,14 @@ export default function Checkout() {
   const baseShippingCost = subtotalAfterPromo <= 0
     ? 0
     : (subtotalAfterPromo >= freeShippingAbove ? 0 : shippingCharge);
-  // Wallet is a separate full-pay method: optional % off + optional free delivery (admin setting).
+  // Wallet is a separate full-pay method: optional % off + always free delivery.
   // Works alone or together with coupon / affiliate / royalty (wallet covers the remainder).
   const walletPct = walletInfo?.discount_percent ?? 0;
   const walletDiscountPreview = walletInfo?.enabled && walletPct > 0
     ? Math.round(subtotalAfterPromo * walletPct / 100 * 100) / 100
     : 0;
-  const walletFreeShipping = !!walletInfo?.enabled && walletFreeShippingSetting;
+  // Wallet pay always includes free delivery (ignore admin toggle).
+  const walletFreeShipping = !!walletInfo?.enabled;
   const walletShippingCost = walletFreeShipping ? 0 : baseShippingCost;
 
   const walletDiscount = paymentMethod === "wallet" ? walletDiscountPreview : 0;

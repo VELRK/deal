@@ -31,11 +31,7 @@ class Sk_Settings extends Sk_Base_Api {
         $map['shipping_charge']     = isset($map['shipping_charge']) ? (float)$map['shipping_charge'] : 50;
         $map['free_shipping_above'] = isset($map['free_shipping_above']) ? (float)$map['free_shipping_above'] : 999;
         // Default ON — free delivery when paying full order with wallet
-        $map['wallet_free_shipping'] = !isset($map['wallet_free_shipping'])
-            || $map['wallet_free_shipping'] === ''
-            || $map['wallet_free_shipping'] === '1'
-            || $map['wallet_free_shipping'] === 1
-            || $map['wallet_free_shipping'] === true;
+        $map['wallet_free_shipping'] = true; // Wallet pay always includes free delivery
         $map['currency_symbol']     = sk_currency_symbol($map);
         $map['currency_code']       = strtoupper(trim((string)($map['currency_code'] ?? 'MYR'))) ?: 'MYR';
         if (in_array($map['currency_code'], ['INR', 'RS', ''], true)) {

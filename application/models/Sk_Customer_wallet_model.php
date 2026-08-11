@@ -101,18 +101,9 @@ class Sk_Customer_wallet_model extends CI_Model {
         return $this->db->trans_status();
     }
 
-    /** Free delivery when customer pays the full order with wallet (admin setting). */
+    /** Free delivery always applies when customer pays with wallet. */
     public function is_wallet_free_shipping(): bool {
-        $CI =& get_instance();
-        if (!isset($CI->Sk_Admin_model)) {
-            $CI->load->model('Sk_Admin_model');
-        }
-        $v = $CI->Sk_Admin_model->get_setting('wallet_free_shipping');
-        // Default ON when unset so wallet full-pay gets free delivery out of the box.
-        if ($v === null || $v === '') {
-            return true;
-        }
-        return $v === '1' || $v === 1 || $v === true || $v === 'true';
+        return true;
     }
 
     public function get_wallet_discount_percent(): float {

@@ -182,11 +182,11 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        // Normal shipping from admin settings; wallet full-pay can zero it when configured.
+        // Normal shipping from admin settings; wallet pay always gets free delivery.
         $shipping = ($subtotal <= 0)
             ? 0
             : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
-        if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
+        if ($uses_wallet) {
             $shipping = 0;
         }
         $taxable_amount = max(0, $subtotal - $discount);
