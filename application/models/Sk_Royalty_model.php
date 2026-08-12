@@ -119,6 +119,14 @@ class Sk_Royalty_model extends CI_Model {
         if ($points < 1 || $amountRm <= 0) {
             return false;
         }
+        $exists = $this->db->where('user_id', $userId)
+            ->where('reference', $reference)
+            ->where('type', 'redeem')
+            ->count_all_results('customer_royalty_transactions');
+        if ($exists > 0) {
+            return true; // already redeemed (idempotent)
+        }
+
         $acc = $this->get_account($userId);
         if ((int)$acc['points_balance'] < $points) {
             return false;
@@ -143,6 +151,17 @@ class Sk_Royalty_model extends CI_Model {
         ]);
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    /** True when redeem ledger row already exists for this order. */
+    public function was_redeemed_for_order(int $userId, int $orderId): bool {
+        if ($userId < 1 || $orderId < 1) {
+            return false;
+        }
+        return $this->db->where('user_id', $userId)
+            ->where('reference', 'ORD-' . $orderId . '-ROYALTY-REDEEM')
+            ->where('type', 'redeem')
+            ->count_all_results('customer_royalty_transactions') > 0;
     }
 
     public function get_transactions(int $userId, int $limit = 20, int $offset = 0): array {

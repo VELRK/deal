@@ -153,7 +153,7 @@ export default function AffiliateEnquiryModal() {
                   placeholder="12-345 6789"
                   required
                   value={formatMalaysiaDisplay(phone)}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   style={{ width: "100%", padding: "12px", border: "none", outline: "none" }}
                 />
               </div>

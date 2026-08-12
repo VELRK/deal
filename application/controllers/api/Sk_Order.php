@@ -350,21 +350,24 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        if ($royalty_used_points > 0 && $royalty_used_rm > 0) {
-            if (!$this->Sk_Royalty_model->debit(
-                $user_id,
-                $royalty_used_points,
-                $royalty_used_rm,
-                'ORD-' . $order_id . '-ROYALTY-REDEEM',
-                'Royalty redeem ' . $royalty_used_points . ' pts (RM ' . number_format($royalty_used_rm, 2) . ') for order #' . $order_id,
-                $order_id
-            )) {
+        // Redeem royalty only when order is confirmed now (COD / wallet / fully paid).
+        // Unpaid Razorpay (payment_attempt) keeps points until payment verify confirms.
+        if ($confirm_now && $royalty_used_points > 0 && $royalty_used_rm > 0) {
+            $orderForRoyalty = array_merge($order_data, [
+                'id' => $order_id,
+                'user_id' => $user_id,
+                'royalty_used_points' => $royalty_used_points,
+                'royalty_used_rm' => $royalty_used_rm,
+                'status' => 'confirmed',
+            ]);
+            $debitRes = sk_royalty_debit_for_order($orderForRoyalty);
+            if (empty($debitRes['success'])) {
                 if ($wallet_amount > 0) {
                     $this->Sk_Customer_wallet_model->refund_order_payment($user_id, $order_id, $wallet_amount);
                 }
                 $this->db->where('id', $order_id)->delete('orders');
                 $this->db->where('order_id', $order_id)->delete('order_items');
-                return $this->error('Insufficient royalty points for this order.');
+                return $this->error($debitRes['message'] ?? 'Insufficient royalty points for this order.');
             }
         }
 

@@ -186,7 +186,7 @@ export default function PhoneLoginForm({
                 placeholder="Enter mobile number"
                 value={formatMalaysiaDisplay(phone)}
                 onChange={(e) => {
-                  setPhone(e.target.value.replace(/\D/g, "").slice(0, 11));
+                  setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
                   setError("");
                 }}
                 required

@@ -1,7 +1,8 @@
 export const MY_COUNTRY_CODE = "60";
 
+/** Malaysia mobile must be exactly 10 digits locally (01XXXXXXXX). */
 export const MY_PHONE_ERROR =
-  "Enter a valid Malaysia mobile number (e.g. 0123456789 or 60123456789).";
+  "Enter a valid 10-digit Malaysia mobile number (e.g. 0123456789).";
 
 /** Strip to digits only. */
 export function stripPhoneDigits(value: string): string {
@@ -17,18 +18,26 @@ export function toMalaysiaE164(input: string): string {
   return MY_COUNTRY_CODE + d;
 }
 
-/** Validate Malaysian mobile (01X locally, mobile digit starts with 1 after country code). */
+/**
+ * Validate Malaysian mobile: exactly 10 digits with leading 0 (01XXXXXXXX),
+ * or E.164 601XXXXXXXX (11 digits). Rejects 9-digit numbers.
+ */
 export function isValidMalaysiaMobile(input: string): boolean {
-  const e164 = toMalaysiaE164(input);
-  if (!e164.startsWith(MY_COUNTRY_CODE)) return false;
-  const mobile = e164.slice(MY_COUNTRY_CODE.length);
-  if (mobile.length < 9 || mobile.length > 10) return false;
-  return mobile[0] === "1";
+  const d = stripPhoneDigits(input);
+  if (d.startsWith(MY_COUNTRY_CODE)) {
+    const mobile = d.slice(MY_COUNTRY_CODE.length).replace(/^0+/, "");
+    return mobile.length === 9 && mobile[0] === "1";
+  }
+  if (d.startsWith("0")) {
+    return d.length === 10 && d[1] === "1";
+  }
+  // Bare national number without leading 0 is not accepted — require 10-digit local form.
+  return false;
 }
 
-/** Local display: 012-345 6789 */
+/** Local display: 012-345 6789 (max 10 digits). */
 export function formatMalaysiaDisplay(digits: string): string {
-  const d = stripPhoneDigits(digits).slice(0, 11);
+  const d = stripPhoneDigits(digits).slice(0, 10);
   if (d.length <= 3) return d;
   if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
   return `${d.slice(0, 3)}-${d.slice(3, 6)} ${d.slice(6)}`;

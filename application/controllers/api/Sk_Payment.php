@@ -197,6 +197,11 @@ class Sk_Payment extends Sk_Base_Api {
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
 
         $this->load->helper('sk_royalty');
+        // Redeem reserved royalty only after payment confirms the order.
+        $debitRes = sk_royalty_debit_for_order($order);
+        if (empty($debitRes['success']) && (int)($order['royalty_used_points'] ?? 0) > 0) {
+            log_message('error', 'Royalty redeem failed after payment for order #' . $order_id . ': ' . ($debitRes['message'] ?? ''));
+        }
         sk_royalty_credit_for_order($order);
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
 

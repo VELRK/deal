@@ -461,3 +461,46 @@ function sk_royalty_credit_for_order(array $order): array {
 
     return ['success' => true, 'points' => $points, 'Rs' => $Rs, 'message' => 'Royalty credited.'];
 }
+
+/**
+ * Redeem royalty only for confirmed orders. Idempotent.
+ * Non-confirmed (payment_attempt / unpaid) orders must not decrease points.
+ * @return array{success:bool,points?:int,rm?:float,message?:string}
+ */
+function sk_royalty_debit_for_order(array $order): array {
+    sk_royalty_ensure_schema();
+    $CI =& get_instance();
+    $CI->load->model('Sk_Royalty_model');
+
+    $orderId = (int)($order['id'] ?? 0);
+    $userId  = (int)($order['user_id'] ?? 0);
+    $pts     = (int)($order['royalty_used_points'] ?? 0);
+    $rm      = round((float)($order['royalty_used_rm'] ?? 0), 2);
+
+    if ($orderId < 1 || $userId < 1 || $pts < 1 || $rm <= 0) {
+        return ['success' => true, 'points' => 0, 'rm' => 0.0, 'message' => 'No royalty to redeem.'];
+    }
+
+    $status = strtolower((string)($order['status'] ?? ''));
+    $confirmedStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
+    if (!in_array($status, $confirmedStatuses, true)) {
+        return ['success' => false, 'message' => 'Order not confirmed yet — royalty not redeemed.'];
+    }
+
+    if ($CI->Sk_Royalty_model->was_redeemed_for_order($userId, $orderId)) {
+        return ['success' => true, 'points' => $pts, 'rm' => $rm, 'message' => 'Already redeemed.'];
+    }
+
+    $ok = $CI->Sk_Royalty_model->debit(
+        $userId,
+        $pts,
+        $rm,
+        'ORD-' . $orderId . '-ROYALTY-REDEEM',
+        'Royalty redeem ' . $pts . ' pts (RM ' . number_format($rm, 2) . ') for order #' . $orderId,
+        $orderId
+    );
+    if (!$ok) {
+        return ['success' => false, 'message' => 'Insufficient royalty points to redeem.'];
+    }
+    return ['success' => true, 'points' => $pts, 'rm' => $rm, 'message' => 'Royalty redeemed.'];
+}

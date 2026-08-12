@@ -694,7 +694,7 @@ export default function AccountAddresses() {
                       className="form-input-custom"
                       value={formatMalaysiaDisplay(form.phone)}
                       maxLength={12}
-                      onChange={(e) => field("phone", e.target.value.replace(/\D/g, "").slice(0, 11))}
+                      onChange={(e) => field("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="12-345 6789"
                       required
                       style={{ border: "none", borderRadius: 0 }}
