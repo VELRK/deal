@@ -11,7 +11,7 @@
               var name = <?= json_encode($customer['name']) ?>;
               var url = <?= json_encode(site_url('admin/customers/delete/'.(int)$customer['id'])) ?>;
               var listUrl = <?= json_encode(site_url('admin/customers')) ?>;
-              if (!confirm('Permanently delete \"' + name + '\"? Account, addresses, cart, wallet and reviews will be removed. Order history stays without the customer link.')) return;
+              if (!confirm('Permanently delete \"' + name + '\"?\n\n• Account, addresses, cart, wallet and reviews will be removed.\n• Order history is KEPT for reports/invoices (customer link removed).\n\nThis cannot be undone.')) return;
               $.ajax({
                 url: url,
                 method: 'POST',

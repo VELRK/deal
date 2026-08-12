@@ -3,7 +3,11 @@
 // Confirm delete — name can be a display name OR a row element ID prefixed with '#'/'row-'
 function skConfirmDelete(url, nameOrRowId) {
   var label = (nameOrRowId && String(nameOrRowId).startsWith('row-')) ? 'this item' : (nameOrRowId || 'this item');
-  if (confirm('Delete "' + label + '"? This cannot be undone.')) {
+  var isCustomerRow = nameOrRowId && String(nameOrRowId).startsWith('row-') && (url || '').indexOf('customers/delete') !== -1;
+  var confirmMsg = isCustomerRow
+    ? 'Permanently delete this customer?\n\n• Account, addresses, cart, wallet and reviews will be removed.\n• Order history is KEPT (customer link removed).\n\nThis cannot be undone.'
+    : ('Delete "' + label + '"? This cannot be undone.');
+  if (confirm(confirmMsg)) {
     $.ajax({
       url: url,
       method: 'POST',
@@ -16,8 +20,7 @@ function skConfirmDelete(url, nameOrRowId) {
             location.reload();
           }
           if (res.message) {
-            // brief success feedback without blocking
-            try { console.info(res.message); } catch (e) {}
+            alert(res.message);
           }
         } else {
           alert((res && res.message) ? res.message : 'Delete failed.');

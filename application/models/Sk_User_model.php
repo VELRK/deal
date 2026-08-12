@@ -361,7 +361,8 @@ class Sk_User_model extends CI_Model {
 
     /**
      * Permanently remove a customer and personal data from the database.
-     * Orders and commission history are kept with user_id cleared.
+     * Order records are kept for reports/invoices; user_id is cleared and PII anonymized.
+     * Orders are never deleted by this action.
      */
     public function hard_delete($id): array {
         $id = (int)$id;
@@ -370,18 +371,66 @@ class Sk_User_model extends CI_Model {
             return ['ok' => false, 'message' => 'Customer not found.'];
         }
 
+        $orderCount = 0;
+        if ($this->db->table_exists('orders') && $this->db->field_exists('user_id', 'orders')) {
+            $orderCount = (int)$this->db->where('user_id', $id)->count_all_results('orders');
+        }
+
+        // Make sure history tables can unlink the customer without violating NOT NULL
+        foreach ([
+            'orders',
+            'affiliate_enquiries',
+            'contact_enquiries',
+            'activity_logs',
+            'jwt_blacklist',
+            'promo_usage',
+            'affiliate_commissions',
+            'sk_notification_logs',
+            'reviews',
+        ] as $table) {
+            $this->_ensure_user_id_nullable($table);
+        }
+
         $this->db->trans_start();
-        $this->_hard_delete_user_related($id);
-        $this->db->where('id', $id)->delete('users');
+        // Avoid orphan FK failures while unlinking history rows
+        $this->db->query('SET FOREIGN_KEY_CHECKS=0');
+
+        $unlinkError = $this->_hard_delete_user_related($id);
+        if ($unlinkError !== null) {
+            $this->db->query('SET FOREIGN_KEY_CHECKS=1');
+            $this->db->trans_rollback();
+            return ['ok' => false, 'message' => $unlinkError];
+        }
+
+        $deleted = $this->db->where('id', $id)->delete('users');
+        $this->db->query('SET FOREIGN_KEY_CHECKS=1');
         $this->db->trans_complete();
 
-        if (!$this->db->trans_status()) {
-            return ['ok' => false, 'message' => 'Could not delete customer. A database constraint may be blocking removal.'];
+        if ($deleted === false || !$this->db->trans_status()) {
+            $dbErr = trim((string)$this->db->error()['message']);
+            $msg = 'Could not delete customer.';
+            if ($orderCount > 0) {
+                $msg .= ' This customer has ' . $orderCount . ' order(s). Orders are kept; the account should unlink automatically.';
+            }
+            if ($dbErr !== '') {
+                $msg .= ' Database: ' . $dbErr;
+            } else {
+                $msg .= ' A related record is still linked to this account.';
+            }
+            return ['ok' => false, 'message' => $msg];
         }
-        return ['ok' => true, 'message' => 'Customer permanently deleted.'];
+
+        $msg = 'Customer permanently deleted.';
+        if ($orderCount > 0) {
+            $msg .= ' ' . $orderCount . ' order(s) were kept for reports/invoices (customer link removed).';
+        }
+        return ['ok' => true, 'message' => $msg];
     }
 
-    private function _hard_delete_user_related(int $userId): void {
+    /**
+     * @return string|null Error message, or null on success
+     */
+    private function _hard_delete_user_related(int $userId): ?string {
         if ($this->db->table_exists('reviews')) {
             $reviews = $this->db->select('id, product_id')
                 ->where('user_id', $userId)
@@ -407,12 +456,24 @@ class Sk_User_model extends CI_Model {
             }
         }
 
+        // Personal / wallet data — delete
         $this->_delete_rows_for_user('customer_wallet_transactions', $userId);
         $this->_delete_rows_for_user('customer_wallets', $userId);
         $this->_delete_rows_for_user('customer_royalty_transactions', $userId);
         $this->_delete_rows_for_user('customer_royalty', $userId);
 
-        foreach (['addresses', 'wishlist', 'cart', 'sk_device_tokens'] as $table) {
+        foreach ([
+            'addresses',
+            'wishlist',
+            'cart',
+            'sk_device_tokens',
+            'jwt_blacklist',
+            'promo_usage',
+            'password_resets',
+            'user_otps',
+            'otps',
+            'sk_otp_logs',
+        ] as $table) {
             $this->_delete_rows_for_user($table, $userId);
         }
 
@@ -427,18 +488,49 @@ class Sk_User_model extends CI_Model {
             $this->db->where('user_id', $userId)->delete('carts');
         }
 
+        // Orders: keep rows, clear link + anonymize PII (never delete order history)
+        if ($this->db->table_exists('orders') && $this->db->field_exists('user_id', 'orders')) {
+            $anon = ['user_id' => null];
+            foreach ([
+                'shipping_name' => 'Deleted Customer',
+                'shipping_phone' => null,
+                'shipping_email' => null,
+                'billing_name' => 'Deleted Customer',
+                'billing_phone' => null,
+                'guest_email' => null,
+                'customer_email' => null,
+                'customer_phone' => null,
+                'customer_name' => 'Deleted Customer',
+            ] as $col => $val) {
+                if ($this->db->field_exists($col, 'orders')) {
+                    $anon[$col] = $val;
+                }
+            }
+            if ($this->db->where('user_id', $userId)->update('orders', $anon) === false) {
+                $err = trim((string)($this->db->error()['message'] ?? ''));
+                return 'Could not unlink customer orders'
+                    . ($err !== '' ? (': ' . $err) : '.')
+                    . ' Orders are kept; please contact support if this continues.';
+            }
+        }
+
+        // Other history — keep if useful, otherwise clear user link
         foreach ([
-            'orders',
             'affiliate_enquiries',
             'contact_enquiries',
             'activity_logs',
-            'jwt_blacklist',
-            'promo_usage',
             'affiliate_commissions',
             'sk_notification_logs',
         ] as $table) {
-            $this->_nullify_user_id($table, $userId);
+            if (!$this->_nullify_user_id($table, $userId)) {
+                // Fallback: delete non-critical history so account can still be removed
+                if (in_array($table, ['activity_logs', 'sk_notification_logs'], true)) {
+                    $this->_delete_rows_for_user($table, $userId);
+                }
+            }
         }
+
+        return null;
     }
 
     private function _delete_rows_for_user(string $table, int $userId): void {
@@ -447,10 +539,30 @@ class Sk_User_model extends CI_Model {
         }
     }
 
-    private function _nullify_user_id(string $table, int $userId): void {
-        if ($this->db->table_exists($table) && $this->db->field_exists('user_id', $table)) {
-            $this->db->where('user_id', $userId)->update($table, ['user_id' => null]);
+    private function _nullify_user_id(string $table, int $userId): bool {
+        if (!$this->db->table_exists($table) || !$this->db->field_exists('user_id', $table)) {
+            return true;
         }
+        $this->_ensure_user_id_nullable($table);
+        $ok = $this->db->where('user_id', $userId)->update($table, ['user_id' => null]);
+        return $ok !== false;
+    }
+
+    /** Allow unlinking history without deleting business records. */
+    private function _ensure_user_id_nullable(string $table): void {
+        if (!$this->db->table_exists($table) || !$this->db->field_exists('user_id', $table)) {
+            return;
+        }
+        $col = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE 'user_id'")->row_array();
+        if (!$col) {
+            return;
+        }
+        if (strtoupper((string)($col['Null'] ?? '')) === 'YES') {
+            return;
+        }
+        $type = (string)($col['Type'] ?? 'INT');
+        // Keep unsigned / int shape; drop NOT NULL so we can unlink deleted customers
+        $this->db->query("ALTER TABLE `{$table}` MODIFY COLUMN `user_id` {$type} NULL DEFAULT NULL");
     }
 
     private function _recalc_product_rating(int $productId): void {
