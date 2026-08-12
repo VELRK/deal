@@ -1,12 +1,14 @@
 Options -MultiViews
+DirectoryIndex index.php
 RewriteEngine On
 RewriteBase /admin/
 
+# Existing files (none expected) — otherwise every path boots CI
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
-RewriteRule ^$ /index.php/admin [L,QSA]
-RewriteRule ^(.*)$ /index.php/admin/$1 [L,QSA]
+# /admin/login → /admin/index.php (REQUEST_URI stays /admin/login)
+RewriteRule ^ index.php [L]
 
-# If rewrite is off in this folder, still hit CI (REQUEST_URI keeps /admin/...)
-FallbackResource /index.php
+# Apache 2.4 fallback when RewriteRule is ignored
+FallbackResource /admin/index.php

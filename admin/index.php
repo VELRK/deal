@@ -1,7 +1,8 @@
 <?php
 /**
- * /admin bridge — boot main CodeIgniter front controller.
- * Ensures /admin and /admin/ work when directory index is requested.
+ * Front controller for clean /admin/* URLs (no index.php in the browser).
+ * Apache runs this file for /admin/login etc.; CodeIgniter reads REQUEST_URI.
  */
 $_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
 require dirname(__DIR__) . '/index.php';

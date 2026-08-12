@@ -4,6 +4,10 @@ DirectoryIndex index.php index.html
 RewriteEngine On
 RewriteBase /
 
+# Hide index.php in the browser: /index.php/admin/login → /admin/login
+RewriteCond %{THE_REQUEST} \s/+index\.php/([^\s?]*) [NC]
+RewriteRule ^index\.php/(.*)$ /$1 [R=301,L,QSA]
+
 # Pass Authorization to PHP (Apache often strips it otherwise → JWT/royalty fail)
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -78,5 +82,6 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(?!shopkart-api|shopkart|admin|invoice|uploads|index\.php).*$ frontend/index.html [L]
 
-# Apache 2.4: route unmapped paths to CI when RewriteRule is unavailable
+# Apache 2.4 / shared hosting: route missing paths into CI
 FallbackResource /index.php
+ErrorDocument 404 /index.php
