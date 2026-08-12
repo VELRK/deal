@@ -175,28 +175,12 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
     ];
 }
 
-/** Resolve seller details: single-vendor order uses vendor store, else platform settings. */
+/**
+ * Resolve seller details for invoices.
+ * Platform letterhead (Settings / GOLDEN 2 DEAL defaults) is always used so invoices
+ * show the registered company name, SSM/tax IDs, address, phone and email.
+ */
 function sk_invoice_resolve_seller(array $order, array $settings): array {
-    $CI =& get_instance();
-    $vendorIds = [];
-
-    foreach ($order['items'] ?? [] as $item) {
-        if (empty($item['product_id'])) continue;
-        $p = $CI->db->select('vendor_id')->where('id', (int)$item['product_id'])->get('products')->row_array();
-        if (!empty($p['vendor_id'])) {
-            $vendorIds[(int)$p['vendor_id']] = true;
-        }
-    }
-
-    if (count($vendorIds) === 1) {
-        $vid = (int)array_key_first($vendorIds);
-        $CI->load->model('Sk_Vendor_model');
-        $vendor = $CI->Sk_Vendor_model->get_by_id($vid);
-        if ($vendor && !empty($vendor['store'])) {
-            return sk_invoice_seller_from_vendor($vendor, $vendor['store'], $settings);
-        }
-    }
-
     return sk_invoice_seller_from_settings($settings);
 }
 
@@ -235,12 +219,25 @@ function sk_invoice_logo_paths(?string $preferred = null): array {
     ];
 }
 
+/** Registered company letterhead used on invoices when Settings fields are empty. */
+function sk_invoice_platform_defaults(): array {
+    return [
+        'name'    => 'GOLDEN 2 DEAL (M) SDN. BHD.',
+        'gstin'   => '202101029427',
+        'pan'     => '1429727-A',
+        'email'   => 'golden2deal@gmail.com',
+        'phone'   => '03-6242 2232',
+        'address' => "Lot No. 2A/9(B) Anzen Business Park, No 3-9, Jalan 4/37A , Kawasan Industri\nTaman Bukit Maluri, 52100 Kepong Kuala Lumpur.",
+    ];
+}
+
 function sk_invoice_seller_from_settings(array $settings): array {
-    $regParts = array_filter([
-        trim((string)($settings['gstin'] ?? '')),
-        trim((string)($settings['pan_no'] ?? '')),
-    ]);
-    // Format like sample: "202101029427 (1429727-A)" when both Tax ID + PAN set.
+    $defaults = sk_invoice_platform_defaults();
+
+    $gstin = trim((string)($settings['gstin'] ?? '')) ?: $defaults['gstin'];
+    $pan   = trim((string)($settings['pan_no'] ?? '')) ?: $defaults['pan'];
+    $regParts = array_filter([$gstin, $pan]);
+    // Format: "202101029427 (1429727-A)" when both Tax ID + registration no. set.
     $registration = '';
     if (count($regParts) === 2) {
         $registration = $regParts[0] . ' (' . $regParts[1] . ')';
@@ -248,24 +245,28 @@ function sk_invoice_seller_from_settings(array $settings): array {
         $registration = $regParts[0];
     }
 
+    $name = trim((string)($settings['company_legal_name'] ?? ''));
+    if ($name === '') {
+        $name = trim((string)($settings['site_name'] ?? ''));
+    }
+    if ($name === '' || strcasecmp($name, '2DEAL') === 0 || strcasecmp($name, 'Default Store') === 0) {
+        $name = $defaults['name'];
+    }
+
     $logo = sk_invoice_logo_paths($settings['site_logo'] ?? null);
 
     return [
-        'name'            => trim((string)($settings['company_legal_name'] ?? '')) !== ''
-            ? trim((string)$settings['company_legal_name'])
-            : (trim((string)($settings['site_name'] ?? '')) !== ''
-                ? trim((string)$settings['site_name'])
-                : '2DEAL'),
+        'name'            => $name,
         'logo'            => $logo['rel'] !== '' ? $logo['rel'] : ($settings['site_logo'] ?? ''),
         'logo_url'        => $logo['url'],
         'logo_path'       => $logo['path'],
-        'gstin'           => $settings['gstin'] ?? '',
-        'pan'             => $settings['pan_no'] ?? '',
+        'gstin'           => $gstin,
+        'pan'             => $pan,
         'registration'    => $registration,
         'state_code'      => $settings['state_code'] ?? '',
-        'email'           => $settings['site_email'] ?? '',
-        'phone'           => $settings['site_phone'] ?? '',
-        'address'         => $settings['site_address'] ?? '',
+        'email'           => trim((string)($settings['site_email'] ?? '')) ?: $defaults['email'],
+        'phone'           => trim((string)($settings['site_phone'] ?? '')) ?: $defaults['phone'],
+        'address'         => trim((string)($settings['site_address'] ?? '')) ?: $defaults['address'],
         'invoice_prefix'  => $settings['invoice_prefix'] ?? 'INV',
         'invoice_footer'  => $settings['invoice_footer'] ?? 'Thank you for your business.',
         'source'          => 'platform',

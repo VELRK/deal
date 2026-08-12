@@ -30,12 +30,12 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Site Email</label>
-              <input type="email" name="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="info@superfinelabels.in">
-              <div class="form-text">Must be a real mailbox on your domain (same as SMTP username). Do not use shopkart.com.</div>
+              <input type="email" name="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="golden2deal@gmail.com">
+              <div class="form-text">Used on invoices and email. Prefer a real mailbox on your domain for SMTP.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Phone</label>
-              <input type="text" name="site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>">
+              <input type="text" name="site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>" placeholder="03-6242 2232">
             </div>
             <div class="col-md-6">
               <label class="form-label">Currency Symbol</label>
@@ -173,15 +173,15 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Legal / Company Name</label>
-              <input type="text" name="company_legal_name" class="form-control" value="<?= htmlspecialchars($settings['company_legal_name'] ?? $settings['site_name'] ?? '') ?>" placeholder="Registered business name on invoice">
+              <input type="text" name="company_legal_name" class="form-control" value="<?= htmlspecialchars($settings['company_legal_name'] ?? $settings['site_name'] ?? '') ?>" placeholder="GOLDEN 2 DEAL (M) SDN. BHD.">
             </div>
             <div class="col-md-6">
               <label class="form-label">Tax ID</label>
-              <input type="text" name="gstin" class="form-control" value="<?= htmlspecialchars($settings['gstin'] ?? '') ?>" placeholder="Business tax ID">
+              <input type="text" name="gstin" class="form-control" value="<?= htmlspecialchars($settings['gstin'] ?? '') ?>" placeholder="202101029427">
             </div>
             <div class="col-md-4">
-              <label class="form-label">PAN</label>
-              <input type="text" name="pan_no" class="form-control" value="<?= htmlspecialchars($settings['pan_no'] ?? '') ?>">
+              <label class="form-label">Company No. (SSM)</label>
+              <input type="text" name="pan_no" class="form-control" value="<?= htmlspecialchars($settings['pan_no'] ?? '') ?>" placeholder="1429727-A">
             </div>
             <div class="col-md-4">
               <label class="form-label">State Code</label>

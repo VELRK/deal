@@ -161,7 +161,7 @@ function sk_invoice_build_pdf(array $invoice): string {
     };
 
     // ── Letterhead header (website logo + company + address) ──
-    $companyName = sk_invoice_pdf_sanitize((string)($seller['name'] ?? '2DEAL'));
+    $companyName = sk_invoice_pdf_sanitize((string)($seller['name'] ?? 'GOLDEN 2 DEAL (M) SDN. BHD.'));
     $registration = sk_invoice_pdf_sanitize((string)($seller['registration'] ?? ''));
     $companyLine = $registration !== '' ? ($companyName . ' ' . $registration) : $companyName;
 
