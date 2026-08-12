@@ -1,0 +1,11 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /shopkart-api/
+
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+RewriteRule ^$ /index.php/shopkart-api [L,QSA]
+RewriteRule ^(.*)$ /index.php/shopkart-api/$1 [L,QSA]
+
+FallbackResource /index.php

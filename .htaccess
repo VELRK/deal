@@ -1,3 +1,6 @@
+Options -MultiViews
+DirectoryIndex index.php index.html
+
 RewriteEngine On
 RewriteBase /
 
@@ -5,7 +8,7 @@ RewriteBase /
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# ── CORS — allow Netlify & any browser origin ─────────────────
+# ── CORS ──────────────────────────────────────────────────────
 <IfModule mod_headers.c>
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
@@ -37,11 +40,11 @@ RewriteRule ^ilf/frontend/assets/(.*)$ frontend/assets/$1 [R=301,L]
 RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
 RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
 
-# Canonical admin URL — legacy /shopkart panel paths → /admin (internal rewrite, not 302)
+# Canonical admin URL — legacy /shopkart panel paths → /admin (internal rewrite)
 RewriteRule ^shopkart/?$ admin/ [L]
 RewriteRule ^shopkart/(.+)$ admin/$1 [L]
 
-# Always fetch fresh SPA shell after deploys (hashed assets change each build)
+# Always fetch fresh SPA shell after deploys
 <Files "frontend/index.html">
     <IfModule mod_headers.c>
         Header set Cache-Control "no-cache, no-store, must-revalidate"
@@ -50,30 +53,30 @@ RewriteRule ^shopkart/(.+)$ admin/$1 [L]
     </IfModule>
 </Files>
 
-# Serve static dirs directly (no CodeIgniter, no SPA fallback)
+# Serve static dirs / existing files directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
 
-# ── CodeIgniter routes (cPanel-safe: index.php?/path — NOT index.php/path) ──
-# Shared hosting often disables AcceptPathInfo, so PATH_INFO rewrites 404.
-
-# API
+# ── CodeIgniter (prefer PATH_INFO; query-string fallback) ──
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^shopkart-api(?:/(.*))?$ index.php?/shopkart-api/$1 [L,QSA]
+RewriteRule ^shopkart-api(?:/(.*))?$ index.php/shopkart-api/$1 [L,QSA]
 
-# Admin
-RewriteRule ^admin/?$ index.php?/admin [L,QSA]
+RewriteRule ^admin/?$ index.php/admin [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^admin/(.+)$ index.php?/admin/$1 [L,QSA]
+RewriteRule ^admin/(.+)$ index.php/admin/$1 [L,QSA]
 
-# Public signed invoice
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^invoice/(.+)$ index.php?/invoice/$1 [L,QSA]
+RewriteRule ^invoice/(.+)$ index.php/invoice/$1 [L,QSA]
 
-# Route root and all SPA paths to the React frontend
+# SPA: root → frontend shell; other app routes → React
 RewriteRule ^$ frontend/index.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(?!shopkart-api|shopkart|admin|invoice|uploads|index\.php).*$ frontend/index.html [L]
+
+# Apache 2.4: route unmapped paths to CI when RewriteRule is unavailable
+FallbackResource /index.php

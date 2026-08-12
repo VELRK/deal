@@ -38,8 +38,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     // Production domain at document root (public_html)
     if ($hostNoPort === '2deal.my' || $hostNoPort === 'www.2deal.my') {
         $config['base_url'] = $scheme . '://' . $hostNoPort . '/';
-        // Host rewrite to strip index.php is not active — keep index.php in URLs
-        $config['index_page'] = 'index.php';
+        // Clean URLs (no index.php) via .htaccess + /admin + /shopkart-api bridges
+        $config['index_page'] = '';
     } elseif (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal/';
     } else {
@@ -67,8 +67,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 | something else. If you are using mod_rewrite to remove the page set this
 | variable so that it is blank.
 |
-| On 2deal.my, Apache rewrite is not applied — keep index.php in URLs.
-| Do not blank this after the host auto-detect block above.
+| Clean URLs on 2deal.my via .htaccess FallbackResource + /admin and
+| /shopkart-api directory bridges (index_page stays blank).
 */
 if (!isset($config['index_page'])) {
     $config['index_page'] = '';

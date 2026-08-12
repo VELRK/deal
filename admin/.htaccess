@@ -1,0 +1,12 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /admin/
+
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+RewriteRule ^$ /index.php/admin [L,QSA]
+RewriteRule ^(.*)$ /index.php/admin/$1 [L,QSA]
+
+# If rewrite is off in this folder, still hit CI (REQUEST_URI keeps /admin/...)
+FallbackResource /index.php
