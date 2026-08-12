@@ -270,6 +270,9 @@ $route['shopkart/logout'] = 'admin/Login/logout';
 $route['shopkart/vendor/login'] = 'admin/Vendor_login/index';
 $route['shopkart/vendor/login/submit'] = 'admin/Vendor_login/submit';
 $route['shopkart/vendor/logout'] = 'admin/Vendor_login/logout';
+$route['admin/vendor/login'] = 'admin/Vendor_login/index';
+$route['admin/vendor/login/submit'] = 'admin/Vendor_login/submit';
+$route['admin/vendor/logout'] = 'admin/Vendor_login/logout';
 
 // Affiliate portal (separate login)
 $route['shopkart/affiliate/login'] = 'admin/Affiliate_login/index';

@@ -67,8 +67,12 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 | something else. If you are using mod_rewrite to remove the page set this
 | variable so that it is blank.
 |
+| On 2deal.my, Apache rewrite is not applied — keep index.php in URLs.
+| Do not blank this after the host auto-detect block above.
 */
-$config['index_page'] = '';
+if (!isset($config['index_page'])) {
+    $config['index_page'] = '';
+}
 
 /*
 |--------------------------------------------------------------------------

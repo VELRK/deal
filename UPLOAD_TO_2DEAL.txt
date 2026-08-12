@@ -32,12 +32,13 @@
 
 7) Test
    - https://2deal.my/
-   - https://2deal.my/index.php/admin
+   - Vendor login: https://2deal.my/index.php/admin/vendor/login
+   - Admin login:  https://2deal.my/index.php/admin/login
    - https://2deal.my/index.php/shopkart-api/site-settings  (JSON OK = API works)
    - Open any product thumbnail URL like /assets/uploads/products/... (must be 200, not 404)
 
 Notes
-- Host rewrite is off: frontend calls /index.php/shopkart-api (not /shopkart-api)
+- Host rewrite is off: use /index.php/... for admin + API (frontend already does)
 - Admin URL: https://2deal.my/index.php/admin
 - base_url + index_page=index.php auto for 2deal.my
 - Replace database.php credentials on server (gitignored locally)
