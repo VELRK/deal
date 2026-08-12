@@ -1264,6 +1264,47 @@ $config['catalog'] = [
             'data' => ['order' => ['id' => 1, 'status' => 'cancelled']],
         ],
     ],
+    [
+        'id' => 'order-invoice',
+        'group' => 'orders',
+        'name' => 'Order Invoice Links',
+        'method' => 'GET',
+        'path' => 'order/1/invoice',
+        'auth' => true,
+        'verified' => true,
+        'how' => 'JWT required. Replace :id with your order id (must belong to the logged-in user). Returns signed public download_url / view_url (no auth to open) plus api_download (Bearer PDF stream). Use download_url in email/WhatsApp; use api_download from the mobile app with JWT.',
+        'query' => [],
+        'headers' => [],
+        'body' => null,
+        'sample_response' => [
+            'success' => true,
+            'message' => 'Success',
+            'data' => [
+                'order_id' => 1,
+                'order_number' => 'SK903246A0',
+                'download_url' => 'http://localhost/deal1/invoice/download/1/a33fa0898753b5eb0ee4f90a6514a77e',
+                'view_url' => 'http://localhost/deal1/invoice/view/1/a33fa0898753b5eb0ee4f90a6514a77e',
+                'api_download' => 'http://localhost/deal1/shopkart-api/order/1/invoice/download',
+            ],
+        ],
+    ],
+    [
+        'id' => 'order-invoice-download',
+        'group' => 'orders',
+        'name' => 'Download Order Invoice PDF',
+        'method' => 'GET',
+        'path' => 'order/1/invoice/download',
+        'auth' => true,
+        'verified' => true,
+        'how' => 'JWT required. Streams the tax invoice as application/pdf for the order owner. Replace :id. In the explorer, response may look like binary text — in Postman/app save as file. Prefer Order Invoice Links first to get a signed public URL if you need a shareable link without JWT.',
+        'query' => [],
+        'headers' => ['Accept' => 'application/pdf'],
+        'body' => null,
+        'sample_response' => [
+            'note' => 'Binary PDF body (Content-Type: application/pdf). Not JSON.',
+            'Content-Disposition' => 'attachment; filename="invoice-SK903246A0.pdf"',
+        ],
+    ],
 
     /* ========== SHIPPING ========== */
     [
