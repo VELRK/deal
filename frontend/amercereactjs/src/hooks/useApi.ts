@@ -171,13 +171,14 @@ export function apiImageUrl(path?: string | null): string {
   // get encodeURIComponent'd into the filename (breaks cart/checkout thumbs).
   raw = raw.split(/[?#]/)[0];
 
-  // Already a rooted public URL for this deploy
-  if (
-    raw.startsWith("/deal/") ||
-    raw.startsWith("/deal1/") ||
-    raw.startsWith("/frontend/")
-  ) {
+  // Rooted SPA/static paths — keep (except legacy /deal on production root)
+  if (raw.startsWith("/frontend/") || raw.startsWith("/deal1/")) {
     return raw;
+  }
+  // Old XAMPP/subfolder URLs: /deal/assets/... → /assets/... on 2deal.my
+  if (raw.startsWith("/deal/")) {
+    if (import.meta.env.DEV) return raw;
+    raw = raw.replace(/^\/deal/, "") || "/";
   }
 
   let clean = raw.replace(/^\/+/, "");

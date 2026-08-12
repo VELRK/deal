@@ -36,6 +36,8 @@ RewriteRule ^firebase-messaging-sw\.js$ firebase-messaging-sw.php [L]
 RewriteRule ^ilf/frontend/assets/(.*)$ frontend/assets/$1 [R=301,L]
 RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
 RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
+RewriteRule ^deal/assets/(.*)$ /assets/$1 [R=301,L]
+RewriteRule ^deal/(.*)$ /$1 [R=301,L]
 RewriteRule ^shopkart/?$ /admin [R=301,L]
 RewriteRule ^shopkart/(.+)$ /admin/$1 [R=301,L]
 
