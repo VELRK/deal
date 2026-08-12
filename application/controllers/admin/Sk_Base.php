@@ -109,8 +109,22 @@ class Sk_Base extends CI_Controller {
     protected function assert_product_vendor_access(?array $product): void {
         if (!$product) show_404();
         $vid = $this->current_vendor_id();
-        if ($vid && (int)($product['vendor_id'] ?? 0) !== $vid) {
-            show_error('Access denied.', 403);
+        if (!$vid) {
+            return;
+        }
+        $productVendor = (int)($product['vendor_id'] ?? 0);
+        // Unassigned products (vendor_id NULL/0) are editable by scoped vendors —
+        // they were usually created by super-admin before marketplace assignment.
+        if ($productVendor === 0) {
+            return;
+        }
+        if ($productVendor !== $vid) {
+            show_error(
+                'Access denied: this product belongs to another vendor (product vendor_id='
+                . $productVendor . ', your vendor_id=' . $vid
+                . '). Log in as main Admin (not Vendor) or exit vendor impersonation, then try again.',
+                403
+            );
         }
     }
 

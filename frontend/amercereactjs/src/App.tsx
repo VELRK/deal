@@ -390,10 +390,14 @@ const ProductSwatchDropdownColor = lazy(
   () => import("./pages/shop-details/product-swatch-dropdown-color/index"),
 );
 
-const routerBasename =
-  (import.meta.env.VITE_ROUTER_BASENAME as string | undefined)?.replace(/\/$/, "") ||
-  import.meta.env.BASE_URL.replace(/\/$/, "") ||
-  "/";
+// When VITE_ROUTER_BASENAME is set (even "/" for domain root), do not fall back to VITE_BASE (/frontend/).
+const routerBasename = (() => {
+  const fromEnv = import.meta.env.VITE_ROUTER_BASENAME as string | undefined;
+  if (fromEnv !== undefined) {
+    return String(fromEnv).replace(/\/$/, "") || "/";
+  }
+  return import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+})();
 
 function RouteScrollToTop() {
   const location = useLocation();

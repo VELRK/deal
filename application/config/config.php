@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.
 |
 */
-// Auto-detect host + port (works on localhost:80, :8080, and production)
+// Auto-detect host + port (works on localhost, /deal/ legacy, and 2deal.my root)
 if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
     $forwarded = strtolower(trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_PROTO'])[0]));
     if ($forwarded === 'https') {
@@ -33,7 +33,12 @@ if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
 if (!empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'];
-    if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
+    $hostNoPort = strtolower(preg_replace('/:\d+$/', '', $host));
+
+    // Production domain at document root (public_html)
+    if ($hostNoPort === '2deal.my' || $hostNoPort === 'www.2deal.my') {
+        $config['base_url'] = $scheme . '://' . $hostNoPort . '/';
+    } elseif (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal/';
     } else {
         $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');

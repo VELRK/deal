@@ -1,0 +1,35 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+/*
+| Edit these values on the cPanel server, then rename this file to database.php
+| (or copy over application/config/database.php after upload).
+|
+| cPanel → MySQL Databases → create DB + user → All Privileges
+| Example names: cpaneluser_shopkart / cpaneluser_deal
+*/
+
+$active_group = 'default';
+$query_builder = TRUE;
+
+$db['default'] = array(
+	'dsn'	=> '',
+	'hostname' => 'localhost',
+	'username' => 'CHANGE_DB_USER',
+	'password' => 'CHANGE_DB_PASSWORD',
+	'database' => 'CHANGE_DB_NAME',
+	'dbdriver' => 'mysqli',
+	'dbprefix' => '',
+	'pconnect' => FALSE,
+	'db_debug' => FALSE,
+	'cache_on' => FALSE,
+	'cachedir' => '',
+	'char_set' => 'utf8mb4',
+	'dbcollat' => 'utf8mb4_general_ci',
+	'swap_pre' => '',
+	'encrypt' => FALSE,
+	'compress' => FALSE,
+	'stricton' => FALSE,
+	'failover' => array(),
+	'save_queries' => FALSE,
+);
