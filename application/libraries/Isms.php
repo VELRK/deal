@@ -63,11 +63,16 @@ class Isms {
         }
         $cc = $this->country_code;
         if (strpos($digits, $cc) === 0) {
-            return $digits;
+            $mobile = ltrim(substr($digits, strlen($cc)), '0');
+            return $mobile !== '' ? $cc . $mobile : '';
         }
-        // Require local 10-digit form with leading 0 (01XXXXXXXX). Reject bare 9-digit.
+        // Local 10-digit form with leading 0 (01XXXXXXXX)
         if (strpos($digits, '0') === 0) {
             return $cc . substr($digits, 1);
+        }
+        // National number typed beside +60 UI (1XXXXXXXX)
+        if (strlen($digits) === 9 && isset($digits[0]) && $digits[0] === '1') {
+            return $cc . $digits;
         }
         return $digits;
     }

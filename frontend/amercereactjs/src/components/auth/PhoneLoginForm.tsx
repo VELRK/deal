@@ -183,7 +183,7 @@ export default function PhoneLoginForm({
                 type="tel"
                 inputMode="numeric"
                 maxLength={12}
-                placeholder="Enter mobile number"
+                placeholder="12-345 6789"
                 value={formatMalaysiaDisplay(phone)}
                 onChange={(e) => {
                   setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
