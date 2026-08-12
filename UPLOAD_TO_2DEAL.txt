@@ -25,13 +25,14 @@
 
 6) Test
    - https://2deal.my/
-   - https://2deal.my/admin
-   - https://2deal.my/shopkart-api/ (needs auth for most routes)
+   - https://2deal.my/index.php/admin
+   - https://2deal.my/index.php/shopkart-api/site-settings  (JSON OK = API works)
 
 Notes
-- Frontend already built for https://2deal.my (API = /shopkart-api, assets = /frontend/)
-- base_url auto-detects on the server (no localhost /deal path)
-- This package excludes: .git, node_modules, local DB passwords may still be in database.php — REPLACE them on server
+- Host rewrite is off: frontend calls /index.php/shopkart-api (not /shopkart-api)
+- Admin URL: https://2deal.my/index.php/admin
+- base_url + index_page=index.php auto for 2deal.my
+- Replace database.php credentials on server (gitignored locally)
 
 If admin product Save returns HTTP 403
 1) Check the page text: if it says "Access denied: this product belongs to another vendor" → log in as main Admin (not Vendor) / exit vendor mode.

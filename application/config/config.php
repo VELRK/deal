@@ -38,6 +38,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     // Production domain at document root (public_html)
     if ($hostNoPort === '2deal.my' || $hostNoPort === 'www.2deal.my') {
         $config['base_url'] = $scheme . '://' . $hostNoPort . '/';
+        // Host rewrite to strip index.php is not active — keep index.php in URLs
+        $config['index_page'] = 'index.php';
     } elseif (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal/';
     } else {

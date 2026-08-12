@@ -34,15 +34,16 @@ These must sit DIRECTLY in public_html (not inside a nested "deal" folder):
 
 ## Test URLs
 - Store: https://2deal.my/
-- Admin: https://2deal.my/admin
-- API:  https://2deal.my/shopkart-api/site-settings
-- API fallback (if rewrite fails): https://2deal.my/index.php?/shopkart-api/site-settings
+- Admin: https://2deal.my/index.php/admin
+- API:  https://2deal.my/index.php/shopkart-api/site-settings
 
-If `/shopkart-api/*` returns 404, pull latest `server-2deal` (`.htaccess` uses `index.php?/…` for cPanel).
+**Why `/shopkart-api` 404s:** this host does not apply `.htaccess` rewrites for those paths.
+The storefront is built with `VITE_API_BASE_URL=/index.php/shopkart-api` so the browser
+hits PHP directly (verified working). Admin uses `index_page=index.php` on 2deal.my.
 
 ## Local rebuild tip
 ```bash
 cd frontend/amercereactjs
-# .env.production already has VITE_BASE=/frontend/ for root domain
+# .env.production: VITE_BASE=/frontend/ and VITE_API_BASE_URL=/index.php/shopkart-api
 npm run build
 ```
