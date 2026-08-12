@@ -203,9 +203,16 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
 
   function onPickImages(files: FileList | null) {
     if (!files) return;
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedMime = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedExt = ["jpg", "jpeg", "png", "webp", "gif"];
     const picked = Array.from(files);
-    const invalidType = picked.find((f) => !allowed.includes(f.type) && !f.type.startsWith("image/"));
+    const isAllowedImage = (f: File) => {
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      // Prefer extension: Windows/WPS often reports empty or octet-stream for .webp
+      if (allowedExt.includes(ext)) return true;
+      return allowedMime.includes(f.type) || f.type.startsWith("image/");
+    };
+    const invalidType = picked.find((f) => !isAllowedImage(f));
     if (invalidType) {
       setSubmitMsg({ type: "error", text: "Photos must be JPG, PNG, WebP or GIF." });
       return;
@@ -216,7 +223,7 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
       return;
     }
     setSubmitMsg(null);
-    const next = [...images, ...picked.filter((f) => f.type.startsWith("image/"))].slice(0, 5);
+    const next = [...images, ...picked.filter(isAllowedImage)].slice(0, 5);
     setImages(next);
   }
 
@@ -328,7 +335,7 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
                 >
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
                     multiple
                     hidden
                     onChange={(e) => {
