@@ -41,8 +41,8 @@ class Sk_Admin_model extends CI_Model {
     }
 
     /**
-     * Replace legacy ShopKart / India demo contact details with GOLDEN 2 DEAL letterhead
-     * so Admin → Settings shows editable real values and invoices pick them up.
+     * One-time migration of legacy ShopKart / India demo contact details.
+     * After golden_letterhead_seeded=1, never auto-overwrite phone/email/address again.
      */
     private function _ensure_invoice_letterhead(array &$settings): void {
         static $done = false;
@@ -50,6 +50,10 @@ class Sk_Admin_model extends CI_Model {
             return;
         }
         $done = true;
+
+        if (($settings['golden_letterhead_seeded'] ?? '') === '1') {
+            return;
+        }
 
         $defaults = [
             'company_legal_name' => 'GOLDEN 2 DEAL (M) SDN. BHD.',
@@ -60,7 +64,7 @@ class Sk_Admin_model extends CI_Model {
             'site_address'       => "Lot No. 2A/9(B) Anzen Business Park, No 3-9, Jalan 4/37A , Kawasan Industri\nTaman Bukit Maluri, 52100 Kepong Kuala Lumpur.",
         ];
 
-        $patch = [];
+        $patch = ['golden_letterhead_seeded' => '1'];
 
         $legal = trim((string)($settings['company_legal_name'] ?? ''));
         if ($legal === '' || strcasecmp($legal, '2DEAL') === 0 || stripos($legal, 'shopkart') !== false) {
@@ -88,9 +92,6 @@ class Sk_Admin_model extends CI_Model {
             $patch['site_address'] = $defaults['site_address'];
         }
 
-        if ($patch === []) {
-            return;
-        }
         $this->save_settings($patch);
         foreach ($patch as $k => $v) {
             $settings[$k] = $v;
@@ -111,22 +112,15 @@ class Sk_Admin_model extends CI_Model {
 
     private function _is_placeholder_phone(string $phone): bool {
         $digits = preg_replace('/\D+/', '', $phone);
-        // Legacy India demo numbers / empty
-        if ($digits === '' || strpos($digits, '919876543210') !== false || $digits === '9876543210') {
-            return true;
-        }
-        if (strpos($phone, '+91') === 0 || stripos($phone, 'india') !== false) {
-            return true;
-        }
-        return false;
+        // Only known India demo numbers — do not treat real MY phones as placeholders.
+        return $digits === '' || $digits === '9876543210' || $digits === '919876543210';
     }
 
     private function _is_placeholder_address(string $address): bool {
         $a = strtolower($address);
         return $a === ''
             || strpos($a, 'mumbai') !== false
-            || strpos($a, '123 main street') !== false
-            || strpos($a, 'india') !== false;
+            || strpos($a, '123 main street') !== false;
     }
 
     /** Keep currency_symbol as RM across admin + APIs. */
@@ -191,14 +185,31 @@ class Sk_Admin_model extends CI_Model {
 
     public function save_settings($data) {
         $hasGroup = $this->db->field_exists('group', 'settings');
+        $hasUpdated = $this->db->field_exists('updated_at', 'settings');
         foreach ($data as $key => $value) {
             $key = (string) $key;
             $value = is_scalar($value) || $value === null ? (string) $value : json_encode($value);
-            $existing = $this->db->get_where('settings', ['key' => $key], 1)->row_array();
-            if ($existing) {
-                $this->db->where('key', $key)->update('settings', ['value' => $value]);
+
+            // Update by id and remove duplicate keys so phone cannot stick on an old row.
+            $rows = $this->db->where('key', $key)->order_by('id', 'ASC')->get('settings')->result_array();
+            if (!empty($rows)) {
+                $update = ['value' => $value];
+                if ($hasUpdated) {
+                    $update['updated_at'] = date('Y-m-d H:i:s');
+                }
+                $this->db->where('id', (int)$rows[0]['id'])->update('settings', $update);
+                if (count($rows) > 1) {
+                    $dupIds = [];
+                    for ($i = 1; $i < count($rows); $i++) {
+                        $dupIds[] = (int)$rows[$i]['id'];
+                    }
+                    if ($dupIds) {
+                        $this->db->where_in('id', $dupIds)->delete('settings');
+                    }
+                }
                 continue;
             }
+
             $row = ['key' => $key, 'value' => $value];
             if ($hasGroup) {
                 if (strpos($key, 'askeva_') === 0) {
@@ -210,6 +221,9 @@ class Sk_Admin_model extends CI_Model {
                 } else {
                     $row['group'] = 'general';
                 }
+            }
+            if ($hasUpdated) {
+                $row['updated_at'] = date('Y-m-d H:i:s');
             }
             $this->db->insert('settings', $row);
         }

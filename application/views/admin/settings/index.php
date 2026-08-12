@@ -5,6 +5,30 @@
 <form action="<?= site_url('shopkart/settings/update') ?>" method="POST" enctype="multipart/form-data">
   <input type="hidden" name="settings_tab" id="settingsTabInput" value="general">
 
+  <!-- Contact fields first so phone/email always POST (large settings form can drop late fields). -->
+  <div class="card sk-table-card shadow-sm mb-3 border-warning">
+    <div class="card-body py-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="mb-0"><i class="bi bi-telephone me-1 text-warning"></i> Invoice phone / email / address</h6>
+        <span class="text-muted small">Saved with Settings — used on every invoice</span>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label mb-1">Phone</label>
+          <input type="text" name="site_phone" id="site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>" placeholder="03-6242 2232" autocomplete="tel">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1">Email</label>
+          <input type="text" name="site_email" id="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="golden2deal@gmail.com" autocomplete="email">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1">Address</label>
+          <textarea name="site_address" id="site_address" class="form-control" rows="1" placeholder="Company address"><?= htmlspecialchars($settings['site_address'] ?? '') ?></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Nav Tabs -->
   <ul class="nav nav-tabs mb-3" id="settingsTabs">
     <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
@@ -46,8 +70,7 @@
             </div>
             <div class="col-12">
               <div class="alert alert-secondary small mb-0 py-2">
-                Company <strong>phone</strong>, <strong>email</strong> and <strong>address</strong> for invoices are edited under the
-                <a href="#" class="alert-link" data-bs-toggle="tab" data-bs-target="#tab-invoice">Invoice</a> tab.
+                Phone, email and address are edited in the yellow box above this form (always visible).
               </div>
             </div>
             <div class="col-md-6">
@@ -162,7 +185,7 @@
     <div class="tab-pane fade" id="tab-invoice">
       <div class="card sk-table-card shadow-sm">
         <div class="card-body">
-          <p class="text-muted small mb-3">These details appear on every tax invoice. Edit phone, email and address here (or under General) and click Save Settings.</p>
+          <p class="text-muted small mb-3">Company legal name and tax IDs for invoices. Phone / email / address are in the yellow box at the top of this page.</p>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Legal / Company Name</label>
@@ -183,18 +206,6 @@
             <div class="col-md-4">
               <label class="form-label">Invoice Prefix</label>
               <input type="text" name="invoice_prefix" class="form-control" value="<?= htmlspecialchars($settings['invoice_prefix'] ?? 'INV') ?>" maxlength="20">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Invoice Phone</label>
-              <input type="text" name="site_phone" id="invoice_site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>" placeholder="03-6242 2232" autocomplete="tel">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Invoice Email</label>
-              <input type="text" name="site_email" id="invoice_site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="golden2deal@gmail.com" autocomplete="email">
-            </div>
-            <div class="col-12">
-              <label class="form-label">Invoice Address</label>
-              <textarea name="site_address" id="invoice_site_address" class="form-control" rows="3" placeholder="Company address on invoice"><?= htmlspecialchars($settings['site_address'] ?? '') ?></textarea>
             </div>
             <div class="col-12">
               <label class="form-label">Invoice Footer Note</label>

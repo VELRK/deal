@@ -87,12 +87,19 @@ class Settings extends Sk_Base {
             $data['askeva_api_token'] = trim((string) $tokenPosted);
         }
 
-        // Always persist invoice contact fields (text inputs — not type=email, so saves reliably).
+        // Persist phone/email/address from POST (also read raw $_POST in case XSS filter drops value).
         foreach (['site_email', 'site_phone', 'site_address'] as $contactField) {
-            $posted = $this->input->post($contactField, TRUE);
-            if ($posted !== null) {
-                $data[$contactField] = trim((string) $posted);
+            $posted = $this->input->post($contactField, FALSE);
+            if ($posted === null && array_key_exists($contactField, $_POST)) {
+                $posted = $_POST[$contactField];
             }
+            if ($posted !== null) {
+                $data[$contactField] = trim(is_string($posted) ? $posted : (string) $posted);
+            }
+        }
+        // User edited contact — do not let one-time letterhead seed overwrite later.
+        if (isset($data['site_phone']) || isset($data['site_email']) || isset($data['site_address'])) {
+            $data['golden_letterhead_seeded'] = '1';
         }
 
         // logo upload
@@ -111,7 +118,12 @@ class Settings extends Sk_Base {
                 @unlink($file);
             }
         }
-        $this->session->set_flashdata('success', 'Settings saved successfully.');
+        $phoneSaved = trim((string)($data['site_phone'] ?? ''));
+        $msg = 'Settings saved successfully.';
+        if ($phoneSaved !== '') {
+            $msg .= ' Phone: ' . $phoneSaved;
+        }
+        $this->session->set_flashdata('success', $msg);
         $tab = trim((string)$this->input->post('settings_tab'));
         if ($tab !== '' && preg_match('/^[a-z0-9_-]+$/i', $tab)) {
             redirect('shopkart/settings?tab=' . rawurlencode($tab));

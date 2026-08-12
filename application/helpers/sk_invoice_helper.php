@@ -262,8 +262,8 @@ function sk_invoice_seller_from_settings(array $settings): array {
 
     $phone = trim((string)($settings['site_phone'] ?? ''));
     $phoneDigits = preg_replace('/\D+/', '', $phone);
-    if ($phone === '' || strpos($phone, '+91') === 0 || $phoneDigits === '9876543210'
-        || strpos($phoneDigits, '919876543210') !== false) {
+    // Only replace empty / known India demo number — keep any phone the admin saved.
+    if ($phone === '' || $phoneDigits === '9876543210' || $phoneDigits === '919876543210') {
         $phone = $defaults['phone'];
     }
 
