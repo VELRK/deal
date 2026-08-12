@@ -6,7 +6,7 @@ const AboutPage = () => {
   return (
     <>
       <PageMeta
-        title={"About Us | 2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"About Us"}
         description={"Welcome to 2Deal, your one-stop destination for Incense Sticks, Dhoop Sticks, Sambrani Cones, Soaps and Food Products."}
       />
       <PageTitle />

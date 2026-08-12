@@ -5,8 +5,8 @@ const NotFoundPage = () => {
   return (
     <>
       <PageMeta
-        title={"404 | 2Deal - Incense Sticks, Soaps & Food Products Store"}
-        description={"2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"404"}
+        description={"Shop incense, soaps, and food products online."}
       />
       <Section404 />
     </>

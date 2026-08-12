@@ -6,8 +6,8 @@ const AccountOrdersPage = () => {
   return (
     <>
       <PageMeta
-        title={"Your Orders | 2Deal - Incense Sticks, Soaps & Food Products Store"}
-        description={"2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"Your Orders"}
+        description={"Shop incense, soaps, and food products online."}
       />
       <AccountPageTitle />
       <AccountOrders />

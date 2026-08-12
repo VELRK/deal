@@ -16,13 +16,23 @@ import Features from "@/components/homes/home-fashion-2/Features";
 import ServicesBanner from "@/components/homes/home-fashion-2/ServicesBanner";
 import AppDownload from "@/components/homes/home-fashion-2/AppDownload";
 import { useSeoPage, useSiteSettings } from "@/hooks/useApi";
+import { isLegacyMarketingTitle } from "@/lib/siteBrand";
 
 export default function HomeFashion2Page() {
   const { settings } = useSiteSettings();
   const seoPage = useSeoPage("home");
-  const siteName = settings?.site_name ?? "2DEAL";
-  const title = seoPage?.meta_title || settings?.meta_title || `${siteName} - Incense Sticks, Soaps & Food Products`;
-  const description = seoPage?.meta_description || settings?.meta_description || settings?.meta_desc || `Shop Incense Sticks, Dhoop Sticks, Sambrani Cones, Soaps and Food Products at ${siteName}.`;
+  const siteName = settings?.site_name?.trim() || "2Deal";
+
+  const seoTitle = (seoPage?.meta_title || settings?.meta_title || "").trim();
+  // Prefer admin site_name; ignore stale SEO titles like “Incense Sticks…”
+  const title =
+    seoTitle && !isLegacyMarketingTitle(seoTitle) ? seoTitle : siteName;
+
+  const description =
+    seoPage?.meta_description ||
+    settings?.meta_description ||
+    settings?.meta_desc ||
+    `Shop online at ${siteName}.`;
 
   return (
     <div style={{ overflowX: "hidden", width: "100%", maxWidth: "100vw" }}>

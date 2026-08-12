@@ -1,5 +1,10 @@
 import { useEffect } from "react";
 import { useSiteSettings } from "@/hooks/useApi";
+import {
+  formatDocumentTitle,
+  isLegacyMarketingTitle,
+  setLiveSiteName,
+} from "@/lib/siteBrand";
 
 const INJECTED_ATTR = "data-sk-dynamic-script";
 
@@ -11,6 +16,9 @@ function injectScripts(html: string, target: "head" | "body") {
   nodes.forEach((node) => {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as HTMLElement;
+    // Never let admin head HTML overwrite the React-managed tab title
+    if (el.tagName === "TITLE") return;
+
     if (el.tagName === "SCRIPT") {
       const script = document.createElement("script");
       script.setAttribute(INJECTED_ATTR, "1");
@@ -33,8 +41,16 @@ export default function SiteScripts() {
 
     if (!settings) return;
 
+    setLiveSiteName(settings.site_name);
+
     injectScripts(settings.head_scripts ?? "", "head");
     injectScripts(settings.footer_scripts ?? "", "body");
+
+    // If a script still forced a stale title, restore branded title
+    const brand = settings.site_name?.trim();
+    if (brand && isLegacyMarketingTitle(document.title)) {
+      document.title = formatDocumentTitle(document.title, brand);
+    }
 
     const gaId = settings.google_analytics?.trim();
     if (gaId && !document.querySelector(`script[data-ga-id="${gaId}"]`)) {
@@ -48,19 +64,6 @@ export default function SiteScripts() {
       inline.setAttribute("data-ga-id", gaId);
       inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`;
       document.head.appendChild(inline);
-    }
-
-    const siteName = settings.site_name?.trim();
-    if (siteName) {
-      const current = document.title?.trim() || "";
-      if (
-        !current ||
-        /^2Deal Online Store$/i.test(current) ||
-        /^2Deal$/i.test(current) ||
-        /^2DEAL$/i.test(current)
-      ) {
-        document.title = siteName;
-      }
     }
   }, [settings]);
 

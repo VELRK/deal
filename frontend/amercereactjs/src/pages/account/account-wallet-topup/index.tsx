@@ -6,8 +6,8 @@ const AccountWalletTopupPage = () => {
   return (
     <>
       <PageMeta
-        title={"Top Up Wallet | 2Deal - Incense Sticks, Soaps & Food Products Store"}
-        description={"2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"Top Up Wallet"}
+        description={"Shop incense, soaps, and food products online."}
       />
       <AccountPageTitle />
       <AccountWalletTopup />

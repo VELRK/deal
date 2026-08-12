@@ -6,7 +6,7 @@ const AccountRoyaltyPage = () => {
   return (
     <>
       <PageMeta
-        title={"Royalty Points | 2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"Royalty Points"}
         description={"View and track your royalty points separately from wallet balance."}
       />
       <AccountPageTitle />

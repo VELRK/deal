@@ -5,8 +5,8 @@ const InvoicePage = () => {
   return (
     <>
       <PageMeta
-        title={"Invoice | 2Deal - Incense Sticks, Soaps & Food Products Store"}
-        description={"2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"Invoice"}
+        description={"Shop incense, soaps, and food products online."}
       />
       <InvoiceContent />
     </>

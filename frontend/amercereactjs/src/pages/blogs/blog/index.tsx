@@ -6,8 +6,8 @@ const BlogPage = () => {
   return (
     <>
       <PageMeta
-        title={"Blog | 2Deal - Incense Sticks, Soaps & Food Products Store"}
-        description={"2Deal - Incense Sticks, Soaps & Food Products Store"}
+        title={"Blog"}
+        description={"Shop incense, soaps, and food products online."}
       />
       <PageTitle />
       <Blog />

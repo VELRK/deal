@@ -1,5 +1,6 @@
 import { useLayoutEffect } from "react";
 import { useSiteSettings } from "@/hooks/useApi";
+import { formatDocumentTitle, setLiveSiteName } from "@/lib/siteBrand";
 
 export type PageMetaProps = {
   title: string;
@@ -39,25 +40,9 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
-/** Ensure the browser tab title ends with the live site name from admin settings. */
-function withSiteBrand(title: string, siteName: string): string {
-  const brand = (siteName || "2Deal").trim() || "2Deal";
-  const cleaned = title
-    .replace(/\s*\|\s*2Deal\s*-\s*Incense Sticks[^|]*/gi, "")
-    .replace(/\s*\|\s*2Deal Online Store\s*$/gi, "")
-    .replace(/\s*\|\s*2DEAL\s*$/gi, "")
-    .replace(/\s*\|\s*2Deal\s*$/gi, "")
-    .trim();
-  const base = cleaned || brand;
-  if (base.toLowerCase() === brand.toLowerCase()) return brand;
-  if (new RegExp(`\\|\\s*${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i").test(base)) {
-    return base;
-  }
-  return `${base} | ${brand}`;
-}
-
 /**
  * Sets document.title and SEO / social tags dynamically per page.
+ * Always ends with admin site_name once settings are loaded.
  */
 export default function PageMeta({
   title,
@@ -68,11 +53,24 @@ export default function PageMeta({
   robots = "index,follow",
   ogType = "website",
 }: PageMetaProps) {
-  const { settings } = useSiteSettings();
-  const siteName = settings?.site_name?.trim() || "2Deal";
-  const finalTitle = withSiteBrand(title, siteName);
+  const { settings, loading: settingsLoading } = useSiteSettings();
+  const siteName = settings?.site_name?.trim() || "";
 
   useLayoutEffect(() => {
+    if (siteName) setLiveSiteName(siteName);
+  }, [siteName]);
+
+  // Wait for settings so we don't flash a wrong brand, then lock the real title
+  const brandReady = !settingsLoading;
+  const finalTitle = brandReady
+    ? formatDocumentTitle(title, siteName || "2Deal")
+    : formatDocumentTitle(title, siteName || undefined);
+
+  useLayoutEffect(() => {
+    if (!brandReady && !siteName) {
+      // Keep index.html / previous title until we know the real site name
+      return;
+    }
     document.title = finalTitle;
     upsertHeadMeta("name", "description", description);
     if (keywords) upsertHeadMeta("name", "keywords", keywords);
@@ -86,7 +84,7 @@ export default function PageMeta({
     upsertHeadMeta("name", "twitter:description", description);
     if (image) upsertHeadMeta("name", "twitter:image", image);
     if (canonical) upsertLink("canonical", canonical);
-  }, [finalTitle, description, keywords, image, canonical, robots, ogType]);
+  }, [brandReady, siteName, finalTitle, description, keywords, image, canonical, robots, ogType]);
 
   return null;
 }
