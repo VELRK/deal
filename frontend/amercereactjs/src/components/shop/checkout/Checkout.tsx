@@ -1312,10 +1312,24 @@ const CheckoutOrderItemPremium = memo(function CheckoutOrderItemPremium({ item, 
         </div>
 
         <div className="d-flex justify-content-between align-items-center mt-auto">
-          <div className="qty-control">
-            <button type="button" className="qty-btn" onClick={() => onQtyChange(item.quantity - 1)}>−</button>
-            <input className="qty-input" readOnly value={item.quantity} />
-            <button type="button" className="qty-btn" onClick={() => onQtyChange(item.quantity + 1)}>+</button>
+          <div className="qty-control-wrapper d-flex flex-column">
+            <div className="qty-control">
+              <button type="button" className="qty-btn" onClick={() => onQtyChange(item.quantity - 1)}>−</button>
+              <input className="qty-input" readOnly value={item.quantity} />
+              <button 
+                type="button" 
+                className="qty-btn" 
+                onClick={() => {
+                  if (item.stock !== undefined && item.quantity >= item.stock) return;
+                  onQtyChange(item.quantity + 1);
+                }}
+                disabled={item.stock !== undefined && item.quantity >= item.stock}
+                style={item.stock !== undefined && item.quantity >= item.stock ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+              >+</button>
+            </div>
+            {item.stock !== undefined && item.quantity >= item.stock && (
+              <span className="text-danger mt-1" style={{ fontSize: "10px", lineHeight: "1" }}>Max stock reached</span>
+            )}
           </div>
           <div className="order-item-price">
             {formatPrice(item.price * item.quantity)}

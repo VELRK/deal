@@ -39,7 +39,6 @@ export const footerCustomerLinks: FooterLinkGroup = {
 export const footerAccountLinksModal: FooterLinkGroup = {
   title: "MY ACCOUNT",
   links: [
-    { label: "My Account", href: "/login" },
     { label: "My Account", href: "/account-page" },
     { label: "Wish List", href: "/wishlist" },
   ],
@@ -49,7 +48,6 @@ export const footerAccountLinksModal: FooterLinkGroup = {
 export const footerAccountLinksPage: FooterLinkGroup = {
   title: "MY ACCOUNT",
   links: [
-    { label: "My Account", href: "/login" },
     { label: "My Account", href: "/account-page" },
     { label: "My Orders", href: "/account-orders" },
     { label: "Wish List", href: "/wishlist" },
