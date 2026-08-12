@@ -2,7 +2,7 @@
   <h5 class="sk-page-title"><i class="bi bi-gear me-2 text-warning"></i>Settings</h5>
 </div>
 
-<form action="<?= site_url('shopkart/settings/update') ?>" method="POST" enctype="multipart/form-data">
+<form action="<?= site_url('admin/settings/update') ?>" method="POST" enctype="multipart/form-data">
   <input type="hidden" name="settings_tab" id="settingsTabInput" value="general">
 
   <!-- Contact fields first so phone/email always POST (large settings form can drop late fields). -->

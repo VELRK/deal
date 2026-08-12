@@ -38,6 +38,13 @@ RewriteRule ^ilf/assets/(.*)$ assets/$1 [R=301,L]
 RewriteRule ^ecomm/(.*)$ $1 [R=301,L]
 RewriteRule ^deal/assets/(.*)$ /assets/$1 [R=301,L]
 RewriteRule ^deal/(.*)$ /$1 [R=301,L]
+# Legacy /shopkart/... URLs
+# POST must NOT use external 301 (browsers turn POST→GET and drop the body → "settings not saved").
+RewriteCond %{REQUEST_METHOD} !^(GET|HEAD)$ [NC]
+RewriteRule ^shopkart/?$ index.php?/admin [L,QSA]
+RewriteCond %{REQUEST_METHOD} !^(GET|HEAD)$ [NC]
+RewriteRule ^shopkart/(.+)$ index.php?/admin/$1 [L,QSA]
+# GET: send browsers to /admin/...
 RewriteRule ^shopkart/?$ /admin [R=301,L]
 RewriteRule ^shopkart/(.+)$ /admin/$1 [R=301,L]
 

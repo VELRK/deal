@@ -18,6 +18,10 @@ class Settings extends Sk_Base {
     }
 
     public function update() {
+        if (strtoupper((string)$this->input->server('REQUEST_METHOD')) !== 'POST') {
+            redirect('admin/settings');
+            return;
+        }
         $this->load->helper(['sk_isms', 'sk_whatsapp']);
         sk_whatsapp_ensure_settings();
         $fields = [
@@ -126,10 +130,10 @@ class Settings extends Sk_Base {
         $this->session->set_flashdata('success', $msg);
         $tab = trim((string)$this->input->post('settings_tab'));
         if ($tab !== '' && preg_match('/^[a-z0-9_-]+$/i', $tab)) {
-            redirect('shopkart/settings?tab=' . rawurlencode($tab));
+            redirect('admin/settings?tab=' . rawurlencode($tab));
             return;
         }
-        redirect('shopkart/settings');
+        redirect('admin/settings');
     }
 
     public function test_isms() {
