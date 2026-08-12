@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteBase /
 
 # Pass Authorization to PHP (Apache often strips it otherwise → JWT/royalty fail)
 RewriteCond %{HTTP:Authorization} .
@@ -13,7 +14,7 @@ RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
 # Return 200 immediately for preflight OPTIONS requests
 RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
+RewriteRule ^ - [R=200,L]
 
 # Allow direct access to uploads directory and all files in it
 RewriteCond %{REQUEST_FILENAME} -f
@@ -52,24 +53,27 @@ RewriteRule ^shopkart/(.+)$ admin/$1 [L]
 # Serve static dirs directly (no CodeIgniter, no SPA fallback)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
 
-# Route PHP API (shopkart-api) to CodeIgniter
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^shopkart-api/(.*)$ index.php/shopkart-api/$1 [L]
+# ── CodeIgniter routes (cPanel-safe: index.php?/path — NOT index.php/path) ──
+# Shared hosting often disables AcceptPathInfo, so PATH_INFO rewrites 404.
 
-# Admin panel at /deal/admin
-RewriteRule ^admin/?$ index.php/admin [L]
+# API
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^admin/(.+)$ index.php/admin/$1 [L]
+RewriteRule ^shopkart-api(?:/(.*))?$ index.php?/shopkart-api/$1 [L,QSA]
 
-# Public signed invoice (email view / PDF download) → CodeIgniter
+# Admin
+RewriteRule ^admin/?$ index.php?/admin [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^invoice/(.+)$ index.php/invoice/$1 [L]
+RewriteRule ^admin/(.+)$ index.php?/admin/$1 [L,QSA]
+
+# Public signed invoice
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^invoice/(.+)$ index.php?/invoice/$1 [L,QSA]
 
 # Route root and all SPA paths to the React frontend
 RewriteRule ^$ frontend/index.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(?!shopkart-api|shopkart|admin|invoice|uploads).*$ frontend/index.html [L]
+RewriteRule ^(?!shopkart-api|shopkart|admin|invoice|uploads|index\.php).*$ frontend/index.html [L]

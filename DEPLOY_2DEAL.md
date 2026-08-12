@@ -35,7 +35,10 @@ These must sit DIRECTLY in public_html (not inside a nested "deal" folder):
 ## Test URLs
 - Store: https://2deal.my/
 - Admin: https://2deal.my/admin
-- API:  https://2deal.my/shopkart-api/
+- API:  https://2deal.my/shopkart-api/site-settings
+- API fallback (if rewrite fails): https://2deal.my/index.php?/shopkart-api/site-settings
+
+If `/shopkart-api/*` returns 404, pull latest `server-2deal` (`.htaccess` uses `index.php?/…` for cPanel).
 
 ## Local rebuild tip
 ```bash
