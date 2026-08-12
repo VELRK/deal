@@ -87,6 +87,14 @@ class Settings extends Sk_Base {
             $data['askeva_api_token'] = trim((string) $tokenPosted);
         }
 
+        // Always persist invoice contact fields (text inputs — not type=email, so saves reliably).
+        foreach (['site_email', 'site_phone', 'site_address'] as $contactField) {
+            $posted = $this->input->post($contactField, TRUE);
+            if ($posted !== null) {
+                $data[$contactField] = trim((string) $posted);
+            }
+        }
+
         // logo upload
         $logo = $this->upload_file('site_logo', 'settings');
         if ($logo) $data['site_logo'] = $logo;

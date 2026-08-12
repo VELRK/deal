@@ -36,7 +36,97 @@ class Sk_Admin_model extends CI_Model {
         }
         $this->_ensure_brand_name($settings);
         $this->_ensure_currency_symbol($settings);
+        $this->_ensure_invoice_letterhead($settings);
         return $settings;
+    }
+
+    /**
+     * Replace legacy ShopKart / India demo contact details with GOLDEN 2 DEAL letterhead
+     * so Admin → Settings shows editable real values and invoices pick them up.
+     */
+    private function _ensure_invoice_letterhead(array &$settings): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+
+        $defaults = [
+            'company_legal_name' => 'GOLDEN 2 DEAL (M) SDN. BHD.',
+            'gstin'              => '202101029427',
+            'pan_no'             => '1429727-A',
+            'site_email'         => 'golden2deal@gmail.com',
+            'site_phone'         => '03-6242 2232',
+            'site_address'       => "Lot No. 2A/9(B) Anzen Business Park, No 3-9, Jalan 4/37A , Kawasan Industri\nTaman Bukit Maluri, 52100 Kepong Kuala Lumpur.",
+        ];
+
+        $patch = [];
+
+        $legal = trim((string)($settings['company_legal_name'] ?? ''));
+        if ($legal === '' || strcasecmp($legal, '2DEAL') === 0 || stripos($legal, 'shopkart') !== false) {
+            $patch['company_legal_name'] = $defaults['company_legal_name'];
+        }
+
+        foreach (['gstin', 'pan_no'] as $k) {
+            if (trim((string)($settings[$k] ?? '')) === '') {
+                $patch[$k] = $defaults[$k];
+            }
+        }
+
+        $email = strtolower(trim((string)($settings['site_email'] ?? '')));
+        if ($email === '' || $this->_is_placeholder_email($email)) {
+            $patch['site_email'] = $defaults['site_email'];
+        }
+
+        $phone = trim((string)($settings['site_phone'] ?? ''));
+        if ($phone === '' || $this->_is_placeholder_phone($phone)) {
+            $patch['site_phone'] = $defaults['site_phone'];
+        }
+
+        $address = trim((string)($settings['site_address'] ?? ''));
+        if ($address === '' || $this->_is_placeholder_address($address)) {
+            $patch['site_address'] = $defaults['site_address'];
+        }
+
+        if ($patch === []) {
+            return;
+        }
+        $this->save_settings($patch);
+        foreach ($patch as $k => $v) {
+            $settings[$k] = $v;
+        }
+    }
+
+    private function _is_placeholder_email(string $email): bool {
+        if ($email === '') {
+            return true;
+        }
+        foreach (['shopkart.com', 'shopkart.app', 'example.com', 'example.org', 'test.com'] as $domain) {
+            if (substr($email, -strlen('@' . $domain)) === '@' . $domain) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function _is_placeholder_phone(string $phone): bool {
+        $digits = preg_replace('/\D+/', '', $phone);
+        // Legacy India demo numbers / empty
+        if ($digits === '' || strpos($digits, '919876543210') !== false || $digits === '9876543210') {
+            return true;
+        }
+        if (strpos($phone, '+91') === 0 || stripos($phone, 'india') !== false) {
+            return true;
+        }
+        return false;
+    }
+
+    private function _is_placeholder_address(string $address): bool {
+        $a = strtolower($address);
+        return $a === ''
+            || strpos($a, 'mumbai') !== false
+            || strpos($a, '123 main street') !== false
+            || strpos($a, 'india') !== false;
     }
 
     /** Keep currency_symbol as RM across admin + APIs. */

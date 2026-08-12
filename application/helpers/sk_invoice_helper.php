@@ -249,8 +249,29 @@ function sk_invoice_seller_from_settings(array $settings): array {
     if ($name === '') {
         $name = trim((string)($settings['site_name'] ?? ''));
     }
-    if ($name === '' || strcasecmp($name, '2DEAL') === 0 || strcasecmp($name, 'Default Store') === 0) {
+    if ($name === '' || strcasecmp($name, '2DEAL') === 0 || strcasecmp($name, 'Default Store') === 0
+        || stripos($name, 'shopkart') !== false) {
         $name = $defaults['name'];
+    }
+
+    $email = trim((string)($settings['site_email'] ?? ''));
+    $emailLower = strtolower($email);
+    if ($email === '' || preg_match('/@(shopkart\.(com|app)|example\.(com|org)|test\.com)$/', $emailLower)) {
+        $email = $defaults['email'];
+    }
+
+    $phone = trim((string)($settings['site_phone'] ?? ''));
+    $phoneDigits = preg_replace('/\D+/', '', $phone);
+    if ($phone === '' || strpos($phone, '+91') === 0 || $phoneDigits === '9876543210'
+        || strpos($phoneDigits, '919876543210') !== false) {
+        $phone = $defaults['phone'];
+    }
+
+    $address = trim((string)($settings['site_address'] ?? ''));
+    $addressLower = strtolower($address);
+    if ($address === '' || strpos($addressLower, 'mumbai') !== false
+        || strpos($addressLower, '123 main street') !== false) {
+        $address = $defaults['address'];
     }
 
     $logo = sk_invoice_logo_paths($settings['site_logo'] ?? null);
@@ -264,9 +285,9 @@ function sk_invoice_seller_from_settings(array $settings): array {
         'pan'             => $pan,
         'registration'    => $registration,
         'state_code'      => $settings['state_code'] ?? '',
-        'email'           => trim((string)($settings['site_email'] ?? '')) ?: $defaults['email'],
-        'phone'           => trim((string)($settings['site_phone'] ?? '')) ?: $defaults['phone'],
-        'address'         => trim((string)($settings['site_address'] ?? '')) ?: $defaults['address'],
+        'email'           => $email,
+        'phone'           => $phone,
+        'address'         => $address,
         'invoice_prefix'  => $settings['invoice_prefix'] ?? 'INV',
         'invoice_footer'  => $settings['invoice_footer'] ?? 'Thank you for your business.',
         'source'          => 'platform',
@@ -806,6 +827,14 @@ function sk_invoice_ensure_vendor_schema(): void {
         if (!$CI->db->field_exists($col, 'vendor_stores')) {
             $CI->db->query("ALTER TABLE `vendor_stores` ADD COLUMN `{$col}` {$def}");
         }
+    }
+
+    // Contact phone was VARCHAR(20) — too short for formatted numbers like "03-6242 2232".
+    if ($CI->db->field_exists('contact_phone', 'vendor_stores')) {
+        $CI->db->query('ALTER TABLE `vendor_stores` MODIFY COLUMN `contact_phone` VARCHAR(50) DEFAULT NULL');
+    }
+    if ($CI->db->field_exists('contact_email', 'vendor_stores')) {
+        $CI->db->query('ALTER TABLE `vendor_stores` MODIFY COLUMN `contact_email` VARCHAR(190) DEFAULT NULL');
     }
 
     if (!$CI->db->field_exists('invoice_emailed_at', 'orders')) {

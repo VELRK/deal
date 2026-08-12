@@ -29,15 +29,6 @@
               <input type="text" name="site_name" class="form-control" value="<?= htmlspecialchars($settings['site_name'] ?? '2DEAL') ?>">
             </div>
             <div class="col-md-6">
-              <label class="form-label">Site Email</label>
-              <input type="email" name="site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="golden2deal@gmail.com">
-              <div class="form-text">Used on invoices and email. Prefer a real mailbox on your domain for SMTP.</div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Phone</label>
-              <input type="text" name="site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>" placeholder="03-6242 2232">
-            </div>
-            <div class="col-md-6">
               <label class="form-label">Currency Symbol</label>
               <input type="text" name="currency_symbol" class="form-control" value="<?= htmlspecialchars($settings['currency_symbol'] ?? 'RM') ?>">
             </div>
@@ -54,8 +45,10 @@
               <input type="number" name="free_shipping_above" class="form-control" value="<?= $settings['free_shipping_above'] ?? '999' ?>">
             </div>
             <div class="col-12">
-              <label class="form-label">Address</label>
-              <textarea name="site_address" class="form-control" rows="2"><?= htmlspecialchars($settings['site_address'] ?? '') ?></textarea>
+              <div class="alert alert-secondary small mb-0 py-2">
+                Company <strong>phone</strong>, <strong>email</strong> and <strong>address</strong> for invoices are edited under the
+                <a href="#" class="alert-link" data-bs-toggle="tab" data-bs-target="#tab-invoice">Invoice</a> tab.
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Site Logo</label>
@@ -169,7 +162,7 @@
     <div class="tab-pane fade" id="tab-invoice">
       <div class="card sk-table-card shadow-sm">
         <div class="card-body">
-          <p class="text-muted small mb-3">These details appear on tax invoices when an order contains products from multiple vendors or platform-owned products. Vendors can set their own invoice details under <strong>Store Settings</strong>.</p>
+          <p class="text-muted small mb-3">These details appear on every tax invoice. Edit phone, email and address here (or under General) and click Save Settings.</p>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Legal / Company Name</label>
@@ -185,11 +178,23 @@
             </div>
             <div class="col-md-4">
               <label class="form-label">State Code</label>
-              <input type="text" name="state_code" class="form-control" value="<?= htmlspecialchars($settings['state_code'] ?? '') ?>" placeholder="e.g. TN, KA">
+              <input type="text" name="state_code" class="form-control" value="<?= htmlspecialchars($settings['state_code'] ?? '') ?>" placeholder="e.g. WP">
             </div>
             <div class="col-md-4">
               <label class="form-label">Invoice Prefix</label>
               <input type="text" name="invoice_prefix" class="form-control" value="<?= htmlspecialchars($settings['invoice_prefix'] ?? 'INV') ?>" maxlength="20">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Invoice Phone</label>
+              <input type="text" name="site_phone" id="invoice_site_phone" class="form-control" value="<?= htmlspecialchars($settings['site_phone'] ?? '') ?>" placeholder="03-6242 2232" autocomplete="tel">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Invoice Email</label>
+              <input type="text" name="site_email" id="invoice_site_email" class="form-control" value="<?= htmlspecialchars($settings['site_email'] ?? '') ?>" placeholder="golden2deal@gmail.com" autocomplete="email">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Invoice Address</label>
+              <textarea name="site_address" id="invoice_site_address" class="form-control" rows="3" placeholder="Company address on invoice"><?= htmlspecialchars($settings['site_address'] ?? '') ?></textarea>
             </div>
             <div class="col-12">
               <label class="form-label">Invoice Footer Note</label>
