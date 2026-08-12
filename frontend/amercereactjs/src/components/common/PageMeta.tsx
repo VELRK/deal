@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSiteSettings } from "@/hooks/useApi";
 import { formatDocumentTitle, setLiveSiteName } from "@/lib/siteBrand";
 
@@ -41,8 +41,7 @@ function upsertLink(rel: string, href: string) {
 }
 
 /**
- * Sets document.title and SEO / social tags dynamically per page.
- * Always ends with admin site_name once settings are loaded.
+ * Sets document.title from admin site_name and locks it against late SEO/script overwrites.
  */
 export default function PageMeta({
   title,
@@ -55,23 +54,22 @@ export default function PageMeta({
 }: PageMetaProps) {
   const { settings, loading: settingsLoading } = useSiteSettings();
   const siteName = settings?.site_name?.trim() || "";
+  const desiredRef = useRef("");
 
   useLayoutEffect(() => {
     if (siteName) setLiveSiteName(siteName);
   }, [siteName]);
 
-  // Wait for settings so we don't flash a wrong brand, then lock the real title
-  const brandReady = !settingsLoading;
-  const finalTitle = brandReady
-    ? formatDocumentTitle(title, siteName || "2Deal")
-    : formatDocumentTitle(title, siteName || undefined);
+  // Do not commit a final title until settings have resolved (avoids wrong brand flash)
+  const brand = siteName || (!settingsLoading ? "2Deal" : "");
+  const finalTitle = brand ? formatDocumentTitle(title, brand) : "";
 
   useLayoutEffect(() => {
-    if (!brandReady && !siteName) {
-      // Keep index.html / previous title until we know the real site name
-      return;
-    }
+    if (!finalTitle) return;
+
+    desiredRef.current = finalTitle;
     document.title = finalTitle;
+
     upsertHeadMeta("name", "description", description);
     if (keywords) upsertHeadMeta("name", "keywords", keywords);
     if (robots) upsertHeadMeta("name", "robots", robots);
@@ -84,7 +82,36 @@ export default function PageMeta({
     upsertHeadMeta("name", "twitter:description", description);
     if (image) upsertHeadMeta("name", "twitter:image", image);
     if (canonical) upsertLink("canonical", canonical);
-  }, [brandReady, siteName, finalTitle, description, keywords, image, canonical, robots, ogType]);
+  }, [finalTitle, description, keywords, image, canonical, robots, ogType]);
+
+  // Re-assert if SEO scripts / injected head HTML change <title> after load
+  useEffect(() => {
+    if (!finalTitle) return;
+
+    const apply = () => {
+      if (desiredRef.current && document.title !== desiredRef.current) {
+        document.title = desiredRef.current;
+      }
+    };
+
+    apply();
+    const titleEl = document.querySelector("title");
+    const obs = new MutationObserver(apply);
+    if (titleEl) {
+      obs.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    }
+    // Also catch document.title assignments that replace the <title> node
+    obs.observe(document.head, { childList: true, subtree: true });
+
+    const interval = window.setInterval(apply, 500);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 8000);
+
+    return () => {
+      obs.disconnect();
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
+    };
+  }, [finalTitle]);
 
   return null;
 }

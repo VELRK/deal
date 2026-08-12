@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { useSiteSettings } from "@/hooks/useApi";
-import {
-  formatDocumentTitle,
-  isLegacyMarketingTitle,
-  setLiveSiteName,
-} from "@/lib/siteBrand";
+import { setLiveSiteName } from "@/lib/siteBrand";
 
 const INJECTED_ATTR = "data-sk-dynamic-script";
 
@@ -45,12 +41,6 @@ export default function SiteScripts() {
 
     injectScripts(settings.head_scripts ?? "", "head");
     injectScripts(settings.footer_scripts ?? "", "body");
-
-    // If a script still forced a stale title, restore branded title
-    const brand = settings.site_name?.trim();
-    if (brand && isLegacyMarketingTitle(document.title)) {
-      document.title = formatDocumentTitle(document.title, brand);
-    }
 
     const gaId = settings.google_analytics?.trim();
     if (gaId && !document.querySelector(`script[data-ga-id="${gaId}"]`)) {

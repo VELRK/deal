@@ -16,17 +16,14 @@ import Features from "@/components/homes/home-fashion-2/Features";
 import ServicesBanner from "@/components/homes/home-fashion-2/ServicesBanner";
 import AppDownload from "@/components/homes/home-fashion-2/AppDownload";
 import { useSeoPage, useSiteSettings } from "@/hooks/useApi";
-import { isLegacyMarketingTitle } from "@/lib/siteBrand";
 
 export default function HomeFashion2Page() {
-  const { settings } = useSiteSettings();
+  const { settings, loading: settingsLoading } = useSiteSettings();
   const seoPage = useSeoPage("home");
   const siteName = settings?.site_name?.trim() || "2Deal";
 
-  const seoTitle = (seoPage?.meta_title || settings?.meta_title || "").trim();
-  // Prefer admin site_name; ignore stale SEO titles like “Incense Sticks…”
-  const title =
-    seoTitle && !isLegacyMarketingTitle(seoTitle) ? seoTitle : siteName;
+  // Browser tab = admin site_name only (SEO meta_title often still has old incense copy)
+  const title = settingsLoading && !settings?.site_name ? "2Deal" : siteName;
 
   const description =
     seoPage?.meta_description ||

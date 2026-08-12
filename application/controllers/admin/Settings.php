@@ -95,6 +95,14 @@ class Settings extends Sk_Base {
         if ($og) $data['seo_og_image'] = $og;
 
         $this->Sk_Admin_model->save_settings($data);
+        // Bust storefront settings/SEO API cache so site_name updates immediately
+        $cacheDir = APPPATH . 'cache/api/';
+        foreach (['site_settings', 'seo_global'] as $cacheKey) {
+            $file = $cacheDir . preg_replace('/[^a-z0-9_-]/', '_', strtolower($cacheKey)) . '.json';
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
         $this->session->set_flashdata('success', 'Settings saved successfully.');
         $tab = trim((string)$this->input->post('settings_tab'));
         if ($tab !== '' && preg_match('/^[a-z0-9_-]+$/i', $tab)) {
