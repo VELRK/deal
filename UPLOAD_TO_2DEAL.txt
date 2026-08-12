@@ -12,21 +12,29 @@
      OR rename application/config/database.php.server → database.php
      and fill CHANGE_DB_USER / CHANGE_DB_PASSWORD / CHANGE_DB_NAME
 
-3) Folders permissions (File Manager)
+3) Product / media images (REQUIRED — git clone does not always have latest uploads)
+   - Copy the FULL folder from your old server / local XAMPP into public_html:
+       assets/uploads/
+   - Especially: assets/uploads/products/
+   - Without this, the store loads but product photos 404
+
+4) Folders permissions (File Manager)
+   - assets/uploads/         → 755 or 775
    - uploads/                → 755 or 775
    - application/cache/      → 755 or 775
    - application/logs/       → 755 or 775
 
-4) PHP
+5) PHP
    - MultiPHP: 8.0+ with mysqli, mbstring, curl, openssl, gd/fileinfo
 
-5) SSL
+6) SSL
    - AutoSSL for 2deal.my + Force HTTPS
 
-6) Test
+7) Test
    - https://2deal.my/
    - https://2deal.my/index.php/admin
    - https://2deal.my/index.php/shopkart-api/site-settings  (JSON OK = API works)
+   - Open any product thumbnail URL like /assets/uploads/products/... (must be 200, not 404)
 
 Notes
 - Host rewrite is off: frontend calls /index.php/shopkart-api (not /shopkart-api)

@@ -29,21 +29,17 @@ These must sit DIRECTLY in public_html (not inside a nested "deal" folder):
 ## After checkout
 1. Create `application/config/database.php` from `database.php.server` / example — set cPanel DB user/pass/name
 2. Import MySQL dump in phpMyAdmin
-3. chmod 755 (or 775) on: uploads/, application/cache/, application/logs/
-4. Enable SSL for 2deal.my
+3. **Upload media folder** `assets/uploads/` from old server / XAMPP (product photos are NOT always in git)
+4. chmod 755 (or 775) on: assets/uploads/, uploads/, application/cache/, application/logs/
+5. Enable SSL for 2deal.my
 
 ## Test URLs
 - Store: https://2deal.my/
 - Admin: https://2deal.my/index.php/admin
 - API:  https://2deal.my/index.php/shopkart-api/site-settings
+- Sample image: https://2deal.my/assets/uploads/products/<filename>  (must return 200)
 
-**Why `/shopkart-api` 404s:** this host does not apply `.htaccess` rewrites for those paths.
-The storefront is built with `VITE_API_BASE_URL=/index.php/shopkart-api` so the browser
-hits PHP directly (verified working). Admin uses `index_page=index.php` on 2deal.my.
+**Why product images 404:** DB has paths like `assets/uploads/products/….jpg` but the files
+were never copied to public_html. Fix by uploading `assets/uploads/` (File Manager or FTP).
 
-## Local rebuild tip
-```bash
-cd frontend/amercereactjs
-# .env.production: VITE_BASE=/frontend/ and VITE_API_BASE_URL=/index.php/shopkart-api
-npm run build
-```
+**Image URL path:** storefront uses `/assets/...` (not `/deal/assets/...`).

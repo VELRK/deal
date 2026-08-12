@@ -199,8 +199,10 @@ export function apiImageUrl(path?: string | null): string {
   if (import.meta.env.DEV) {
     return `${LOCAL_ASSETS_PREFIX}/${encoded}`;
   }
+  // Production at document root (2deal.my): /assets/uploads/...
+  // Legacy /deal/ deploys set VITE_ASSETS_BASE_URL=/deal
   if (ASSETS_BASE) return `${ASSETS_BASE}/${encoded}`;
-  return `/deal/${encoded}`;
+  return `/${encoded}`;
 }
 
 // ── useTestimonials ───────────────────────────────────────────────────────────
