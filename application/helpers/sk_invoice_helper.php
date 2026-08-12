@@ -251,7 +251,11 @@ function sk_invoice_seller_from_settings(array $settings): array {
     $logo = sk_invoice_logo_paths($settings['site_logo'] ?? null);
 
     return [
-        'name'            => $settings['company_legal_name'] ?? $settings['site_name'] ?? 'GOLDEN 2 DEAL (M) SDN. BHD.',
+        'name'            => trim((string)($settings['company_legal_name'] ?? '')) !== ''
+            ? trim((string)$settings['company_legal_name'])
+            : (trim((string)($settings['site_name'] ?? '')) !== ''
+                ? trim((string)$settings['site_name'])
+                : '2DEAL'),
         'logo'            => $logo['rel'] !== '' ? $logo['rel'] : ($settings['site_logo'] ?? ''),
         'logo_url'        => $logo['url'],
         'logo_path'       => $logo['path'],
@@ -269,30 +273,62 @@ function sk_invoice_seller_from_settings(array $settings): array {
 }
 
 function sk_invoice_seller_from_vendor(array $vendor, array $store, array $settings = []): array {
+    $platform = sk_invoice_seller_from_settings($settings);
+
+    $storeName = trim((string)($store['store_name'] ?? ''));
+    if ($storeName === '' || strcasecmp($storeName, 'Default Store') === 0) {
+        $storeName = '';
+    }
+    $bizName = trim((string)($vendor['business_name'] ?? ''));
+    $sellerName = $storeName !== ''
+        ? $storeName
+        : ($bizName !== '' ? $bizName : ($platform['name'] ?? '2DEAL'));
+
     $addrParts = array_filter([
         $store['pickup_line1'] ?? '',
         $store['pickup_line2'] ?? '',
         trim(($store['pickup_city'] ?? '') . ', ' . ($store['pickup_state'] ?? '') . ' - ' . ($store['pickup_pincode'] ?? '')),
-        $store['pickup_country'] ?? 'Malaysia',
+        $store['pickup_country'] ?? '',
     ]);
+    $address = implode("\n", $addrParts);
+    if (trim($address) === '') {
+        $address = (string)($platform['address'] ?? '');
+    }
+
+    $email = trim((string)($store['contact_email'] ?? $vendor['email'] ?? ''));
+    if ($email === '') {
+        $email = (string)($platform['email'] ?? '');
+    }
+    $phone = trim((string)($store['contact_phone'] ?? $vendor['phone'] ?? ''));
+    if ($phone === '') {
+        $phone = (string)($platform['phone'] ?? '');
+    }
+
+    $gst = trim((string)($store['gst_vat'] ?? ''));
+    $pan = trim((string)($store['pan_no'] ?? ''));
+    $registration = $gst !== '' ? $gst : (string)($platform['registration'] ?? '');
 
     $logo = sk_invoice_logo_paths(!empty($store['logo']) ? $store['logo'] : ($settings['site_logo'] ?? null));
 
     return [
-        'name'           => $store['store_name'] ?? $vendor['business_name'] ?? 'Vendor',
-        'logo'           => $logo['rel'] !== '' ? $logo['rel'] : ($store['logo'] ?? ''),
-        'logo_url'       => $logo['url'],
-        'logo_path'      => $logo['path'],
-        'gstin'          => $store['gst_vat'] ?? '',
-        'pan'            => $store['pan_no'] ?? '',
-        'registration'   => trim((string)($store['gst_vat'] ?? '')),
-        'state_code'     => $store['state_code'] ?? ($store['pickup_state'] ?? ''),
+        'name'           => $sellerName,
+        'logo'           => $logo['rel'] !== '' ? $logo['rel'] : ($store['logo'] ?? $platform['logo'] ?? ''),
+        'logo_url'       => $logo['url'] ?: ($platform['logo_url'] ?? ''),
+        'logo_path'      => $logo['path'] ?: ($platform['logo_path'] ?? ''),
+        'gstin'          => $gst !== '' ? $gst : (string)($platform['gstin'] ?? ''),
+        'pan'            => $pan !== '' ? $pan : (string)($platform['pan'] ?? ''),
+        'registration'   => $registration,
+        'state_code'     => $store['state_code'] ?? ($store['pickup_state'] ?? ($platform['state_code'] ?? '')),
         'state'          => $store['pickup_state'] ?? '',
-        'email'          => $store['contact_email'] ?? $vendor['email'] ?? '',
-        'phone'          => $store['contact_phone'] ?? $vendor['phone'] ?? '',
-        'address'        => implode("\n", $addrParts),
-        'invoice_prefix' => $store['invoice_prefix'] ?? 'INV',
-        'invoice_footer' => $store['invoice_footer'] ?? 'Thank you for shopping with us.',
+        'email'          => $email,
+        'phone'          => $phone,
+        'address'        => $address,
+        'invoice_prefix' => trim((string)($store['invoice_prefix'] ?? '')) !== ''
+            ? $store['invoice_prefix']
+            : ($platform['invoice_prefix'] ?? 'INV'),
+        'invoice_footer' => trim((string)($store['invoice_footer'] ?? '')) !== ''
+            ? $store['invoice_footer']
+            : ($platform['invoice_footer'] ?? 'Thank you for shopping with us.'),
         'source'         => 'vendor',
         'vendor_id'      => (int)$vendor['id'],
     ];

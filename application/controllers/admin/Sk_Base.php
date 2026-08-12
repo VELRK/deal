@@ -82,11 +82,24 @@ class Sk_Base extends CI_Controller {
         return false;
     }
 
-    /** Shop/store name for vendor UI; falls back to "Default Store". */
+    /** Shop/store name for vendor UI; falls back to site name from settings. */
     protected function _vendor_shop_display_name(int $vendor_id): string {
         $store = $this->db->select('store_name')->where('vendor_id', $vendor_id)->get('vendor_stores')->row_array();
         $name = trim((string)($store['store_name'] ?? ''));
-        return $name !== '' ? $name : 'Default Store';
+        if ($name !== '' && strcasecmp($name, 'Default Store') !== 0) {
+            return $name;
+        }
+        if (!isset($this->Sk_Admin_model)) {
+            $this->load->model('Sk_Admin_model');
+        }
+        $settings = $this->Sk_Admin_model->get_settings();
+        $site = trim((string)($settings['company_legal_name'] ?? $settings['site_name'] ?? ''));
+        if ($site !== '') {
+            return $site;
+        }
+        $vendor = $this->db->select('business_name, name')->where('id', $vendor_id)->get('vendors')->row_array();
+        $biz = trim((string)($vendor['business_name'] ?? $vendor['name'] ?? ''));
+        return $biz !== '' ? $biz : 'Store';
     }
 
     protected function is_super_admin(): bool {
