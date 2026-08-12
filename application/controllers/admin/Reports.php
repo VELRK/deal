@@ -25,22 +25,29 @@ class Reports extends Sk_Base {
         $from = $this->input->get('from') ?? date('Y-m-01');
         $to   = $this->input->get('to')   ?? date('Y-m-d');
 
+        $from = preg_replace('/[^0-9\-]/', '', (string)$from) ?: date('Y-m-01');
+        $to   = preg_replace('/[^0-9\-]/', '', (string)$to) ?: date('Y-m-d');
+
         $orders = $this->db->select('o.order_number, u.name as customer, o.total, o.status, o.payment_status, o.created_at')
                            ->from('orders o')
                            ->join('users u', 'u.id = o.user_id', 'left')
-                           ->where('DATE(o.created_at) BETWEEN', null, false)
-                           ->where("DATE(o.created_at) BETWEEN '$from' AND '$to'", null, false)
+                           ->where("DATE(o.created_at) BETWEEN " . $this->db->escape($from) . " AND " . $this->db->escape($to), null, false)
                            ->order_by('o.created_at', 'DESC')
                            ->get()->result_array();
 
-        header('Content-Type: text/csv');
+        header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="orders_' . $from . '_to_' . $to . '.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
         $out = fopen('php://output', 'w');
+        // UTF-8 BOM for Excel
+        fwrite($out, "\xEF\xBB\xBF");
         fputcsv($out, ['Order #', 'Customer', 'Total', 'Status', 'Payment', 'Date']);
         foreach ($orders as $o) {
             fputcsv($out, [$o['order_number'], $o['customer'], $o['total'], $o['status'], $o['payment_status'], $o['created_at']]);
         }
         fclose($out);
+        exit;
     }
 
     private function _revenue_in_range($from, $to) {

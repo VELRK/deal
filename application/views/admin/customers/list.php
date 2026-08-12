@@ -44,7 +44,7 @@
             <a href="<?= site_url('shopkart/customers/edit/'.$c['id']) ?>" class="btn btn-sm btn-outline-warning" title="Edit">
               <i class="bi bi-pencil"></i>
             </a>
-            <button onclick="skToggleStatus('<?= site_url('shopkart/customers/toggle/'.$c['id']) ?>')"
+            <button onclick="skToggleStatus('<?= site_url('admin/customers/toggle/'.$c['id']) ?>')"
                     class="btn btn-sm <?= $c['status'] ? 'btn-outline-danger' : 'btn-outline-success' ?>"
                     title="<?= $c['status'] ? 'Block' : 'Activate' ?>">
               <i class="bi bi-<?= $c['status'] ? 'slash-circle' : 'check-circle' ?>"></i>
@@ -52,7 +52,7 @@
             <button type="button"
                     class="btn btn-sm btn-outline-danger"
                     title="Delete permanently"
-                    onclick="skConfirmDelete('<?= site_url('shopkart/customers/delete/'.$c['id']) ?>', 'row-<?= (int)$c['id'] ?>')">
+                    onclick="skConfirmDelete('<?= site_url('admin/customers/delete/'.$c['id']) ?>', 'row-<?= (int)$c['id'] ?>')">
               <i class="bi bi-trash"></i>
             </button>
           </td>

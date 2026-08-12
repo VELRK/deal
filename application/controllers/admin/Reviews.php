@@ -72,9 +72,12 @@ class Reviews extends Sk_Base {
         $this->db->where('id', $id)->update('reviews', ['status' => $status]);
         $this->_recalc_rating_by_product($review['product_id']);
         // Clear storefront review cache so media shows after approve
-        $cacheFile = APPPATH . 'cache/api/' . preg_replace('/[^a-z0-9_-]/', '_', strtolower('reviews_v2_' . (int)$review['product_id'])) . '.json';
-        if (is_file($cacheFile)) {
-            @unlink($cacheFile);
+        $pid = (int)$review['product_id'];
+        foreach (['reviews_v3_' . $pid, 'reviews_v2_' . $pid] as $cacheKey) {
+            $cacheFile = APPPATH . 'cache/api/' . preg_replace('/[^a-z0-9_-]/', '_', strtolower($cacheKey)) . '.json';
+            if (is_file($cacheFile)) {
+                @unlink($cacheFile);
+            }
         }
         $this->json(['success' => true, 'status' => $status]);
     }

@@ -60,6 +60,24 @@ export default function AccountOrders() {
   // Custom Modal States for interactions
   const [modalAction, setModalAction] = useState<{ type: "cancel" | "return" | "exchange"; orderId: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+
+  async function downloadInvoice(orderId: number) {
+    setInvoiceLoading(true);
+    try {
+      const res = await ordersAPI.invoice(orderId);
+      const url = res.data?.data?.download_url;
+      if (!url) {
+        setToastMessage("Invoice link unavailable for this order.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      setToastMessage("Could not download invoice. Please try again.");
+    } finally {
+      setInvoiceLoading(false);
+    }
+  }
 
   useEffect(() => {
     ordersAPI.getAll()
@@ -1488,6 +1506,18 @@ export default function AccountOrders() {
                     <SvgBilling />
                     <span>Payment details</span>
                   </div>
+
+                  {selectedOrder.status !== "payment_attempt" && (
+                    <button
+                      type="button"
+                      className="tf-btn btn-sm mb-16"
+                      style={{ background: "#0f172a", color: "#fff", borderRadius: 8, padding: "10px 16px", fontWeight: 700, width: "100%" }}
+                      disabled={invoiceLoading}
+                      onClick={() => void downloadInvoice(selectedOrder.id)}
+                    >
+                      {invoiceLoading ? "Preparing invoice…" : "Download Invoice"}
+                    </button>
+                  )}
 
                   <div className="payment-items-summary-list">
                     {/* List products and prices */}

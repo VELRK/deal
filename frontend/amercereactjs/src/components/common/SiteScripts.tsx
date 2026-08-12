@@ -49,6 +49,19 @@ export default function SiteScripts() {
       inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`;
       document.head.appendChild(inline);
     }
+
+    const siteName = settings.site_name?.trim();
+    if (siteName) {
+      const current = document.title?.trim() || "";
+      if (
+        !current ||
+        /^2Deal Online Store$/i.test(current) ||
+        /^2Deal$/i.test(current) ||
+        /^2DEAL$/i.test(current)
+      ) {
+        document.title = siteName;
+      }
+    }
   }, [settings]);
 
   return null;

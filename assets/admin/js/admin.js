@@ -2,19 +2,38 @@
 
 // Confirm delete — name can be a display name OR a row element ID prefixed with '#'/'row-'
 function skConfirmDelete(url, nameOrRowId) {
-  var label = (nameOrRowId && nameOrRowId.startsWith('row-')) ? 'this item' : nameOrRowId;
+  var label = (nameOrRowId && String(nameOrRowId).startsWith('row-')) ? 'this item' : (nameOrRowId || 'this item');
   if (confirm('Delete "' + label + '"? This cannot be undone.')) {
-    $.post(url, {}, function(res) {
-      if (res.success) {
-        if (nameOrRowId && nameOrRowId.startsWith('row-')) {
-          $('#' + nameOrRowId).fadeOut(300, function() { $(this).remove(); });
+    $.ajax({
+      url: url,
+      method: 'POST',
+      dataType: 'json',
+      success: function(res) {
+        if (res && res.success) {
+          if (nameOrRowId && String(nameOrRowId).startsWith('row-')) {
+            $('#' + nameOrRowId).fadeOut(300, function() { $(this).remove(); });
+          } else {
+            location.reload();
+          }
+          if (res.message) {
+            // brief success feedback without blocking
+            try { console.info(res.message); } catch (e) {}
+          }
         } else {
-          location.reload();
+          alert((res && res.message) ? res.message : 'Delete failed.');
         }
-      } else {
-        alert('Delete failed.');
+      },
+      error: function(xhr) {
+        var msg = 'Delete failed.';
+        try {
+          var body = xhr.responseJSON || JSON.parse(xhr.responseText || '{}');
+          if (body && body.message) msg = body.message;
+        } catch (e) {}
+        if (xhr.status === 404) msg = 'Item not found or delete URL is invalid.';
+        if (xhr.status === 403) msg = 'You do not have permission to delete this item.';
+        alert(msg);
       }
-    }, 'json');
+    });
   }
 }
 

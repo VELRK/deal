@@ -151,6 +151,21 @@ class Sk_Base extends CI_Controller {
     }
 
     protected function upload_file($field, $dir = 'products') {
+        if (empty($_FILES[$field]['name'])) {
+            return null;
+        }
+        if ((int)($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $code = (int)$_FILES[$field]['error'];
+            $msg = 'Image upload failed.';
+            if ($code === UPLOAD_ERR_INI_SIZE || $code === UPLOAD_ERR_FORM_SIZE) {
+                $msg = 'Image is too large. Use JPG, PNG, GIF or WebP under 5MB.';
+            } elseif ($code === UPLOAD_ERR_PARTIAL) {
+                $msg = 'Image upload was incomplete. Please try again.';
+            }
+            $this->session->set_flashdata('error', $msg);
+            return null;
+        }
+
         $path = FCPATH . 'assets/uploads/' . $dir . '/';
         if (!is_dir($path)) mkdir($path, 0755, true);
 
@@ -166,6 +181,11 @@ class Sk_Base extends CI_Controller {
         if ($this->upload->do_upload($field)) {
             return 'assets/uploads/' . $dir . '/' . $this->upload->data('file_name');
         }
+        $err = strip_tags((string)$this->upload->display_errors('', ''));
+        $this->session->set_flashdata(
+            'error',
+            $err !== '' ? $err : 'Image upload failed. Use JPG, PNG, GIF or WebP under 5MB.'
+        );
         return null;
     }
 }

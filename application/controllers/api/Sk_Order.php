@@ -466,6 +466,46 @@ class Sk_Order extends Sk_Base_Api {
         $this->success([], $result['message']);
     }
 
+    /** Authenticated invoice links for the logged-in customer. */
+    public function invoice($id) {
+        $this->auth_required();
+        $order = $this->Sk_Order_model->get_by_id((int)$id, $this->user['user_id']);
+        if (!$order) {
+            return $this->error('Order not found.', 404);
+        }
+        $this->load->helper(['sk_invoice', 'sk_invoice_pdf']);
+        $token = sk_invoice_public_token((int)$order['id'], (string)$order['order_number']);
+        $this->success([
+            'order_id'       => (int)$order['id'],
+            'order_number'   => $order['order_number'],
+            'download_url'   => site_url('invoice/download/' . (int)$order['id'] . '/' . $token),
+            'view_url'       => site_url('invoice/view/' . (int)$order['id'] . '/' . $token),
+            'api_download'   => site_url('shopkart-api/order/' . (int)$order['id'] . '/invoice/download'),
+        ]);
+    }
+
+    /** Stream PDF invoice for the logged-in order owner (Bearer auth). */
+    public function invoice_download($id) {
+        $this->auth_required();
+        $order = $this->Sk_Order_model->get_by_id((int)$id, $this->user['user_id']);
+        if (!$order) {
+            return $this->error('Order not found.', 404);
+        }
+        $this->load->helper(['sk_invoice', 'sk_invoice_pdf']);
+        sk_invoice_ensure_vendor_schema();
+        $settings = $this->get_settings();
+        $invoice = sk_invoice_build($order, $settings);
+        $pdf = sk_invoice_build_pdf($invoice);
+        $filename = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $invoice['order_number'] ?? (string)$id) . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdf));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        echo $pdf;
+        exit;
+    }
+
     private function _jt_cancel_if_needed(array $order) {
         $txId = $order['jt_txlogistic_id'] ?? $order['order_number'] ?? '';
         $billCode = trim((string)($order['jt_bill_code'] ?? $order['tracking_number'] ?? ''));

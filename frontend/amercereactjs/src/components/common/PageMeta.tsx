@@ -1,4 +1,5 @@
 import { useLayoutEffect } from "react";
+import { useSiteSettings } from "@/hooks/useApi";
 
 export type PageMetaProps = {
   title: string;
@@ -38,6 +39,23 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
+/** Ensure the browser tab title ends with the live site name from admin settings. */
+function withSiteBrand(title: string, siteName: string): string {
+  const brand = (siteName || "2Deal").trim() || "2Deal";
+  const cleaned = title
+    .replace(/\s*\|\s*2Deal\s*-\s*Incense Sticks[^|]*/gi, "")
+    .replace(/\s*\|\s*2Deal Online Store\s*$/gi, "")
+    .replace(/\s*\|\s*2DEAL\s*$/gi, "")
+    .replace(/\s*\|\s*2Deal\s*$/gi, "")
+    .trim();
+  const base = cleaned || brand;
+  if (base.toLowerCase() === brand.toLowerCase()) return brand;
+  if (new RegExp(`\\|\\s*${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i").test(base)) {
+    return base;
+  }
+  return `${base} | ${brand}`;
+}
+
 /**
  * Sets document.title and SEO / social tags dynamically per page.
  */
@@ -50,21 +68,25 @@ export default function PageMeta({
   robots = "index,follow",
   ogType = "website",
 }: PageMetaProps) {
+  const { settings } = useSiteSettings();
+  const siteName = settings?.site_name?.trim() || "2Deal";
+  const finalTitle = withSiteBrand(title, siteName);
+
   useLayoutEffect(() => {
-    document.title = title;
+    document.title = finalTitle;
     upsertHeadMeta("name", "description", description);
     if (keywords) upsertHeadMeta("name", "keywords", keywords);
     if (robots) upsertHeadMeta("name", "robots", robots);
-    upsertHeadMeta("property", "og:title", title);
+    upsertHeadMeta("property", "og:title", finalTitle);
     upsertHeadMeta("property", "og:description", description);
     upsertHeadMeta("property", "og:type", ogType);
     if (image) upsertHeadMeta("property", "og:image", image);
     upsertHeadMeta("name", "twitter:card", image ? "summary_large_image" : "summary");
-    upsertHeadMeta("name", "twitter:title", title);
+    upsertHeadMeta("name", "twitter:title", finalTitle);
     upsertHeadMeta("name", "twitter:description", description);
     if (image) upsertHeadMeta("name", "twitter:image", image);
     if (canonical) upsertLink("canonical", canonical);
-  }, [title, description, keywords, image, canonical, robots, ogType]);
+  }, [finalTitle, description, keywords, image, canonical, robots, ogType]);
 
   return null;
 }

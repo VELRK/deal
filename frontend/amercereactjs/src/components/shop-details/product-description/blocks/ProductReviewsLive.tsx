@@ -141,6 +141,14 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim() || !canReview) return;
+    if (images.some((f) => f.size > 5 * 1024 * 1024)) {
+      setSubmitMsg({ type: "error", text: "Each photo must be under 5 MB (JPG, PNG, WebP or GIF)." });
+      return;
+    }
+    if (video && video.size > 25 * 1024 * 1024) {
+      setSubmitMsg({ type: "error", text: "Video must be under 25 MB (MP4 or WebM)." });
+      return;
+    }
     setSubmitting(true);
     setSubmitMsg(null);
     try {
@@ -157,11 +165,18 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
       if (wantedMedia > 0 && mediaCount === 0) {
         setSubmitMsg({
           type: "error",
-          text: "Review saved, but photo/video upload failed. Try JPG/PNG or MP4 under 25 MB.",
+          text: res.data.message ?? "Photo/video upload failed. Use JPG/PNG under 5 MB or MP4 under 25 MB.",
         });
-      } else {
-        setSubmitMsg({ type: "success", text: res.data.message ?? "Review submitted for approval." });
+        return;
       }
+      const partialWarn =
+        wantedMedia > 0 && mediaCount > 0 && mediaCount < wantedMedia
+          ? ` (${mediaCount}/${wantedMedia} media uploaded)`
+          : "";
+      setSubmitMsg({
+        type: "success",
+        text: (res.data.message ?? "Review submitted for approval.") + partialWarn,
+      });
       resetForm();
       setEligibility({
         can_review: false,
@@ -188,9 +203,20 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
 
   function onPickImages(files: FileList | null) {
     if (!files) return;
-    const next = [...images, ...Array.from(files)]
-      .filter((f) => f.type.startsWith("image/"))
-      .slice(0, 5);
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const picked = Array.from(files);
+    const invalidType = picked.find((f) => !allowed.includes(f.type) && !f.type.startsWith("image/"));
+    if (invalidType) {
+      setSubmitMsg({ type: "error", text: "Photos must be JPG, PNG, WebP or GIF." });
+      return;
+    }
+    const tooBig = picked.find((f) => f.size > 5 * 1024 * 1024);
+    if (tooBig) {
+      setSubmitMsg({ type: "error", text: `"${tooBig.name}" is over 5 MB. Please choose a smaller photo.` });
+      return;
+    }
+    setSubmitMsg(null);
+    const next = [...images, ...picked.filter((f) => f.type.startsWith("image/"))].slice(0, 5);
     setImages(next);
   }
 
@@ -200,11 +226,15 @@ export default function ProductReviewsLive({ productId }: { productId?: number }
       return;
     }
     const f = files[0];
-    if (!f.type.startsWith("video/")) return;
+    if (!f.type.startsWith("video/")) {
+      setSubmitMsg({ type: "error", text: "Please choose an MP4 or WebM video." });
+      return;
+    }
     if (f.size > 25 * 1024 * 1024) {
       setSubmitMsg({ type: "error", text: "Video must be under 25 MB." });
       return;
     }
+    setSubmitMsg(null);
     setVideo(f);
   }
 

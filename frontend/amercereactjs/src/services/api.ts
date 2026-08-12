@@ -400,6 +400,17 @@ export const ordersAPI = {
   getAll: () => http.get("/orders"),
   getOne: (id: number) => http.get(`/order/${id}`),
   cancelOrder: (id: number) => http.post(`/order/${id}/cancel`, {}),
+  invoice: (id: number) =>
+    http.get<{
+      success: boolean;
+      data: {
+        order_id: number;
+        order_number: string;
+        download_url: string;
+        view_url: string;
+        api_download?: string;
+      };
+    }>(`/order/${id}/invoice`),
 };
 
 export interface ShippingTrackEvent {

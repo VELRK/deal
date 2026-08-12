@@ -174,37 +174,77 @@ class Sk_Review extends Sk_Base_Api {
         ]);
         $reviewId = (int)$this->db->insert_id();
 
-        $uploaded = $this->_save_review_media($reviewId);
+        $mediaResult = $this->_save_review_media($reviewId);
+        $uploaded = $mediaResult['saved'];
+        $mediaErrors = $mediaResult['errors'];
+        $attempted = (int)$mediaResult['attempted'];
+
+        // If the customer attached media but none saved, roll back so they can retry
+        if ($attempted > 0 && empty($uploaded)) {
+            $this->db->where('id', $reviewId)->delete('reviews');
+            $msg = !empty($mediaErrors)
+                ? implode(' ', $mediaErrors)
+                : 'Photo/video upload failed. Use JPG, PNG, WebP or GIF under 5 MB, or MP4/WebM under 25 MB.';
+            return $this->error($msg, 400);
+        }
 
         // Bust list cache so media appears once approved (and pending admin sees fresh data)
         $this->delete_cache('reviews_v3_' . $product_id);
         $this->delete_cache('reviews_v2_' . $product_id);
 
+        $message = 'Review submitted. It will appear after approval.';
+        if ($attempted > 0 && count($uploaded) < $attempted && !empty($mediaErrors)) {
+            $message .= ' Some media failed: ' . implode(' ', $mediaErrors);
+        }
+
         $this->success([
-            'id'    => $reviewId,
-            'media' => $uploaded,
-        ], 'Review submitted. It will appear after approval.');
+            'id'            => $reviewId,
+            'media'         => $uploaded,
+            'media_errors'  => $mediaErrors,
+            'media_attempted' => $attempted,
+        ], $message);
     }
 
+    /**
+     * @return array{saved: array, errors: string[], attempted: int}
+     */
     private function _save_review_media(int $reviewId): array {
+        $empty = ['saved' => [], 'errors' => [], 'attempted' => 0];
         if (!$this->db->table_exists('review_media') || $reviewId < 1) {
-            return [];
+            return $empty;
         }
 
         $dir = FCPATH . 'assets/uploads/reviews/';
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return [
+                'saved' => [],
+                'errors' => ['Server cannot save review media. Please try again later.'],
+                'attempted' => 1,
+            ];
+        }
 
         $saved = [];
+        $errors = [];
+        $attempted = 0;
         $sort  = 0;
 
         // Normalize images[] / images into a list of file slots
         $imageSlots = $this->_normalize_file_list('images');
+        if (empty($imageSlots)) {
+            $imageSlots = $this->_normalize_file_list('images[]');
+        }
         $maxImages = min(5, count($imageSlots));
         for ($i = 0; $i < $maxImages; $i++) {
-            $path = $this->_store_uploaded_file($imageSlots[$i], $dir, ['jpg', 'jpeg', 'png', 'gif', 'webp'], 5 * 1024 * 1024);
-            if (!$path) continue;
+            $attempted++;
+            $store = $this->_store_uploaded_file($imageSlots[$i], $dir, ['jpg', 'jpeg', 'png', 'gif', 'webp'], 5 * 1024 * 1024, 'image');
+            if (empty($store['path'])) {
+                $errors[] = $store['error'] ?? 'Photo upload failed.';
+                continue;
+            }
+            $path = $store['path'];
             $this->db->insert('review_media', [
                 'review_id'  => $reviewId,
                 'media_type' => 'image',
@@ -214,20 +254,28 @@ class Sk_Review extends Sk_Base_Api {
             $saved[] = ['media_type' => 'image', 'file_path' => $path, 'url' => rtrim(base_url(), '/') . '/' . ltrim($path, '/')];
         }
 
-        if (!empty($_FILES['video']['name']) && (int)($_FILES['video']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-            $path = $this->_store_uploaded_file($_FILES['video'], $dir, ['mp4', 'webm', 'mov', 'm4v'], 25 * 1024 * 1024);
-            if ($path) {
-                $this->db->insert('review_media', [
-                    'review_id'  => $reviewId,
-                    'media_type' => 'video',
-                    'file_path'  => $path,
-                    'sort_order' => $sort++,
-                ]);
-                $saved[] = ['media_type' => 'video', 'file_path' => $path, 'url' => rtrim(base_url(), '/') . '/' . ltrim($path, '/')];
+        if (!empty($_FILES['video']['name']) && (int)($_FILES['video']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $attempted++;
+            if ((int)($_FILES['video']['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+                $errors[] = $this->_upload_err_message((int)$_FILES['video']['error'], 'Video');
+            } else {
+                $store = $this->_store_uploaded_file($_FILES['video'], $dir, ['mp4', 'webm', 'mov', 'm4v'], 25 * 1024 * 1024, 'video');
+                if (empty($store['path'])) {
+                    $errors[] = $store['error'] ?? 'Video upload failed.';
+                } else {
+                    $path = $store['path'];
+                    $this->db->insert('review_media', [
+                        'review_id'  => $reviewId,
+                        'media_type' => 'video',
+                        'file_path'  => $path,
+                        'sort_order' => $sort++,
+                    ]);
+                    $saved[] = ['media_type' => 'video', 'file_path' => $path, 'url' => rtrim(base_url(), '/') . '/' . ltrim($path, '/')];
+                }
             }
         }
 
-        return $saved;
+        return ['saved' => $saved, 'errors' => $errors, 'attempted' => $attempted];
     }
 
     /** Build a list of single-file $_FILES-shaped arrays from images / images[]. */
@@ -238,13 +286,15 @@ class Sk_Review extends Sk_Base_Api {
         $f = $_FILES[$field];
         // Single file
         if (!is_array($f['name'])) {
-            if (empty($f['name']) || (int)$f['error'] !== UPLOAD_ERR_OK) return [];
+            if (empty($f['name'])) return [];
+            if ((int)$f['error'] !== UPLOAD_ERR_OK) return [];
             return [$f];
         }
         $out = [];
         $n = count($f['name']);
         for ($i = 0; $i < $n; $i++) {
-            if (empty($f['name'][$i]) || (int)$f['error'][$i] !== UPLOAD_ERR_OK) continue;
+            if (empty($f['name'][$i])) continue;
+            if ((int)$f['error'][$i] !== UPLOAD_ERR_OK) continue;
             $out[] = [
                 'name'     => $f['name'][$i],
                 'type'     => $f['type'][$i],
@@ -256,30 +306,54 @@ class Sk_Review extends Sk_Base_Api {
         return $out;
     }
 
+    private function _upload_err_message(int $code, string $label = 'File'): string {
+        switch ($code) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                return $label . ' is too large for the server limit.';
+            case UPLOAD_ERR_PARTIAL:
+                return $label . ' upload was incomplete. Please try again.';
+            case UPLOAD_ERR_NO_FILE:
+                return $label . ' was not received.';
+            case UPLOAD_ERR_NO_TMP_DIR:
+            case UPLOAD_ERR_CANT_WRITE:
+                return $label . ' could not be saved on the server.';
+            default:
+                return $label . ' upload failed.';
+        }
+    }
+
     /**
      * Save one uploaded file with extension allow-list (avoids CI mime quirks for video).
+     * @return array{path:?string,error:?string}
      */
-    private function _store_uploaded_file(array $file, string $dir, array $allowedExt, int $maxBytes): ?string {
-        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-            return null;
+    private function _store_uploaded_file(array $file, string $dir, array $allowedExt, int $maxBytes, string $label = 'File'): array {
+        if ((int)($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            return ['path' => null, 'error' => $this->_upload_err_message((int)$file['error'], $label)];
         }
-        if ((int)($file['size'] ?? 0) > $maxBytes || (int)($file['size'] ?? 0) < 1) {
-            log_message('error', 'Review media size rejected: ' . ($file['name'] ?? ''));
-            return null;
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return ['path' => null, 'error' => $label . ' was not received. Please try again.'];
+        }
+        $size = (int)($file['size'] ?? 0);
+        if ($size < 1) {
+            return ['path' => null, 'error' => $label . ' is empty.'];
+        }
+        if ($size > $maxBytes) {
+            $mb = max(1, (int)round($maxBytes / (1024 * 1024)));
+            return ['path' => null, 'error' => $label . ' must be under ' . $mb . ' MB.'];
         }
         $ext = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
         if ($ext === '' || !in_array($ext, $allowedExt, true)) {
-            log_message('error', 'Review media type rejected: ' . ($file['name'] ?? ''));
-            return null;
+            return ['path' => null, 'error' => $label . ' type not allowed. Use: ' . implode(', ', $allowedExt) . '.'];
         }
         $name = 'rev_' . str_replace('.', '', uniqid('', true)) . '.' . $ext;
         $dest = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $name;
         if (!@move_uploaded_file($file['tmp_name'], $dest)) {
             log_message('error', 'Review media move failed: ' . ($file['name'] ?? ''));
-            return null;
+            return ['path' => null, 'error' => $label . ' could not be saved. Please try again.'];
         }
         @chmod($dest, 0644);
-        return 'assets/uploads/reviews/' . $name;
+        return ['path' => 'assets/uploads/reviews/' . $name, 'error' => null];
     }
 
     private function _user_has_review($user_id, $product_id) {

@@ -190,7 +190,12 @@ class Products extends Sk_Base {
         $product = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($product);
 
-        $thumbnail = $this->upload_file('thumbnail', 'products') ?? $product['thumbnail'];
+        $hadThumbUpload = !empty($_FILES['thumbnail']['name']);
+        $uploadedThumb = $this->upload_file('thumbnail', 'products');
+        if ($hadThumbUpload && !$uploadedThumb) {
+            // Flash error already set by upload_file — keep existing thumbnail
+        }
+        $thumbnail = $uploadedThumb ?? $product['thumbnail'];
 
         $data = [
             'name'             => $this->input->post('name', TRUE),

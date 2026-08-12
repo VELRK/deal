@@ -312,6 +312,8 @@ class Sk_Affiliate_auth extends Sk_Base_Api {
         ];
         if (!$full) return $base;
         return array_merge($base, [
+            'mykad_number'             => $aff['mykad_number'] ?? '',
+            'passport_number'          => $aff['passport_number'] ?? '',
             'address_line1'            => $aff['address_line1'] ?? '',
             'address_line2'            => $aff['address_line2'] ?? '',
             'city'                     => $aff['city'] ?? '',

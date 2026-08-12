@@ -2,7 +2,7 @@
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-bar-chart-line me-2 text-warning"></i>Reports</h5>
-  <a href="<?= site_url('admin/reports/export?from=' . $from . '&to=' . $to) ?>" class="btn btn-sm btn-outline-success">
+  <a href="<?= site_url('shopkart/reports/export?from=' . urlencode($from) . '&to=' . urlencode($to)) ?>" class="btn btn-sm btn-outline-success">
     <i class="bi bi-download me-1"></i> Export CSV
   </a>
 </div>

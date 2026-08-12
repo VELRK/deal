@@ -7,7 +7,29 @@
       <i class="bi bi-pencil me-1"></i> Edit
     </a>
     <button type="button" class="btn btn-sm btn-outline-danger"
-            onclick="if(confirm('Permanently delete <?= htmlspecialchars($customer['name'], ENT_QUOTES) ?>? Their account, addresses, cart, wallet, and reviews will be removed. Order history will remain without the customer link.')) { $.post('<?= site_url('shopkart/customers/delete/'.(int)$customer['id']) ?>', {}, function(res) { if (res.success) { location.href='<?= site_url('shopkart/customers') ?>'; } else { alert(res.message || 'Delete failed.'); } }, 'json'); }">
+            onclick="(function(){
+              var name = <?= json_encode($customer['name']) ?>;
+              var url = <?= json_encode(site_url('admin/customers/delete/'.(int)$customer['id'])) ?>;
+              var listUrl = <?= json_encode(site_url('admin/customers')) ?>;
+              if (!confirm('Permanently delete \"' + name + '\"? Account, addresses, cart, wallet and reviews will be removed. Order history stays without the customer link.')) return;
+              $.ajax({
+                url: url,
+                method: 'POST',
+                dataType: 'json',
+                success: function(res) {
+                  if (res && res.success) { location.href = listUrl; }
+                  else { alert((res && res.message) ? res.message : 'Delete failed.'); }
+                },
+                error: function(xhr) {
+                  var msg = 'Delete failed.';
+                  try {
+                    var body = xhr.responseJSON || JSON.parse(xhr.responseText || '{}');
+                    if (body && body.message) msg = body.message;
+                  } catch (e) {}
+                  alert(msg);
+                }
+              });
+            })()">
       <i class="bi bi-trash me-1"></i> Delete
     </button>
     <a href="<?= site_url('shopkart/customers') ?>" class="btn btn-sm btn-outline-secondary">
