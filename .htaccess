@@ -52,6 +52,11 @@ RewriteRule ^shopkart/(.+)$ /admin/$1 [R=301,L]
 # Real files/folders under static trees → Apache (missing file = real 404)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
 
+# Missing hashed frontend assets must NOT become SPA HTML (breaks module MIME)
+RewriteCond %{REQUEST_URI} ^/frontend/assets/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ - [R=404,L]
+
 # Existing files anywhere (e.g. robots.txt) → Apache
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
