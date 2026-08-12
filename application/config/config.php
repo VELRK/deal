@@ -38,7 +38,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     // Production domain at document root (public_html)
     if ($hostNoPort === '2deal.my' || $hostNoPort === 'www.2deal.my') {
         $config['base_url'] = $scheme . '://' . $hostNoPort . '/';
-        // Clean URLs (no index.php) via .htaccess + /admin + /shopkart-api bridges
+        // Clean URLs: blank index_page + root .htaccess rewrite to single index.php
         $config['index_page'] = '';
     } elseif (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
         $config['base_url'] = $scheme . '://' . $host . '/deal/';
@@ -67,8 +67,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 | something else. If you are using mod_rewrite to remove the page set this
 | variable so that it is blank.
 |
-| Clean URLs on 2deal.my via .htaccess FallbackResource + /admin and
-| /shopkart-api directory bridges (index_page stays blank).
+| Leave blank so site_url() / redirect() omit index.php (needs root .htaccess).
 */
 if (!isset($config['index_page'])) {
     $config['index_page'] = '';
@@ -90,7 +89,7 @@ if (!isset($config['index_page'])) {
 | WARNING: If you set this to 'PATH_INFO', URIs will always be URL-decoded!
 */
 // AUTO works on XAMPP + cPanel (index.php?/path query-string rewrites).
-$config['uri_protocol'] = 'AUTO';
+$config['uri_protocol'] = 'REQUEST_URI';
 
 /*
 |--------------------------------------------------------------------------

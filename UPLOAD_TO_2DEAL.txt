@@ -2,8 +2,9 @@
 ====================================
 
 1) Extract ALL files into public_html (document root of 2deal.my)
-   - You should see index.php, .htaccess, application/, system/, frontend/, assets/, admin/, shopkart-api/ at the TOP of public_html
+   - You should see index.php, .htaccess, application/, system/, frontend/, assets/ at the TOP of public_html
    - Do NOT leave them inside a "deal1" or "2deal-my-deploy" subfolder
+   - Do NOT create extra admin/index.php or shopkart-api/index.php (breaks clean URLs)
 
 2) Database (required)
    - cPanel → MySQL Databases → create database + user + All Privileges
@@ -38,7 +39,7 @@
    - Product image: /assets/uploads/products/... (must be 200)
 
 Notes
-- Clean URLs use root .htaccess + admin/ + shopkart-api/ bridges
+- Clean URLs: blank index_page + root .htaccess only (one index.php)
 - Replace database.php credentials on server (gitignored locally)
 
 If admin product Save returns HTTP 403
