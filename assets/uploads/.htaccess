@@ -1,0 +1,18 @@
+# Allow public product/banner/category images
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>
+
+# Do not execute uploaded scripts
+<FilesMatch "\.(?i:php|phtml|php3|php4|php5|phar|cgi|pl|py|asp|aspx|jsp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>
