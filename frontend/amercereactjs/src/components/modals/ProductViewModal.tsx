@@ -194,7 +194,7 @@ export default function ProductViewModal() {
                   <img
                     src={gallery[activeImg] || apiImageUrl(null)}
                     alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
                   />
                 </div>
                 {/* Thumbnails */}
@@ -210,7 +210,7 @@ export default function ProductViewModal() {
                           background: "#f1f5f9", flexShrink: 0,
                         }}
                       >
-                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                       </div>
                     ))}
                   </div>

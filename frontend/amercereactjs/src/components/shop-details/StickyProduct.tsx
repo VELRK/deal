@@ -93,7 +93,7 @@ export default function StickyProduct() {
             <div className="atc-product-side">
               {imgSrc && (
                 <div className="prd_img">
-                  <img loading="lazy" width={60} height={80} src={imgSrc} alt={product.name} />
+                  <img loading="lazy" width={60} height={80} src={imgSrc} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
               )}
               <div className="prd_info d-none d-lg-grid">
