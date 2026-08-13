@@ -298,7 +298,7 @@ function sk_isms_clear_session($phone) {
 }
 
 function sk_isms_phone_error() {
-    return 'Valid 10-digit Malaysia mobile number required (e.g. 0123456789 or 60123456789).';
+    return 'Valid Malaysia mobile required (e.g. 0123456789, 01110861982, or 601110861982).';
 }
 
 /**
@@ -344,8 +344,8 @@ function sk_razorpay_contact($phone, array $settings = null) {
         }
     }
 
-    // Curlec MY: 60 + mobile starting with 1, exactly 9 digits after country (local 10-digit 01XXXXXXXX).
-    if (!preg_match('/^60[1][0-9]{8}$/', $digits)) {
+    // Curlec MY: 60 + mobile starting with 1, 9 or 10 digits (local 01XXXXXXXX / 01XXXXXXXXX).
+    if (!preg_match('/^60[1][0-9]{8,9}$/', $digits)) {
         return '';
     }
     return '+' . $digits;

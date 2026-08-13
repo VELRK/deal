@@ -66,12 +66,13 @@ class Isms {
             $mobile = ltrim(substr($digits, strlen($cc)), '0');
             return $mobile !== '' ? $cc . $mobile : '';
         }
-        // Local 10-digit form with leading 0 (01XXXXXXXX)
+        // Local form with leading 0: 01XXXXXXXX (10) or 01XXXXXXXXX (11)
         if (strpos($digits, '0') === 0) {
-            return $cc . substr($digits, 1);
+            return $cc . ltrim(substr($digits, 1), '0');
         }
-        // National number typed beside +60 UI (1XXXXXXXX)
-        if (strlen($digits) === 9 && isset($digits[0]) && $digits[0] === '1') {
+        // National number typed beside +60 UI: 1XXXXXXXX (9) or 1XXXXXXXXX (10)
+        // e.g. 111-086 1982 → 1110861982 → 601110861982
+        if ((strlen($digits) === 9 || strlen($digits) === 10) && isset($digits[0]) && $digits[0] === '1') {
             return $cc . $digits;
         }
         return $digits;
@@ -91,8 +92,9 @@ class Isms {
         }
         $mobile = substr($normalized, strlen($cc));
         $mobile = ltrim($mobile, '0');
-        // Exactly 9 digits after country code → local 10-digit 01XXXXXXXX
-        if ($mobile === '' || strlen($mobile) !== 9) {
+        $len = strlen($mobile);
+        // 9 digits → local 01XXXXXXXX; 10 digits → local 01XXXXXXXXX (e.g. 011-1086 1982)
+        if ($mobile === '' || ($len !== 9 && $len !== 10)) {
             return null;
         }
         // Malaysian mobile numbers use 01X locally (first digit after country code is 1).
@@ -140,7 +142,7 @@ class Isms {
 
         $parsed = $this->parse_phone($phone);
         if (!$parsed) {
-            return ['success' => false, 'message' => 'Invalid Malaysia mobile number. Use 10 digits (e.g. 0123456789).'];
+            return ['success' => false, 'message' => 'Invalid Malaysia mobile number. Use 01XXXXXXXX or 01XXXXXXXXX (e.g. 0123456789 or 01110861982).'];
         }
 
         $otp = $this->generate_otp();
