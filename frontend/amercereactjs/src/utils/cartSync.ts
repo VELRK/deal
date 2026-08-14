@@ -8,6 +8,9 @@ import {
 import { useAuthStore } from "@/store/authStore";
 
 const TOMBSTONE_STORAGE_KEY = "sk_cart_removed";
+const PAID_CART_CLEAR_KEY = "sk_paid_cart_clear";
+
+export type PaidCartLine = { product_id: number; variant_id?: number | null };
 
 function mapApiItemToCartProduct(item: CartItem): CartProduct {
   const price = Number(item.effective_price ?? item.sale_price ?? item.price ?? 0);
@@ -32,6 +35,66 @@ function mapApiItemToCartProduct(item: CartItem): CartProduct {
 
 export function applyServerCartItems(items: CartItem[]): void {
   useStore.getState().setCartProducts(items.map(mapApiItemToCartProduct));
+}
+
+/** Drop paid products from Zustand + localStorage and remember so sync cannot restore them. */
+export function removePaidProductsFromLocalCart(lines: PaidCartLine[]): void {
+  if (!Array.isArray(lines) || lines.length === 0) return;
+
+  const ids = new Set(lines.map((l) => String(l.product_id)).filter(Boolean));
+  if (ids.size === 0) return;
+
+  const prev = useStore.getState().cartProducts;
+  const next = prev.filter((p) => !ids.has(String(p.id)));
+  for (const line of lines) {
+    const pid = Number(line.product_id);
+    if (!pid) continue;
+    rememberRemovedLine(pid, line.variant_id ?? null);
+    rememberRemovedLine(pid, null);
+  }
+  if (next.length !== prev.length) {
+    bumpLocalCartEpoch();
+    useStore.getState().setCartProducts(next);
+  }
+  persistPaidCartClear(lines);
+}
+
+export async function removePaidProductsFromCart(lines: PaidCartLine[]): Promise<void> {
+  removePaidProductsFromLocalCart(lines);
+  for (const line of lines) {
+    const pid = Number(line.product_id);
+    if (!pid) continue;
+    const vid = line.variant_id != null ? Number(line.variant_id) : undefined;
+    await cartAPI
+      .remove({
+        product_id: pid,
+        ...(vid ? { variant_id: vid } : {}),
+      })
+      .catch(() => null);
+    await cartAPI.remove({ product_id: pid }).catch(() => null);
+  }
+}
+
+function persistPaidCartClear(lines: PaidCartLine[]): void {
+  try {
+    localStorage.setItem(PAID_CART_CLEAR_KEY, JSON.stringify(lines));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Apply payment-success cart clear before server sync (FPX return / new tab). */
+export function applyPaidCartClearFromStorage(): void {
+  try {
+    const raw = localStorage.getItem(PAID_CART_CLEAR_KEY);
+    if (!raw) return;
+    const lines = JSON.parse(raw) as PaidCartLine[];
+    if (Array.isArray(lines) && lines.length > 0) {
+      removePaidProductsFromLocalCart(lines);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Loose product/variant match (string vs number ids from persist/API). */
@@ -303,6 +366,7 @@ export function removeLineFromCart(
  * then pull server cart.
  */
 export async function syncCartFromServer(): Promise<void> {
+  applyPaidCartClearFromStorage();
   const epochAtStart = getLocalCartEpoch();
   try {
     const sid = localStorage.getItem("sk_sid") || undefined;

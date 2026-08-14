@@ -273,16 +273,57 @@ function sk_razorpay_order_payment_trusted(
  * Build a consistent order payment success payload for mobile apps.
  */
 function sk_razorpay_order_payment_response(array $order, string $message): array {
+    $userId = (int)($order['user_id'] ?? 0);
+    $orderId = (int)($order['id'] ?? 0);
+    $cartClearLines = ($userId > 0 && $orderId > 0)
+        ? sk_cart_remove_items_for_paid_order($userId, $orderId)
+        : [];
     return [
-        'confirmed'      => true,
-        'order_id'       => (int)($order['id'] ?? 0),
-        'order_number'   => (string)($order['order_number'] ?? ''),
-        'payment_status' => (string)($order['payment_status'] ?? 'paid'),
-        'status'         => (string)($order['status'] ?? 'confirmed'),
-        'total'          => (float)($order['total'] ?? 0),
-        'order'          => $order,
-        'message'        => $message,
+        'confirmed'        => true,
+        'order_id'         => $orderId,
+        'order_number'     => (string)($order['order_number'] ?? ''),
+        'payment_status'   => (string)($order['payment_status'] ?? 'paid'),
+        'status'           => (string)($order['status'] ?? 'confirmed'),
+        'total'            => (float)($order['total'] ?? 0),
+        'order'            => $order,
+        'cart_clear_lines' => $cartClearLines,
+        'message'          => $message,
     ];
+}
+
+/**
+ * After a paid order, drop those products from the user's cart table.
+ *
+ * @return list<array{product_id:int,variant_id:?int}>
+ */
+function sk_cart_remove_items_for_paid_order(int $userId, int $orderId): array {
+    $CI =& get_instance();
+    if ($userId <= 0 || $orderId <= 0) {
+        return [];
+    }
+    if (!isset($CI->Sk_Order_model)) {
+        $CI->load->model('Sk_Order_model');
+    }
+    $items = $CI->Sk_Order_model->get_items($orderId);
+    if (!is_array($items) || $items === []) {
+        return [];
+    }
+
+    $lines = [];
+    $seen = [];
+    foreach ($items as $item) {
+        $pid = (int)($item['product_id'] ?? 0);
+        if ($pid <= 0 || isset($seen[$pid])) {
+            continue;
+        }
+        $seen[$pid] = true;
+        $vid = isset($item['variant_id']) && $item['variant_id'] !== '' && $item['variant_id'] !== null
+            ? (int)$item['variant_id']
+            : null;
+        $CI->db->where('user_id', $userId)->where('product_id', $pid)->delete('cart');
+        $lines[] = ['product_id' => $pid, 'variant_id' => $vid];
+    }
+    return $lines;
 }
 
 /**

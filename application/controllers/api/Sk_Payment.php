@@ -434,12 +434,13 @@ class Sk_Payment extends Sk_Base_Api {
         $homeUrl = rtrim(base_url(), '/') . '/';
         $ordersUrl = rtrim(base_url(), '/') . '/account-orders';
         $view = [
-            'success'      => false,
-            'pending'      => false,
-            'message'      => $errorDesc ?: 'Payment was not completed. Please try again from My Orders.',
-            'order_number' => '',
-            'orders_url'   => $ordersUrl,
-            'home_url'     => $homeUrl,
+            'success'          => false,
+            'pending'          => false,
+            'message'          => $errorDesc ?: 'Payment was not completed. Please try again from My Orders.',
+            'order_number'     => '',
+            'orders_url'       => $ordersUrl,
+            'home_url'         => $homeUrl,
+            'cart_clear_lines' => [],
         ];
 
         if ($rzpOrderId === '' && $rzpPaymentId === '') {
@@ -471,6 +472,8 @@ class Sk_Payment extends Sk_Base_Api {
                 $view['success'] = true;
                 $view['order_number'] = (string)($paid['order_number'] ?? '');
                 $view['message'] = 'Payment successful! Your order is confirmed.';
+                $view['cart_clear_lines'] = $result['response']['cart_clear_lines']
+                    ?? sk_cart_remove_items_for_paid_order((int)($paid['user_id'] ?? 0), $shopOrderId);
                 $this->load->view('payment/result', $view);
                 return;
             }

@@ -12,7 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { rememberAuthReturn } from "@/utils/authRedirect";
-import { syncCartFromServer } from "@/utils/cartSync";
+import { applyPaidCartClearFromStorage, syncCartFromServer } from "@/utils/cartSync";
 import { useStore } from "@/context/store";
 
 import AccountLayout from "@/pages/account/layout";
@@ -174,7 +174,10 @@ function CartSync() {
     let focusTimer: ReturnType<typeof setTimeout> | undefined;
 
     const run = () => {
-      if (!cancelled) void syncCartFromServer();
+      if (!cancelled) {
+        applyPaidCartClearFromStorage();
+        void syncCartFromServer();
+      }
     };
 
     const onCartReady = () => run();

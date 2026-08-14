@@ -9,6 +9,7 @@ declare global {
 
 import { paymentAPI } from "@/services/api";
 import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
+import { removePaidProductsFromCart, type PaidCartLine } from "@/utils/cartSync";
 
 export function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -91,7 +92,12 @@ export async function completeOrderPayment(
           const body = verifyRes.data as {
             success?: boolean;
             message?: string;
-            data?: { confirmed?: boolean; pending?: boolean; failed?: boolean };
+            data?: {
+              confirmed?: boolean;
+              pending?: boolean;
+              failed?: boolean;
+              cart_clear_lines?: PaidCartLine[];
+            };
           };
           if (body?.data?.confirmed || body?.success) {
             if (body?.data?.pending) {
@@ -103,6 +109,9 @@ export async function completeOrderPayment(
               onMessage(body.message || curlecUserMessage().message);
               resolve("failed");
               return;
+            }
+            if (body?.data?.cart_clear_lines?.length) {
+              await removePaidProductsFromCart(body.data.cart_clear_lines);
             }
             onMessage(body.message || "Payment successful! Your order is confirmed.");
             resolve("confirmed");

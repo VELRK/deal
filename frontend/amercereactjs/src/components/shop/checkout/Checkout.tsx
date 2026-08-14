@@ -12,7 +12,7 @@ import { userAPI, cartAPI, ordersAPI, promoAPI, paymentAPI, siteSettingsAPI } fr
 import type { ApiAddress, RoyaltyCartInfo } from "@/services/api";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
-import { removeLineFromCart } from "@/utils/cartSync";
+import { removeLineFromCart, removePaidProductsFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
 import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
@@ -634,11 +634,16 @@ export default function Checkout() {
       }
 
       const orderId = result.data.order.id;
+      const paidLines = cartProducts.map((p) => ({
+        product_id: Number(p.id),
+        variant_id: p.selectedVariantId ?? null,
+      }));
 
       // ── COD, Wallet, or fully paid by royalty: done ─────────────────
       if (paymentMethod === "cod" || paymentMethod === "wallet" || amountDue <= 0.009) {
         saveStoredPromo(null);
         saveUseRoyalty(false);
+        await removePaidProductsFromCart(paidLines);
         setCartProducts([]);
         navigate("/account-orders");
         return;
@@ -695,7 +700,12 @@ export default function Checkout() {
             const body = verifyRes.data as {
               success?: boolean;
               message?: string;
-              data?: { confirmed?: boolean; pending?: boolean; failed?: boolean };
+              data?: {
+                confirmed?: boolean;
+                pending?: boolean;
+                failed?: boolean;
+                cart_clear_lines?: { product_id: number; variant_id?: number | null }[];
+              };
             };
             if (body?.data?.pending) {
               setOrderError(body.message || curlecUserMessage({ reason: "payment_pending_gateway" }).message);
@@ -707,16 +717,20 @@ export default function Checkout() {
               setOrderPlacing(false);
               return;
             }
+            saveStoredPromo(null);
+            saveUseRoyalty(false);
+            await removePaidProductsFromCart(
+              body?.data?.cart_clear_lines?.length ? body.data.cart_clear_lines : paidLines,
+            );
+            setCartProducts([]);
+            navigate("/account-orders");
+            return;
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
             setOrderError(msg ?? ("Payment received but confirmation is still pending. Check My Orders for #" + pd.order_number));
             setOrderPlacing(false);
             return;
           }
-          saveStoredPromo(null);
-          saveUseRoyalty(false);
-          setCartProducts([]);
-          navigate("/account-orders");
         },
         modal: {
           ondismiss: () => {

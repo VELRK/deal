@@ -49,5 +49,30 @@ $defaultMsg = $ok
     <a class="btn" href="<?= $ordersUrl ?>">My Orders</a>
     <a class="btn btn-ghost" href="<?= $homeUrl ?>">Back to shop</a>
   </div>
+  <?php if ($ok): ?>
+  <script>
+  (function () {
+    var lines = <?= json_encode(array_values($cart_clear_lines ?? [])) ?>;
+    try { localStorage.setItem('sk_paid_cart_clear', JSON.stringify(lines || [])); } catch (e) {}
+    try {
+      var raw = localStorage.getItem('2Deal-store');
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (!data || !data.state || !Array.isArray(data.state.cartProducts)) return;
+      var ids = {};
+      (lines || []).forEach(function (l) {
+        if (l && l.product_id) ids[String(l.product_id)] = true;
+      });
+      data.state.cartProducts = Object.keys(ids).length
+        ? data.state.cartProducts.filter(function (p) { return !ids[String(p.id)]; })
+        : data.state.cartProducts;
+      data.state.totalPrice = (data.state.cartProducts || []).reduce(function (sum, p) {
+        return sum + (Number(p.price) || 0) * (Number(p.quantity) || 1);
+      }, 0);
+      localStorage.setItem('2Deal-store', JSON.stringify(data));
+    } catch (e) {}
+  })();
+  </script>
+  <?php endif; ?>
 </body>
 </html>
