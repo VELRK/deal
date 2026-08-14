@@ -24,9 +24,6 @@ export default function QuickAdd() {
     addToWishlist,
     removeFromWishlist,
     isAddedtoWishlist,
-    addToCompareItem,
-    removeFromCompareItem,
-    isAddedToCompareItem,
   } = useContextElement();
   const { activeModal, closeModal } = useModalStore();
   const isOpen = activeModal === "quickAdd";
@@ -84,7 +81,6 @@ export default function QuickAdd() {
     ?? "/frontend/assets/images/product/product-1.jpg";
 
   const inWishlist = product && isAddedtoWishlist ? isAddedtoWishlist(product.id) : false;
-  const inCompare = product && isAddedToCompareItem ? isAddedToCompareItem(product.id) : false;
 
   const handleToggleWishlist = () => {
     if (!product) return;
@@ -92,15 +88,6 @@ export default function QuickAdd() {
       removeFromWishlist?.(product.id);
     } else {
       addToWishlist?.(product);
-    }
-  };
-
-  const handleToggleCompare = () => {
-    if (!product) return;
-    if (inCompare) {
-      removeFromCompareItem?.(product.id);
-    } else {
-      addToCompareItem?.(product);
     }
   };
 
@@ -146,9 +133,6 @@ export default function QuickAdd() {
     : productFullyOut || isOutOfStock
       ? "Out of Stock"
       : `Add to Cart — ${formatPrice(displayPrice * quantity)}`;
-
-  const ratingValue = product?.rating ?? product?.avg_rating ?? 5;
-  const reviewsCountText = product?.reviewsText ?? (product?.review_count ? `(${product.review_count} reviews)` : null);
 
   return (
     <Modal isOpen={isOpen} onClose={closeModal} maxWidth="520px">

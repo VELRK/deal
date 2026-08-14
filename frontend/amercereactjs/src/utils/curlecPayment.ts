@@ -1,3 +1,16 @@
+/** FPX / TnG / card 3DS must leave Curlec via this URL. Do not omit. */
+export function curlecCheckoutRedirect(callbackUrl?: string | null): {
+  callback_url: string;
+  redirect: true;
+} {
+  const fromApi = (callbackUrl || "").trim();
+  const fallback = `${window.location.origin}/shopkart-api/payment/razorpay-return`;
+  return {
+    callback_url: fromApi || fallback,
+    redirect: true,
+  };
+}
+
 /** User-facing copy for Curlec / Razorpay checkout outcomes. */
 export function curlecUserMessage(err?: {
   reason?: string;

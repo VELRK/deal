@@ -15,7 +15,7 @@ import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
 import { removeLineFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
-import { curlecUserMessage } from "@/utils/curlecPayment";
+import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
 
 /* Razorpay global type */
 declare global {
@@ -681,7 +681,7 @@ export default function Checkout() {
         image: checkoutLogo,
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
-        ...(pd.callback_url ? { callback_url: pd.callback_url, redirect: true } : {}),
+        ...curlecCheckoutRedirect(pd.callback_url),
         // Do not pass method/config filters — Curlec only shows methods
         // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {

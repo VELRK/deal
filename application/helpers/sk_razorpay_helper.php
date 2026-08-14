@@ -683,7 +683,11 @@ function sk_razorpay_handle_webhook_event(array $event, array $settings = null):
  * Browser return URL after Curlec FPX / card 3DS / e-wallet (no JWT).
  */
 function sk_razorpay_callback_url(): string {
-    return site_url('shopkart-api/payment/razorpay-return');
+    $url = site_url('shopkart-api/payment/razorpay-return');
+    if (stripos($url, 'http://2deal.my') === 0 || stripos($url, 'http://www.2deal.my') === 0) {
+        $url = 'https://' . substr($url, strlen('http://'));
+    }
+    return $url;
 }
 
 /**

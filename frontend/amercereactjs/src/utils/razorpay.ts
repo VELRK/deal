@@ -7,9 +7,22 @@ declare global {
   }
 }
 
-import { loadRazorpayScript } from "@/utils/razorpay";
 import { paymentAPI } from "@/services/api";
-import { curlecUserMessage } from "@/utils/curlecPayment";
+import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
+
+export function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 type CurlecPayData = {
   razorpay_order_id: string;
@@ -62,7 +75,7 @@ export async function completeOrderPayment(
       image: checkoutLogo,
       prefill: pd.prefill ?? {},
       theme: { color: "#3EC1BC" },
-      ...(pd.callback_url ? { callback_url: pd.callback_url, redirect: true } : {}),
+      ...curlecCheckoutRedirect(pd.callback_url),
       handler: async (response: {
         razorpay_order_id: string;
         razorpay_payment_id: string;

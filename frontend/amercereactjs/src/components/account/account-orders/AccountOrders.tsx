@@ -111,6 +111,9 @@ export default function AccountOrders() {
 
   const getOrderStatusGroup = (status: string) => {
     const s = status.toLowerCase();
+    if (s === "abandoned") {
+      return "abandoned";
+    }
     if (s === "payment_attempt") {
       return "in-progress";
     }

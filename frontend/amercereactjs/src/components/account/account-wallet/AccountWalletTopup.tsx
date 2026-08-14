@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AccountSection } from "@/components/account/AccountSection";
 import { paymentAPI, userAPI } from "@/services/api";
 import { loadRazorpayScript } from "@/utils/razorpay";
+import { curlecCheckoutRedirect } from "@/utils/curlecPayment";
 
 const PRESETS = [100, 150, 200, 250] as const;
 const MIN_TOPUP_RM = 100;
@@ -54,7 +55,7 @@ export default function AccountWalletTopup() {
       ).href,
       prefill: d.prefill ?? {},
       theme: { color: "#3EC1BC" },
-      ...(d.callback_url ? { callback_url: d.callback_url, redirect: true } : {}),
+      ...curlecCheckoutRedirect(d.callback_url),
       // Do not pass method/config filters — Curlec only shows methods
       // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
       handler: async (response: {
@@ -70,7 +71,6 @@ export default function AccountWalletTopup() {
             reference: d.reference,
           });
           if (verifyRes.data?.success) {
-            const credited = verifyRes.data.data?.credited ?? true;
             const bal = verifyRes.data.data?.balance ?? verifyRes.data.data?.balance_rm;
             setSuccessMsg(
               verifyRes.data.message ||
@@ -135,7 +135,7 @@ export default function AccountWalletTopup() {
           currency: d.currency,
           key_id: d.key_id,
           prefill: d.prefill,
-          callback_url: d.callback_url,
+          callback_url: (d as { callback_url?: string }).callback_url,
         });
         return;
       }
