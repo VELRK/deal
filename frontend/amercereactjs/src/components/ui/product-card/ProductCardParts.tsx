@@ -25,7 +25,7 @@ export function ProductCardDualImageLink({
     <Link
       to={`/product-detail/${productId}`}
       className="product-img"
-      style={{ display: "block", aspectRatio: "3/4", overflow: "hidden" }}
+      style={{ display: "block", aspectRatio: "3/4", overflow: "hidden", position: "relative", width: "100%" }}
     >
       <img
         className="img-product"
@@ -34,19 +34,21 @@ export function ProductCardDualImageLink({
         width={width}
         height={height}
         loading="lazy"
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
-      <img
-        className="img-hover"
-        src={hoverImage}
-        alt={alt}
-        width={width}
-        height={height}
-        loading="lazy"
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-      />
+      {hoverImage && hoverImage !== activeImage && (
+        <img
+          className="img-hover"
+          src={hoverImage}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", top: 0, left: 0 }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      )}
     </Link>
   );
 }

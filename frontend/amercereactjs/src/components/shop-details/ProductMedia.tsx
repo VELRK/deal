@@ -159,7 +159,7 @@ export default function ProductMedia({
                         dataZoom={img.src}
                         src={img.src}
                         alt="img-product"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#fff" }}
                       />
                     </a>
                   )}
@@ -182,7 +182,8 @@ export default function ProductMedia({
                   style={{
                     width: thumbnailPosition === "bottom" ? 82 : 72,
                     height: thumbnailPosition === "bottom" ? 110 : 96,
-                    objectFit: "cover",
+                    objectFit: "contain",
+                    backgroundColor: "#fff",
                   }}
                 />
                 {img.video && <i className="icon icon-video"></i>}

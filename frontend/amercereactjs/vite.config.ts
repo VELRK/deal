@@ -54,27 +54,28 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: true,
       port: 3000,
       open: "/frontend/",
       proxy: {
         "/shopkart-api": {
-          target: "http://127.0.0.1/deal",
+          target: "https://superfinelabels.in/deal",
           changeOrigin: true,
         },
         "/uploads": {
-          target: "http://127.0.0.1/deal",
+          target: "https://superfinelabels.in/deal",
           changeOrigin: true,
         },
         "/deal": {
-          target: "http://127.0.0.1",
+          target: "https://superfinelabels.in",
           changeOrigin: true,
         },
         "/assets": {
-          target: "http://127.0.0.1/deal",
+          target: "https://superfinelabels.in/deal",
           changeOrigin: true,
         },
         "/frontend/assets": {
-          target: "http://127.0.0.1/deal",
+          target: "https://superfinelabels.in/deal",
           changeOrigin: true,
         },
       },

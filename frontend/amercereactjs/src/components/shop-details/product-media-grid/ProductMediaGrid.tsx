@@ -133,6 +133,7 @@ export default function ProductMediaGrid({
                               dataZoom={img.src}
                               src={img.src}
                               alt="img-product"
+                              style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#fff" }}
                             />
                           </a>
                         )}
@@ -172,6 +173,7 @@ export default function ProductMediaGrid({
                     height={110}
                     src={img.src}
                     alt="Image"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#fff" }}
                   />
                 </div>
               </SwiperSlide>

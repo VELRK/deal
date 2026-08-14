@@ -1429,17 +1429,7 @@ export default function AccountOrders() {
 
                             {/* Card actions bottom */}
                             <div className="product-card-footer">
-                              {statusGroup === "in-progress" ? (
-                                <button
-                                  className="action-btn-flat"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setModalAction({ type: "cancel", orderId: selectedOrder.id });
-                                  }}
-                                >
-                                  Cancel Item
-                                </button>
-                              ) : statusGroup === "delivered" ? (
+                              {statusGroup === "delivered" ? (
                                 <>
                                   <button
                                     className="action-btn-flat"
