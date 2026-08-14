@@ -105,21 +105,38 @@ function sk_isms_get_test_config(array $settings = null) {
 }
 
 /**
- * Known spellings of the developer test mobile (extra trailing 0 was creating duplicate users).
+ * Spellings of the configured developer test mobile only.
+ * Do NOT keep old hardcoded numbers here — changing Settings → test phone
+ * must not reopen a previous test account (e.g. …004 vs …008).
  * @return string[]
  */
 function sk_isms_test_phone_aliases(array $settings) {
     $CI =& get_instance();
     $CI->load->library('isms', $settings);
     $test = sk_isms_get_test_config($settings);
+    $canonical = preg_replace('/\D/', '', (string) ($test['phone'] ?? ''));
+    if ($canonical === '') {
+        $canonical = '60180000000';
+    }
+
     $aliases = [
-        $CI->isms->normalize_phone($test['phone']),
-        $CI->isms->normalize_phone('0180000000'),
-        $CI->isms->normalize_phone('60180000000'),
-        $CI->isms->normalize_phone('601800000000'),
-        '60180000000',
-        '601800000000',
+        $CI->isms->normalize_phone($canonical),
+        $canonical,
     ];
+
+    // Local / national forms of the SAME number
+    if (strpos($canonical, '60') === 0) {
+        $national = substr($canonical, 2);
+        $aliases[] = $CI->isms->normalize_phone('0' . $national);
+        $aliases[] = $CI->isms->normalize_phone($national);
+    }
+
+    // Extra trailing-0 spelling of the SAME number only (legacy duplicate)
+    $aliases[] = $CI->isms->normalize_phone($canonical . '0');
+    if (strlen($canonical) > 11 && substr($canonical, -1) === '0') {
+        $aliases[] = $CI->isms->normalize_phone(substr($canonical, 0, -1));
+    }
+
     return array_values(array_unique(array_filter($aliases)));
 }
 
