@@ -11,10 +11,6 @@ export function ProductSafeCheckout() {
         <span className="badge border fw-medium px-10 py-6" style={{ fontSize: 11, background: "#f0fdf4", color: "#166534", borderColor: "#bbf7d0" }}>
           Razorpay
         </span>
-        {/* COD */}
-        <span className="badge border fw-medium px-10 py-6" style={{ fontSize: 11, background: "#fefce8", color: "#854d0e", borderColor: "#fde68a" }}>
-          Cash on Delivery
-        </span>
         {/* Net Banking */}
         <span className="badge border fw-medium px-10 py-6" style={{ fontSize: 11, background: "#fdf4ff", color: "#6b21a8", borderColor: "#e9d5ff" }}>
           Net Banking

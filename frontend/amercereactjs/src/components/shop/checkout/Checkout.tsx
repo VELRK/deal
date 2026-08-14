@@ -320,7 +320,8 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay" | "wallet">(() => {
     const saved = sessionStorage.getItem("checkout_payment_method");
-    return (saved === "razorpay" || saved === "wallet" ? saved : "cod") as "cod" | "razorpay" | "wallet";
+    // COD hidden on website — only razorpay / wallet
+    return (saved === "wallet" ? "wallet" : "razorpay") as "cod" | "razorpay" | "wallet";
   });
   useEffect(() => {
     sessionStorage.setItem("checkout_payment_method", paymentMethod);
@@ -359,7 +360,7 @@ export default function Checkout() {
   const royaltyRm = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), billTotal)
     : 0;
-  const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → wallet / COD / online
+  const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → wallet / online
 
   // Wallet charge if user selects wallet (promo + wallet % + free ship − royalty).
   // Free delivery is fixed for wallet — shipping is never added to wallet payable (no min order).
@@ -376,10 +377,11 @@ export default function Checkout() {
     && walletPayablePreview > 0
     && walletBalance + 0.009 >= walletPayablePreview;
 
-  // If wallet was selected but balance no longer covers full payable, fall back to COD.
+  // If wallet was selected but balance no longer covers full payable, fall back to online.
+  // Also clear any stale COD selection (COD is hidden on website).
   useEffect(() => {
-    if (paymentMethod === "wallet" && !walletBalanceOk) {
-      setPaymentMethod("cod");
+    if (paymentMethod === "cod" || (paymentMethod === "wallet" && !walletBalanceOk)) {
+      setPaymentMethod("razorpay");
     }
   }, [paymentMethod, walletBalanceOk]);
   /* ── Place order ── */
@@ -644,7 +646,7 @@ export default function Checkout() {
       // ── Razorpay online payment ─────────────────────────────
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        setOrderError("Failed to load payment gateway. Please try again or use Cash on Delivery.");
+        setOrderError("Failed to load payment gateway. Please try again or pay with Wallet.");
         return;
       }
 
@@ -658,7 +660,7 @@ export default function Checkout() {
       });
 
       if (!payData.success || !payData.data?.razorpay_order_id) {
-        setOrderError(payData.message ?? "Payment gateway error. Try Cash on Delivery.");
+        setOrderError(payData.message ?? "Payment gateway error. Try again or pay with Wallet.");
         return;
       }
 
@@ -719,8 +721,8 @@ export default function Checkout() {
         setOrderError(
           desc ||
             reason ||
-            "Card / online payment failed. Check your phone number on the delivery address, try another card, or use Cash on Delivery. Your order is saved under My Orders."
-        );
+            "Card / online payment failed. Check your phone number on the delivery address, try another card, or pay with Wallet. Your order is saved under My Orders."
+          );
         setOrderPlacing(false);
       });
       rzp.open();
@@ -1078,21 +1080,6 @@ export default function Checkout() {
               </div>
 
               <div
-                className={`payment-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
-                onClick={() => setPaymentMethod("cod")}
-              >
-                <div className="d-flex align-items-center gap-3">
-                  <div className="radio-circle">
-                    {paymentMethod === 'cod' && <div className="radio-inner" />}
-                  </div>
-                  <div>
-                    <div className="payment-card-title">💵 Cash on Delivery</div>
-                    <div className="payment-card-desc">Pay when your order arrives</div>
-                  </div>
-                </div>
-              </div>
-
-              <div
                 className={`payment-card mb-3 ${paymentMethod === 'razorpay' ? 'selected' : ''}`}
                 onClick={() => setPaymentMethod("razorpay")}
               >
@@ -1178,9 +1165,9 @@ export default function Checkout() {
                           ? ' · Add items to apply'
                           : useRoyalty && royaltyRm > 0
                             ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${
-                                paymentMethod === 'wallet' ? 'wallet' : paymentMethod === 'cod' ? 'COD' : 'online'
+                                paymentMethod === 'wallet' ? 'wallet' : 'online'
                               }`
-                            : ' · Deducts from bill; pay remainder with wallet / COD / online'}
+                            : ' · Deducts from bill; pay remainder with wallet / online'}
                       </div>
                     </div>
                     {useRoyalty ? (
