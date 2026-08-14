@@ -42,7 +42,7 @@ export function ProductShippingReturns({
               </li>
               <li className="cl-text-2 mb-3 d-flex align-items-start" style={{ lineHeight: '1.6' }}>
                 <span className="me-2 text-dark opacity-50">•</span>
-                <span>Cash on Delivery available pan-India</span>
+                <span>Tracked dispatch via courier</span>
               </li>
               <li className="cl-text-2 mb-3 d-flex align-items-start" style={{ lineHeight: '1.6' }}>
                 <span className="me-2 text-dark opacity-50">•</span>

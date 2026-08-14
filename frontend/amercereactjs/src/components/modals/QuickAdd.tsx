@@ -144,8 +144,8 @@ export default function QuickAdd() {
   const primaryLabel = adding
     ? "Adding to Cart..."
     : productFullyOut || isOutOfStock
-    ? "Out of Stock"
-    : `Add to Cart — ${formatPrice(displayPrice * quantity)}`;
+      ? "Out of Stock"
+      : `Add to Cart — ${formatPrice(displayPrice * quantity)}`;
 
   const ratingValue = product?.rating ?? product?.avg_rating ?? 5;
   const reviewsCountText = product?.reviewsText ?? (product?.review_count ? `(${product.review_count} reviews)` : null);
@@ -191,7 +191,7 @@ export default function QuickAdd() {
                   {product.name}
                 </Link>
 
-                {ratingValue > 0 && (
+                {/* {ratingValue > 0 && (
                   <div className={styles.ratingRow}>
                     <span className={styles.starIcon}>★</span>
                     <span style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
@@ -201,7 +201,7 @@ export default function QuickAdd() {
                       <span className={styles.reviewText}>{reviewsCountText}</span>
                     )}
                   </div>
-                )}
+                )} */}
 
                 <div className={styles.priceRow}>
                   <span className={styles.currentPrice}>
@@ -256,9 +256,8 @@ export default function QuickAdd() {
                           setQuantity(1);
                         }}
                         title={out ? `${variant.label} — Out of stock` : variant.label}
-                        className={`${styles.variantCard} ${
-                          active ? styles.variantCardActive : ""
-                        } ${out ? styles.variantCardDisabled : ""}`}
+                        className={`${styles.variantCard} ${active ? styles.variantCardActive : ""
+                          } ${out ? styles.variantCardDisabled : ""}`}
                       >
                         {active && <span className={styles.activeCheckIcon}>✓</span>}
                         <span className={styles.variantLabel}>{variant.label}</span>
@@ -288,9 +287,8 @@ export default function QuickAdd() {
                         type="button"
                         onClick={() => setSelectedColorIndex(index)}
                         title={color.label}
-                        className={`${styles.colorSwatchBtn} ${
-                          isActive ? styles.colorSwatchActive : ""
-                        }`}
+                        className={`${styles.colorSwatchBtn} ${isActive ? styles.colorSwatchActive : ""
+                          }`}
                       >
                         <img
                           loading="lazy"
@@ -320,9 +318,8 @@ export default function QuickAdd() {
                         key={`${size}-${index}`}
                         type="button"
                         onClick={() => setSelectedSizeIndex(index)}
-                        className={`${styles.sizeBtn} ${
-                          isActive ? styles.sizeBtnActive : ""
-                        }`}
+                        className={`${styles.sizeBtn} ${isActive ? styles.sizeBtnActive : ""
+                          }`}
                       >
                         {size}
                       </button>
@@ -371,16 +368,15 @@ export default function QuickAdd() {
                   type="button"
                   onClick={handleToggleWishlist}
                   title={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-                  className={`${styles.iconUtilityBtn} ${
-                    inWishlist ? styles.iconUtilityBtnActive : ""
-                  }`}
+                  className={`${styles.iconUtilityBtn} ${inWishlist ? styles.iconUtilityBtnActive : ""
+                    }`}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill={inWishlist ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                   </svg>
                 </button>
 
-                <button
+                {/* <button
                   type="button"
                   onClick={handleToggleCompare}
                   title={inCompare ? "Remove from compare" : "Add to compare"}
@@ -391,7 +387,7 @@ export default function QuickAdd() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path>
                   </svg>
-                </button>
+                </button> */}
 
                 <Link
                   to={`/product-detail/${product.id}`}
@@ -423,12 +419,12 @@ export default function QuickAdd() {
             isOutOfStock || productFullyOut
               ? undefined
               : {
-                  label: "Buy It Now",
-                  onClick: async () => {
-                    await handleAddToCart();
-                    window.location.href = "/checkout";
-                  },
-                }
+                label: "Buy It Now",
+                onClick: async () => {
+                  await handleAddToCart();
+                  window.location.href = "/checkout";
+                },
+              }
           }
         />
       )}

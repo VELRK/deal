@@ -130,7 +130,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     { label: "Min Order Qty", value: product.min_order_qty },
     { label: "Procurement SLA", value: product.procurement_sla ? `${product.procurement_sla} Business Days` : undefined },
     { label: "Procurement Type", value: product.procurement_type },
-    { label: "Return Policy", value: product.return_policy },
+    { label: "Return Policy", value: product.return_policy ? String(product.return_policy).replace(/<[^>]*>?/gm, '').replace(/retur policy\s*-\s*/i, '').trim() : undefined },
     { label: "Manufacturer", value: product.manufacturer_name },
     { label: "Manufacturer Address", value: product.manufacturer_address },
   ].filter(item => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");

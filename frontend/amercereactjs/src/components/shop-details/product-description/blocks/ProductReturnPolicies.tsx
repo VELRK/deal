@@ -19,7 +19,7 @@ export function ProductReturnPolicies({
 }: Props) {
   const returnPolicy = product?.return_policy;
   const shippingInfo = product?.shipping_info;
-  const sla          = product?.procurement_sla ?? 3;
+  const sla = product?.procurement_sla ?? 3;
 
   return (
     <div className={wrapperClassName} style={{ gap: '3rem' }}>
@@ -30,7 +30,7 @@ export function ProductReturnPolicies({
             <div
               className="cl-text-2 product-html-content"
               style={{ lineHeight: '1.8', fontSize: '15px' }}
-              dangerouslySetInnerHTML={{ __html: returnPolicy }}
+              dangerouslySetInnerHTML={{ __html: returnPolicy.replace(/<p><br><\/p>/gi, '').replace(/retur policy\s*-\s*/i, '') }}
             />
           ) : (
             <p className="cl-text-2 m-0" style={{ lineHeight: '1.6' }}>
@@ -62,10 +62,6 @@ export function ProductReturnPolicies({
               <li className="cl-text-2 mb-3 d-flex align-items-start" style={{ lineHeight: '1.6' }}>
                 <span className="me-2 text-dark opacity-50">•</span>
                 <span>Free shipping on orders above RM999.</span>
-              </li>
-              <li className="cl-text-2 mb-3 d-flex align-items-start" style={{ lineHeight: '1.6' }}>
-                <span className="me-2 text-dark opacity-50">•</span>
-                <span>Cash on Delivery available across India.</span>
               </li>
             </ul>
           )}
