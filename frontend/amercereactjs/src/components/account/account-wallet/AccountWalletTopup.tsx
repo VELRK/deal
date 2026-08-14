@@ -31,6 +31,7 @@ export default function AccountWalletTopup() {
     amount: number;
     currency: string;
     key_id: string;
+    callback_url?: string;
     prefill?: { name: string; email: string; contact: string };
   }) {
     const loaded = await loadRazorpayScript();
@@ -53,6 +54,7 @@ export default function AccountWalletTopup() {
       ).href,
       prefill: d.prefill ?? {},
       theme: { color: "#3EC1BC" },
+      ...(d.callback_url ? { callback_url: d.callback_url, redirect: true } : {}),
       // Do not pass method/config filters — Curlec only shows methods
       // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
       handler: async (response: {
@@ -68,9 +70,13 @@ export default function AccountWalletTopup() {
             reference: d.reference,
           });
           if (verifyRes.data?.success) {
+            const credited = verifyRes.data.data?.credited ?? true;
+            const bal = verifyRes.data.data?.balance ?? verifyRes.data.data?.balance_rm;
             setSuccessMsg(
               verifyRes.data.message ||
-              `RM ${numericAmount.toFixed(2)} added to your wallet.`,
+              (bal != null
+                ? `RM ${Number(bal).toFixed(2)} added to your wallet.`
+                : `RM ${numericAmount.toFixed(2)} added to your wallet.`),
             );
             setTimeout(() => navigate("/account-wallet?topup=success"), 1200);
           } else {
@@ -129,6 +135,7 @@ export default function AccountWalletTopup() {
           currency: d.currency,
           key_id: d.key_id,
           prefill: d.prefill,
+          callback_url: d.callback_url,
         });
         return;
       }

@@ -15,6 +15,7 @@ import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
 import { removeLineFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
+import { curlecUserMessage } from "@/utils/curlecPayment";
 
 /* Razorpay global type */
 declare global {
@@ -654,7 +655,7 @@ export default function Checkout() {
       const payData = (payRes.data as {
         success?: boolean; data?: {
           razorpay_order_id: string; amount: number; currency: string;
-          key_id: string; order_number: string;
+          key_id: string; order_number: string; callback_url?: string;
           prefill: { name: string; email: string; contact: string };
         }; message?: string
       });
@@ -680,18 +681,37 @@ export default function Checkout() {
         image: checkoutLogo,
         prefill: { name: pd.prefill.name, email: pd.prefill.email, contact: pd.prefill.contact },
         theme: { color: "#3EC1BC" },
+        ...(pd.callback_url ? { callback_url: pd.callback_url, redirect: true } : {}),
         // Do not pass method/config filters — Curlec only shows methods
         // enabled on the merchant (FPX must be enabled in Dashboard Live mode).
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
-            await paymentAPI.verify({
+            const verifyRes = await paymentAPI.verify({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               order_id: orderId,
             });
-          } catch {
-            setOrderError("Payment received but verification failed. Contact support with Order #" + pd.order_number);
+            const body = verifyRes.data as {
+              success?: boolean;
+              message?: string;
+              data?: { confirmed?: boolean; pending?: boolean; failed?: boolean };
+            };
+            if (body?.data?.pending) {
+              setOrderError(body.message || curlecUserMessage({ reason: "payment_pending_gateway" }).message);
+              setOrderPlacing(false);
+              return;
+            }
+            if (body?.data?.failed || body?.success === false) {
+              setOrderError(body.message || curlecUserMessage().message);
+              setOrderPlacing(false);
+              return;
+            }
+          } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setOrderError(msg ?? ("Payment received but confirmation is still pending. Check My Orders for #" + pd.order_number));
+            setOrderPlacing(false);
+            return;
           }
           saveStoredPromo(null);
           saveUseRoyalty(false);
@@ -716,13 +736,7 @@ export default function Checkout() {
         const err = (response as {
           error?: { description?: string; reason?: string; code?: string };
         })?.error;
-        const desc = err?.description?.trim();
-        const reason = err?.reason?.trim();
-        setOrderError(
-          desc ||
-            reason ||
-            "Card / online payment failed. Check your phone number on the delivery address, try another card, or pay with Wallet. Your order is saved under My Orders."
-          );
+        setOrderError(curlecUserMessage(err).message);
         setOrderPlacing(false);
       });
       rzp.open();

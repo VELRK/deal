@@ -28,7 +28,7 @@ class Settings extends Sk_Base {
             'site_name', 'site_email', 'site_phone', 'site_address',
             'currency', 'currency_symbol', 'tax_rate', 'shipping_charge',
             'free_shipping_above', 'razorpay_key_id', 'razorpay_key_secret',
-            'razorpay_mode', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
+            'razorpay_webhook_secret', 'razorpay_mode', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
             'smtp_from_name', 'admin_email', 'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics', 'top_bar_text',
             'whatsapp_number',
@@ -44,6 +44,7 @@ class Settings extends Sk_Base {
         ];
         $raw_fields = [
             'isms_password', 'isms_api_key', 'smtp_pass', 'razorpay_key_secret',
+            'razorpay_webhook_secret',
             'jt_express_private_key', 'jt_express_customer_password',
             'askeva_api_token',
         ];

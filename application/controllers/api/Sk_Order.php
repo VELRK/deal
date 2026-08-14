@@ -431,7 +431,14 @@ class Sk_Order extends Sk_Base_Api {
             sk_whatsapp_notify_order_status($order, $waStatus, $settings);
         }
 
-        $this->success(['order' => $order], 'Order placed successfully.', 200);
+        $this->success([
+            'order' => $order,
+            'payment' => [
+                'requires_gateway' => $is_razorpay_due,
+                'gateway_amount'   => $gateway_amount,
+                'next_step'        => $is_razorpay_due ? 'create_payment_order' : 'complete',
+            ],
+        ], 'Order placed successfully.', 200);
     }
 
     public function index() {

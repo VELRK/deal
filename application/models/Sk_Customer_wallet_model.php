@@ -313,7 +313,7 @@ class Sk_Customer_wallet_model extends CI_Model {
 
         $CI =& get_instance();
         $CI->load->model('Sk_User_model');
-        $CI->load->helper('sk_isms');
+        $CI->load->helper(['sk_isms', 'sk_razorpay']);
         $user = $CI->Sk_User_model->get_by_id($userId);
         $contact = sk_razorpay_contact($user['phone'] ?? '', $settings);
         if ($contact === '') {
@@ -362,15 +362,12 @@ class Sk_Customer_wallet_model extends CI_Model {
             'Pending Razorpay ' . $rzp['id']
         );
 
-        $CI->load->helper('sk_isms');
-        $email = sk_razorpay_prefill_email($user['email'] ?? '');
-        $prefill = [
-            'name'    => $user['name'] ?? 'Customer',
-            'contact' => $contact,
-        ];
-        if ($email !== '') {
-            $prefill['email'] = $email;
-        }
+        $prefill = sk_razorpay_build_prefill(
+            (string)($user['name'] ?? 'Customer'),
+            (string)($user['phone'] ?? ''),
+            (string)($user['email'] ?? ''),
+            $settings
+        );
 
         return [
             'gateway'           => 'razorpay',
@@ -507,20 +504,24 @@ class Sk_Customer_wallet_model extends CI_Model {
     }
 
     public function find_topup_pending(string $ref, int $userId, string $rzpOrderId = ''): ?array {
-        $this->db->where('reference', $ref)
-            ->where('user_id', $userId);
-        $this->apply_pending_topup_scope();
-        $pending = $this->db->order_by('id', 'DESC')
-            ->get('customer_wallet_transactions')
-            ->row_array();
-        if ($pending) {
-            return $pending;
+        $ref = trim($ref);
+        if ($ref !== '') {
+            $this->db->where('reference', $ref)
+                ->where('user_id', $userId);
+            $this->apply_pending_topup_scope();
+            $pending = $this->db->order_by('id', 'DESC')
+                ->get('customer_wallet_transactions')
+                ->row_array();
+            if ($pending) {
+                return $pending;
+            }
         }
 
         if ($rzpOrderId !== '') {
-            $pending = $this->db->where('user_id', $userId)
-                ->like('description', 'Pending Razorpay ' . $rzpOrderId, 'after')
-                ->order_by('id', 'DESC')
+            $this->db->where('user_id', $userId)
+                ->like('description', 'Pending Razorpay ' . $rzpOrderId, 'after');
+            $this->apply_pending_topup_scope();
+            $pending = $this->db->order_by('id', 'DESC')
                 ->get('customer_wallet_transactions')
                 ->row_array();
             if ($pending) {

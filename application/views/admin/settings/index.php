@@ -237,6 +237,18 @@
               <input type="password" name="razorpay_key_secret" class="form-control font-monospace"
                      value="<?= htmlspecialchars($settings['razorpay_key_secret'] ?? '') ?>">
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Razorpay Webhook Secret</label>
+              <input type="password" name="razorpay_webhook_secret" class="form-control font-monospace"
+                     value="<?= htmlspecialchars($settings['razorpay_webhook_secret'] ?? '') ?>"
+                     placeholder="whsec_...">
+              <div class="form-text">
+                Webhook URL (register in Curlec Dashboard → Webhooks, events: <code>payment.captured</code>, <code>payment.authorized</code>, <code>order.paid</code>):
+                <br><code class="user-select-all"><?= site_url('shopkart-api/payment/razorpay-webhook') ?></code>
+                <br>Checkout return URL (used automatically as Curlec <code>callback_url</code>):
+                <br><code class="user-select-all"><?= site_url('shopkart-api/payment/razorpay-return') ?></code>
+              </div>
+            </div>
             <div class="col-md-4">
               <label class="form-label">Mode</label>
               <select name="razorpay_mode" class="form-select">

@@ -61,6 +61,18 @@ class Sk_Order_model extends CI_Model {
         return $this->db->where('order_id', $order_id)->order_by('id', 'DESC')->limit(1)->get('payments')->row_array();
     }
 
+    public function get_payment_by_rzp_order_id($razorpay_order_id) {
+        $razorpay_order_id = trim((string)$razorpay_order_id);
+        if ($razorpay_order_id === '') {
+            return null;
+        }
+        return $this->db->where('razorpay_order_id', $razorpay_order_id)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('payments')
+            ->row_array();
+    }
+
     public function get_user_orders($user_id, $limit = 10, $offset = 0) {
         return $this->db->where('user_id', $user_id)
                         ->order_by('created_at', 'DESC')

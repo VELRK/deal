@@ -624,6 +624,10 @@ $route['shopkart-api/apply-coupon']['POST'] = 'api/Sk_Promo/apply';
 // Payment
 $route['shopkart-api/payment/create-order']['POST'] = 'api/Sk_Payment/create_order';
 $route['shopkart-api/payment/verify']['POST'] = 'api/Sk_Payment/verify';
+$route['shopkart-api/payment/order-status']['GET'] = 'api/Sk_Payment/order_payment_status';
+$route['shopkart-api/payment/razorpay-return']['GET'] = 'api/Sk_Payment/razorpay_return';
+$route['shopkart-api/payment/razorpay-return']['POST'] = 'api/Sk_Payment/razorpay_return';
+$route['shopkart-api/payment/razorpay-webhook']['POST'] = 'api/Sk_Payment/razorpay_webhook';
 // User profile
 $route['shopkart-api/user/profile']['GET'] = 'api/Sk_User/profile';
 $route['shopkart-api/user/profile']['PUT'] = 'api/Sk_User/update_profile';
@@ -642,6 +646,7 @@ $route['shopkart-api/notifications']['GET']                 = 'api/Sk_Notificati
 $route['shopkart-api/user/royalty']['GET']                  = 'api/Sk_User/royalty';
 $route['shopkart-api/user/royalty/transactions']['GET']     = 'api/Sk_User/royalty_transactions';
 $route['shopkart-api/payment/wallet-topup-verify']['POST']  = 'api/Sk_Payment/wallet_topup_verify';
+$route['shopkart-api/payment/wallet-topup-status']['GET']   = 'api/Sk_Payment/wallet_topup_status';
 $route['shopkart-api/payment/toyyibpay-return']['GET']      = 'api/Sk_Payment/toyyibpay_return';
 $route['shopkart-api/payment/toyyibpay-callback']['POST']   = 'api/Sk_Payment/toyyibpay_callback';
 $route['shopkart-api/payment/toyyibpay-callback']['GET']    = 'api/Sk_Payment/toyyibpay_callback';

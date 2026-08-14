@@ -12,12 +12,18 @@ class Sk_Payment extends Sk_Base_Api {
      */
     public function create_order() {
         $this->auth_required();
+        $this->load->helper(['sk_isms', 'sk_razorpay']);
         $data     = $this->body();
         $order_id = (int)($data['order_id'] ?? 0);
 
         $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
         if (!$order) return $this->error('Order not found.', 404);
-        if ($order['payment_status'] === 'paid') return $this->error('Order already paid.');
+        if ($order['payment_status'] === 'paid') {
+            return $this->error('Order already paid. Do not open Curlec again — show order confirmation.');
+        }
+        if (strtolower((string)($order['payment_method'] ?? '')) === 'wallet') {
+            return $this->error('This order was paid with wallet. No online payment is required.');
+        }
 
         $walletPaid  = round((float)($order['wallet_amount'] ?? 0), 2);
         $royaltyPaid = round((float)($order['royalty_used_rm'] ?? 0), 2);
@@ -31,11 +37,9 @@ class Sk_Payment extends Sk_Base_Api {
         $key_secret = trim((string)($settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret') ?? ''));
 
         if ($key_id === '' || $key_secret === '') {
-            return $this->error('Payment gateway not configured. Please use Cash on Delivery or contact support.', 503);
+            return $this->error('Payment gateway not configured. Please contact support.', 503);
         }
 
-        // Validate contact BEFORE creating a Razorpay order (avoids orphan RZP orders)
-        $this->load->helper('sk_isms');
         $user = $this->Sk_User_model->get_by_id($this->user['user_id']);
         $contact = sk_razorpay_contact($order['shipping_phone'] ?? '', $settings);
         if ($contact === '') {
@@ -61,7 +65,6 @@ class Sk_Payment extends Sk_Base_Api {
             $currency = 'MYR';
         }
 
-        // Call Razorpay Orders API
         $payload = json_encode([
             'amount'          => $amount_paise,
             'currency'        => $currency,
@@ -91,7 +94,7 @@ class Sk_Payment extends Sk_Base_Api {
 
         if ($response === false || $curlErr !== '') {
             log_message('error', 'Razorpay CURL Error: ' . $curlErr);
-            return $this->error('Could not reach Razorpay. Please try again or use Cash on Delivery.', 502);
+            return $this->error('Could not reach Razorpay. Please try again.', 502);
         }
 
         $rzp = json_decode($response, true);
@@ -108,11 +111,10 @@ class Sk_Payment extends Sk_Base_Api {
             log_message('error', 'Razorpay create order failed HTTP ' . $http_code . ': ' . $response);
             $hint = $rzpMsg
                 ? ('Razorpay: ' . $rzpMsg)
-                : 'Failed to create payment order. Check Razorpay keys / MYR currency enablement, or use Cash on Delivery.';
+                : 'Failed to create payment order. Check Razorpay keys / MYR currency enablement.';
             return $this->error($hint, 502);
         }
 
-        // Save payment record
         $this->Sk_Order_model->save_payment([
             'order_id'          => $order_id,
             'razorpay_order_id' => $rzp['id'],
@@ -121,15 +123,12 @@ class Sk_Payment extends Sk_Base_Api {
             'status'            => 'created',
         ]);
 
-        $email = sk_razorpay_prefill_email($user['email'] ?? '');
-
-        $prefill = [
-            'name'    => $order['shipping_name'],
-            'contact' => $contact,
-        ];
-        if ($email !== '') {
-            $prefill['email'] = $email;
-        }
+        $prefill = sk_razorpay_build_prefill(
+            (string)($order['shipping_name'] ?? $user['name'] ?? ''),
+            (string)($order['shipping_phone'] ?? $user['phone'] ?? ''),
+            (string)($user['email'] ?? ''),
+            $settings
+        );
 
         $this->success([
             'razorpay_order_id' => $rzp['id'],
@@ -141,7 +140,12 @@ class Sk_Payment extends Sk_Base_Api {
             'currency'          => $currency,
             'key_id'            => $key_id,
             'order_number'      => $order['order_number'],
+            'order_id'          => $order_id,
+            'shop_order_id'     => $order_id,
             'prefill'           => $prefill,
+            'next_step'         => 'payment_verify',
+            'callback_url'      => sk_razorpay_callback_url(),
+            'redirect'          => true,
         ], 'Payment order created.');
     }
 
@@ -152,67 +156,153 @@ class Sk_Payment extends Sk_Base_Api {
      */
     public function verify() {
         $this->auth_required();
+        $this->load->helper('sk_razorpay');
         $data = $this->body();
 
-        $rzp_order_id   = $data['razorpay_order_id']  ?? '';
-        $rzp_payment_id = $data['razorpay_payment_id'] ?? '';
-        $rzp_signature  = $data['razorpay_signature']  ?? '';
-        $order_id       = (int)($data['order_id'] ?? 0);
+        $rzp_order_id = trim((string)($data['razorpay_order_id'] ?? ''));
+        $rzp_payment_id = trim((string)($data['razorpay_payment_id'] ?? $data['payment_id'] ?? ''));
+        $rzp_signature = trim((string)($data['razorpay_signature'] ?? $data['signature'] ?? ''));
+        $order_id = (int)($data['shop_order_id'] ?? $data['order_id'] ?? 0);
 
-        if (!$rzp_order_id || !$rzp_payment_id || !$rzp_signature) {
+        if ($rzp_order_id === '' || $rzp_payment_id === '') {
             return $this->error('Missing payment verification data.');
         }
 
-        if ($order_id > 0) {
+        if ($order_id <= 0) {
+            $paymentRow = $this->Sk_Order_model->get_payment_by_rzp_order_id($rzp_order_id);
+            $order_id = (int)($paymentRow['order_id'] ?? 0);
+        }
+
+        if ($order_id <= 0) {
+            return $this->error('Order not found for this payment.');
+        }
+
+        $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
+        if ($existing && ($existing['payment_status'] ?? '') === 'paid') {
+            $this->load->helper('sk_royalty');
+            sk_royalty_credit_for_order($existing);
             $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
-            if ($existing && ($existing['payment_status'] ?? '') === 'paid') {
-                $this->load->helper('sk_royalty');
-                sk_royalty_credit_for_order($existing);
-                $existing = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
-                return $this->success(['order' => $existing], 'Payment successful! Your order is confirmed.');
+            $msg = 'Payment successful! Your order is confirmed.';
+            $payload = sk_razorpay_order_payment_response($existing, $msg);
+            return $this->success($payload, $msg);
+        }
+
+        $settings = $this->get_settings();
+        $result = sk_razorpay_finalize_order_payment(
+            $order_id,
+            $rzp_order_id,
+            $rzp_payment_id,
+            $rzp_signature,
+            (int)$this->user['user_id'],
+            $settings
+        );
+
+        if (empty($result['success'])) {
+            if (!empty($result['pending'])) {
+                $payload = $result['response'] ?? sk_razorpay_pending_order_response(
+                    $result['order'] ?? $existing ?? [],
+                    $result['message'] ?? sk_razorpay_pending_message()
+                );
+                return $this->success($payload, $result['message'] ?? sk_razorpay_pending_message());
+            }
+            $pay = $rzp_payment_id !== '' ? sk_razorpay_fetch_payment($rzp_payment_id, $settings) : null;
+            $outcome = sk_razorpay_outcome_from_gateway($pay);
+            $orderRow = $result['order'] ?? $existing ?? [];
+            if ($outcome['kind'] === 'pending') {
+                return $this->success(sk_razorpay_pending_order_response($orderRow, $outcome['message']), $outcome['message']);
+            }
+            if ($outcome['kind'] === 'failed') {
+                return $this->error($outcome['message'], 200, sk_razorpay_failed_order_response($orderRow, $outcome));
+            }
+            return $this->error($result['message'] ?? 'Payment verification failed.', 400);
+        }
+
+        $payload = $result['response'] ?? sk_razorpay_order_payment_response(
+            $result['order'] ?? [],
+            $result['message'] ?? 'Payment successful! Your order is confirmed.'
+        );
+        $this->success($payload, $result['message'] ?? 'Payment successful! Your order is confirmed.');
+    }
+
+    /**
+     * Check shop order payment status after Curlec closes (FPX / e-wallet / card).
+     * GET /shopkart-api/payment/order-status?order_id=101&razorpay_order_id=...&razorpay_payment_id=...
+     */
+    public function order_payment_status() {
+        $this->auth_required();
+        $this->load->helper('sk_razorpay');
+
+        $orderId = (int)($this->input->get('order_id') ?? $this->input->get('shop_order_id') ?? 0);
+        $rzpOrderId = trim((string)($this->input->get('razorpay_order_id') ?? ''));
+        $rzpPaymentId = trim((string)($this->input->get('razorpay_payment_id') ?? ''));
+
+        if ($orderId <= 0 && $rzpOrderId === '') {
+            return $this->error('Pass order_id or razorpay_order_id.');
+        }
+
+        if ($orderId <= 0 && $rzpOrderId !== '') {
+            $paymentRow = $this->Sk_Order_model->get_payment_by_rzp_order_id($rzpOrderId);
+            $orderId = (int)($paymentRow['order_id'] ?? 0);
+        }
+
+        if ($orderId <= 0) {
+            return $this->error('Order not found.', 404);
+        }
+
+        $order = $this->Sk_Order_model->get_by_id($orderId, $this->user['user_id']);
+        if (!$order) {
+            return $this->error('Order not found.', 404);
+        }
+
+        if (($order['payment_status'] ?? '') === 'paid') {
+            $msg = 'Payment successful! Your order is confirmed.';
+            return $this->success(sk_razorpay_order_payment_response($order, $msg), $msg);
+        }
+
+        if ($rzpPaymentId !== '' && $rzpOrderId !== '') {
+            $settings = $this->get_settings();
+            $result = sk_razorpay_finalize_order_payment(
+                $orderId,
+                $rzpOrderId,
+                $rzpPaymentId,
+                '',
+                (int)$this->user['user_id'],
+                $settings
+            );
+            if (!empty($result['success'])) {
+                $payload = $result['response'] ?? sk_razorpay_order_payment_response(
+                    $result['order'] ?? [],
+                    $result['message'] ?? 'Payment successful! Your order is confirmed.'
+                );
+                return $this->success($payload, $result['message'] ?? 'Payment successful! Your order is confirmed.');
+            }
+            if (!empty($result['pending'])) {
+                $msg = $result['message'] ?? sk_razorpay_pending_message();
+                return $this->success(
+                    $result['response'] ?? sk_razorpay_pending_order_response($order, $msg),
+                    $msg
+                );
             }
         }
 
-        $settings   = $this->get_settings();
-        $key_secret = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
-
-        // Verify signature
-        $expected = hash_hmac('sha256', $rzp_order_id . '|' . $rzp_payment_id, $key_secret);
-        if (!hash_equals($expected, $rzp_signature)) {
-            log_message('error', 'Razorpay signature mismatch for order ' . $order_id);
-            return $this->error('Payment verification failed. Invalid signature.', 400);
+        if ($rzpPaymentId !== '') {
+            $pay = sk_razorpay_fetch_payment($rzpPaymentId, $this->get_settings());
+            $outcome = sk_razorpay_outcome_from_gateway($pay);
+            if ($outcome['kind'] === 'pending') {
+                return $this->success(sk_razorpay_pending_order_response($order, $outcome['message']), $outcome['message']);
+            }
+            if ($outcome['kind'] === 'failed') {
+                return $this->error($outcome['message'], 200, sk_razorpay_failed_order_response($order, $outcome));
+            }
         }
 
-        // Update payment record
-        $this->Sk_Order_model->update_payment($rzp_order_id, [
-            'razorpay_payment_id' => $rzp_payment_id,
-            'razorpay_signature'  => $rzp_signature,
-            'status'              => 'captured',
-        ]);
-
-        // Update order
-        $this->Sk_Order_model->update_payment_status($order_id, 'paid');
-        $this->Sk_Order_model->update_status($order_id, 'confirmed');
-
-        $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
-
-        $this->load->helper('sk_royalty');
-        // Redeem reserved royalty only after payment confirms the order.
-        $debitRes = sk_royalty_debit_for_order($order);
-        if (empty($debitRes['success']) && (int)($order['royalty_used_points'] ?? 0) > 0) {
-            log_message('error', 'Royalty redeem failed after payment for order #' . $order_id . ': ' . ($debitRes['message'] ?? ''));
-        }
-        sk_royalty_credit_for_order($order);
-        $order = $this->Sk_Order_model->get_by_id($order_id, $this->user['user_id']);
-
-        $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
-        sk_invoice_ensure_vendor_schema();
-        if (empty($order['invoice_emailed_at'])) {
-            sk_mail_order_invoice($order, $settings);
-        }
-        sk_whatsapp_notify_order_status($order, $order['status'] ?? 'confirmed', $settings);
-
-        $this->success(['order' => $order], 'Payment successful! Your order is confirmed.');
+        return $this->success([
+            'confirmed'      => false,
+            'status'         => (string)($order['status'] ?? 'payment_attempt'),
+            'payment_status' => (string)($order['payment_status'] ?? 'pending'),
+            'order_id'       => $orderId,
+            'order_number'   => (string)($order['order_number'] ?? ''),
+        ], 'Payment pending. Complete Curlec checkout or call payment/verify.');
     }
 
     /**
@@ -221,55 +311,253 @@ class Sk_Payment extends Sk_Base_Api {
      */
     public function wallet_topup_verify() {
         $this->auth_required();
+        $this->load->helper('sk_razorpay');
         $data = $this->body();
 
-        $rzpOrderId   = $data['razorpay_order_id'] ?? '';
-        $rzpPaymentId = $data['razorpay_payment_id'] ?? '';
-        $rzpSignature = $data['razorpay_signature'] ?? '';
-        $reference    = trim($data['reference'] ?? '');
+        $rzpOrderId = trim((string)($data['razorpay_order_id'] ?? $data['order_id'] ?? ''));
+        $rzpPaymentId = trim((string)($data['razorpay_payment_id'] ?? $data['payment_id'] ?? ''));
+        $rzpSignature = trim((string)($data['razorpay_signature'] ?? $data['signature'] ?? ''));
+        $reference = trim((string)($data['reference'] ?? ''));
 
-        if (!$rzpOrderId || !$rzpPaymentId || !$rzpSignature || !$reference) {
+        if ($rzpOrderId === '' || $rzpPaymentId === '') {
             return $this->error('Missing payment verification data.');
         }
-        if (strpos($reference, 'TOPUP-') !== 0) {
-            return $this->error('Invalid wallet top-up reference.');
+
+        $settings = $this->get_settings();
+        $result = sk_razorpay_finalize_wallet_topup(
+            $reference,
+            $rzpOrderId,
+            $rzpPaymentId,
+            $rzpSignature,
+            (int)$this->user['user_id'],
+            $settings
+        );
+
+        if (empty($result['success'])) {
+            return $this->error($result['message'] ?? 'Payment verification failed.', 400);
         }
 
-        $settings   = $this->get_settings();
-        $keySecret  = $settings['razorpay_key_secret'] ?? config_item('razorpay_key_secret');
-        $expected   = hash_hmac('sha256', $rzpOrderId . '|' . $rzpPaymentId, $keySecret);
-        if (!hash_equals($expected, $rzpSignature)) {
-            log_message('error', 'Razorpay wallet topup signature mismatch: ' . $reference);
-            return $this->error('Payment verification failed.', 400);
-        }
+        $payload = $result['response'] ?? sk_razorpay_wallet_topup_response(
+            $result['wallet'] ?? [],
+            $reference,
+            $result['message'] ?? 'Wallet topped up successfully!'
+        );
+        $this->success($payload, $result['message'] ?? 'Wallet topped up successfully!');
+    }
 
+    /**
+     * Check wallet top-up status (mobile can call after Curlec closes).
+     * GET /shopkart-api/payment/wallet-topup-status?reference=TOPUP-...&razorpay_order_id=...&razorpay_payment_id=...
+     */
+    public function wallet_topup_status() {
+        $this->auth_required();
+        $this->load->helper('sk_razorpay');
         $this->load->model('Sk_Customer_wallet_model');
+
+        $reference = trim((string)($this->input->get('reference') ?? ''));
+        $rzpOrderId = trim((string)($this->input->get('razorpay_order_id') ?? ''));
+        $rzpPaymentId = trim((string)($this->input->get('razorpay_payment_id') ?? ''));
         $userId = (int)$this->user['user_id'];
 
-        if ($this->Sk_Customer_wallet_model->is_topup_completed($reference, $userId)) {
+        if ($reference === '' && $rzpOrderId === '') {
+            return $this->error('Pass reference or razorpay_order_id.');
+        }
+
+        if ($reference !== '' && $this->Sk_Customer_wallet_model->is_topup_completed($reference, $userId)) {
             $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
-            return $this->success($wallet, 'Wallet already topped up.');
+            $payload = sk_razorpay_wallet_topup_response($wallet, $reference, 'Wallet topped up successfully!');
+            return $this->success($payload, 'Wallet topped up successfully!');
+        }
+
+        if ($rzpPaymentId !== '' && $rzpOrderId !== '') {
+            $settings = $this->get_settings();
+            $result = sk_razorpay_finalize_wallet_topup(
+                $reference,
+                $rzpOrderId,
+                $rzpPaymentId,
+                '',
+                $userId,
+                $settings
+            );
+            if (!empty($result['success'])) {
+                $payload = $result['response'] ?? sk_razorpay_wallet_topup_response(
+                    $result['wallet'] ?? [],
+                    $reference,
+                    $result['message'] ?? 'Wallet topped up successfully!'
+                );
+                return $this->success($payload, $result['message'] ?? 'Wallet topped up successfully!');
+            }
         }
 
         $pending = $this->Sk_Customer_wallet_model->find_topup_pending($reference, $userId, $rzpOrderId);
-        if (!$pending) {
-            if (!preg_match('/^TOPUP-' . $userId . '-/', $reference)) {
-                return $this->error('Invalid top-up reference for your account.', 403);
-            }
-            return $this->error('Top-up session expired. Please try again.', 404);
+        if ($pending) {
+            return $this->success([
+                'credited'  => false,
+                'status'    => 'pending',
+                'reference' => $pending['reference'] ?? $reference,
+                'amount_rm' => (float)($pending['amount'] ?? 0),
+            ], 'Payment pending. Complete Curlec checkout or call wallet-topup-verify.');
         }
 
-        $refToCredit = $pending['reference'] ?? $reference;
-        if (!$this->Sk_Customer_wallet_model->complete_topup_by_reference($refToCredit, $userId)) {
-            if ($this->Sk_Customer_wallet_model->is_topup_completed($refToCredit, $userId)) {
-                $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
-                return $this->success($wallet, 'Wallet topped up successfully!');
+        return $this->error('Top-up not found or expired.', 404);
+    }
+
+    /**
+     * Curlec browser return after FPX / card 3DS / e-wallet (no JWT).
+     * GET|POST /shopkart-api/payment/razorpay-return
+     * Pass this as Razorpay checkout callback_url so "Back To Merchant" lands here.
+     */
+    public function razorpay_return() {
+        $this->load->helper('sk_razorpay');
+        $params = sk_razorpay_collect_callback_params();
+        $settings = $this->get_settings();
+
+        $rzpOrderId = $params['razorpay_order_id'];
+        $rzpPaymentId = $params['razorpay_payment_id'];
+        $rzpSignature = $params['razorpay_signature'];
+        $errorDesc = $params['error_description'] ?: $params['error_reason'];
+
+        if ($rzpOrderId !== '' && $rzpPaymentId === '') {
+            $payments = sk_razorpay_fetch_order_payments($rzpOrderId, $settings);
+            foreach ($payments as $pay) {
+                $st = strtolower((string)($pay['status'] ?? ''));
+                if (in_array($st, ['captured', 'authorized'], true)) {
+                    $rzpPaymentId = (string)($pay['id'] ?? '');
+                    break;
+                }
             }
-            return $this->error('Could not credit wallet. Contact support with ref ' . $reference, 500);
+            if ($rzpPaymentId === '' && !empty($payments[0]['id'])) {
+                $rzpPaymentId = (string)$payments[0]['id'];
+            }
         }
 
-        $wallet = $this->Sk_Customer_wallet_model->get_checkout_info($userId);
-        $this->success($wallet, 'Wallet topped up successfully!');
+        $homeUrl = rtrim(base_url(), '/') . '/';
+        $ordersUrl = rtrim(base_url(), '/') . '/account-orders';
+        $view = [
+            'success'      => false,
+            'pending'      => false,
+            'message'      => $errorDesc ?: 'Payment was not completed. Please try again from My Orders.',
+            'order_number' => '',
+            'orders_url'   => $ordersUrl,
+            'home_url'     => $homeUrl,
+        ];
+
+        if ($rzpOrderId === '' && $rzpPaymentId === '') {
+            if (sk_razorpay_is_gateway_pending(null, $params['error_reason'], $errorDesc)) {
+                $view['pending'] = true;
+                $view['message'] = sk_razorpay_pending_message();
+            }
+            $this->load->view('payment/result', $view);
+            return;
+        }
+
+        $this->load->model(['Sk_Order_model', 'Sk_Customer_wallet_model']);
+        $paymentRow = $this->Sk_Order_model->get_payment_by_rzp_order_id($rzpOrderId);
+        $shopOrderId = (int)($paymentRow['order_id'] ?? 0);
+
+        if ($shopOrderId > 0 && $rzpPaymentId !== '') {
+            $order = $this->Sk_Order_model->get_by_id($shopOrderId);
+            $userId = $order ? (int)($order['user_id'] ?? 0) : null;
+            $result = sk_razorpay_finalize_order_payment(
+                $shopOrderId,
+                $rzpOrderId,
+                $rzpPaymentId,
+                $rzpSignature,
+                $userId ?: null,
+                $settings
+            );
+            if (!empty($result['success'])) {
+                $paid = $result['order'] ?? $order;
+                $view['success'] = true;
+                $view['order_number'] = (string)($paid['order_number'] ?? '');
+                $view['message'] = 'Payment successful! Your order is confirmed.';
+                $this->load->view('payment/result', $view);
+                return;
+            }
+            $view['order_number'] = (string)($order['order_number'] ?? '');
+            $gatewayPay = $rzpPaymentId !== '' ? sk_razorpay_fetch_payment($rzpPaymentId, $settings) : null;
+            $outcome = sk_razorpay_outcome_from_gateway($gatewayPay, $params['error_reason'], $errorDesc, $params['error_code'] ?? '');
+            if ($outcome['kind'] === 'pending' || !empty($result['pending'])) {
+                $view['pending'] = true;
+                $view['message'] = $outcome['message'] ?? sk_razorpay_pending_message();
+            } else {
+                $view['message'] = $outcome['message'] ?? ($result['message'] ?? $view['message']);
+            }
+            $this->load->view('payment/result', $view);
+            return;
+        }
+
+        if ($shopOrderId > 0 && sk_razorpay_is_gateway_pending(null, $params['error_reason'], $errorDesc)) {
+            $order = $this->Sk_Order_model->get_by_id($shopOrderId);
+            $view['pending'] = true;
+            $view['order_number'] = (string)($order['order_number'] ?? '');
+            $view['message'] = sk_razorpay_pending_message();
+            $this->load->view('payment/result', $view);
+            return;
+        }
+
+        $pending = $this->db->like('description', 'Pending Razorpay ' . $rzpOrderId, 'after')
+            ->order_by('id', 'DESC')
+            ->get('customer_wallet_transactions')
+            ->row_array();
+        if ($pending && $rzpPaymentId !== '') {
+            $ref = (string)($pending['reference'] ?? '');
+            $userId = (int)($pending['user_id'] ?? 0);
+            $result = sk_razorpay_finalize_wallet_topup(
+                $ref,
+                $rzpOrderId,
+                $rzpPaymentId,
+                $rzpSignature,
+                $userId,
+                $settings
+            );
+            if (!empty($result['success'])) {
+                $view['success'] = true;
+                $view['message'] = 'Wallet topped up successfully!';
+                $view['orders_url'] = rtrim(base_url(), '/') . '/account-wallet';
+                $this->load->view('payment/result', $view);
+                return;
+            }
+            $view['message'] = $result['message'] ?? $view['message'];
+        }
+
+        $this->load->view('payment/result', $view);
+    }
+
+    /**
+     * Razorpay / Curlec webhook (payment.captured, order.paid).
+     * POST /shopkart-api/payment/razorpay-webhook
+     * Register this URL in Curlec Dashboard → Webhooks.
+     */
+    public function razorpay_webhook() {
+        $this->load->helper('sk_razorpay');
+        $raw = file_get_contents('php://input');
+        $signature = (string)($this->input->get_request_header('X-Razorpay-Signature', true) ?: '');
+        $settings = $this->get_settings();
+
+        if (!sk_razorpay_webhook_signature_valid($raw, $signature, $settings)) {
+            log_message('error', 'Razorpay webhook signature invalid');
+            return $this->output
+                ->set_status_header(400)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Invalid signature']));
+        }
+
+        $event = json_decode($raw, true);
+        if (!is_array($event)) {
+            return $this->output
+                ->set_status_header(400)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Invalid payload']));
+        }
+
+        $outcome = sk_razorpay_handle_webhook_event($event, $settings);
+        log_message('info', 'Razorpay webhook ' . ($event['event'] ?? '') . ': ' . json_encode($outcome));
+
+        return $this->output
+            ->set_status_header(200)
+            ->set_content_type('application/json')
+            ->set_output(json_encode(['success' => true]));
     }
 
     /** ToyyibPay browser return after wallet top-up / order pay */

@@ -275,6 +275,9 @@ class Sk_User extends Sk_Base_Api {
                 'currency'          => $pay['currency'],
                 'key_id'            => $pay['key_id'],
                 'prefill'           => $pay['prefill'],
+                'next_step'         => 'wallet_topup_verify',
+                'callback_url'      => site_url('shopkart-api/payment/razorpay-return'),
+                'redirect'          => true,
             ], 'Complete payment to add funds to your wallet.');
         }
 

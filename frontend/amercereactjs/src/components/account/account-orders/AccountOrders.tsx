@@ -4,6 +4,7 @@ import { AccountSection } from "@/components/account/AccountSection";
 import { ordersAPI, shippingAPI, type ShippingTrackEvent } from "@/services/api";
 import { formatPrice } from "@/utils/formatPrice";
 import { apiImageUrl } from "@/hooks/useApi";
+import { completeOrderPayment } from "@/utils/razorpay";
 
 interface OrderItem {
   product_id: number;
@@ -61,6 +62,28 @@ export default function AccountOrders() {
   const [modalAction, setModalAction] = useState<{ type: "cancel" | "return" | "exchange"; orderId: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+
+  const unpaidOnline = (order: Order) =>
+    (order.payment_status || "").toLowerCase() !== "paid"
+    && ["razorpay", "online", "curlec", ""].includes((order.payment_method || "razorpay").toLowerCase())
+    && !["cancelled", "returned"].includes((order.status || "").toLowerCase());
+
+  async function handleCompletePayment(order: Order) {
+    setPayLoading(true);
+    try {
+      const result = await completeOrderPayment(order.id, (message) => showToast(message));
+      if (result === "confirmed" || result === "pending") {
+        const res = await ordersAPI.getAll();
+        setOrders((res.data as { data?: Order[] }).data ?? []);
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(msg ?? "Could not open payment. Please try again.");
+    } finally {
+      setPayLoading(false);
+    }
+  }
 
   async function downloadInvoice(orderId: number) {
     setInvoiceLoading(true);
@@ -88,9 +111,8 @@ export default function AccountOrders() {
 
   const getOrderStatusGroup = (status: string) => {
     const s = status.toLowerCase();
-    // payment_attempt is shown as Abandoned (same as admin Orders tab)
     if (s === "payment_attempt") {
-      return "abandoned";
+      return "in-progress";
     }
     if (["pending", "confirmed", "processing", "shipped"].includes(s)) {
       return "in-progress";
@@ -1268,7 +1290,7 @@ export default function AccountOrders() {
                     ) : selectedOrder.status === "payment_attempt" ? (
                       <div className="status-badge-pill badge-abandoned" style={{ padding: "8px 18px", fontSize: "13.5px" }}>
                         <span className="status-dot"></span>
-                        Abandoned — awaiting payment
+                        Awaiting payment — complete payment below
                       </div>
                     ) : (
                       <div>
@@ -1473,6 +1495,18 @@ export default function AccountOrders() {
                     <SvgBilling />
                     <span>Payment details</span>
                   </div>
+
+                  {unpaidOnline(selectedOrder) && (
+                    <button
+                      type="button"
+                      className="tf-btn btn-sm mb-16"
+                      style={{ background: "#3ec1bc", color: "#fff", borderRadius: 8, padding: "10px 16px", fontWeight: 700, width: "100%" }}
+                      disabled={payLoading}
+                      onClick={() => void handleCompletePayment(selectedOrder)}
+                    >
+                      {payLoading ? "Opening payment…" : "Complete payment"}
+                    </button>
+                  )}
 
                   {selectedOrder.status !== "payment_attempt" && (
                     <button
