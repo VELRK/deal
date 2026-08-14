@@ -364,12 +364,40 @@ function sk_razorpay_topup_payment_trusted(
 function sk_razorpay_wallet_topup_response(array $wallet, string $reference, string $message): array {
     return [
         'credited'   => true,
+        'pending'    => false,
+        'failed'     => false,
+        'confirmed'  => true,
         'reference'  => $reference,
         'balance'    => (float)($wallet['balance'] ?? $wallet['balance_rm'] ?? 0),
         'balance_rm' => (float)($wallet['balance_rm'] ?? $wallet['balance'] ?? 0),
         'points'     => (int)($wallet['points'] ?? 0),
         'wallet'     => $wallet,
         'message'    => $message,
+    ];
+}
+
+function sk_razorpay_pending_wallet_response(string $reference, string $message): array {
+    return [
+        'credited'  => false,
+        'pending'   => true,
+        'failed'    => false,
+        'confirmed' => false,
+        'reference' => $reference,
+        'message'   => $message,
+    ];
+}
+
+function sk_razorpay_failed_wallet_response(string $reference, array $outcome): array {
+    return [
+        'credited'      => false,
+        'pending'       => false,
+        'failed'        => true,
+        'confirmed'     => false,
+        'retry_allowed' => !empty($outcome['retry_allowed']),
+        'error_reason'  => (string)($outcome['reason'] ?? ''),
+        'error_code'    => (string)($outcome['code'] ?? ''),
+        'reference'     => $reference,
+        'message'       => (string)($outcome['message'] ?? ''),
     ];
 }
 
@@ -618,6 +646,25 @@ function sk_razorpay_finalize_wallet_topup(
                 log_message('info', 'Wallet topup verified via Razorpay API fallback: ' . $reference);
             } else {
                 log_message('error', 'Razorpay wallet topup signature mismatch: ' . $reference);
+                $pay = $rzpPaymentId !== '' ? sk_razorpay_fetch_payment($rzpPaymentId, $settings) : null;
+                if (sk_razorpay_is_gateway_pending($pay)) {
+                    $msg = sk_razorpay_pending_message();
+                    return [
+                        'success'  => false,
+                        'pending'  => true,
+                        'message'  => $msg,
+                        'response' => sk_razorpay_pending_wallet_response($reference, $msg),
+                    ];
+                }
+                $outcome = sk_razorpay_outcome_from_gateway($pay);
+                if ($outcome['kind'] === 'failed') {
+                    return [
+                        'success'  => false,
+                        'failed'   => true,
+                        'message'  => $outcome['message'],
+                        'response' => sk_razorpay_failed_wallet_response($reference, $outcome),
+                    ];
+                }
                 return ['success' => false, 'message' => 'Payment verification failed. Please contact support with ref ' . $reference];
             }
         }

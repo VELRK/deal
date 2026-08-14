@@ -257,6 +257,7 @@ class Sk_User extends Sk_Base_Api {
         $points = $this->Sk_Customer_wallet_model->rm_to_points($amountRm);
 
         if ($gateway === 'razorpay') {
+            $this->load->helper('sk_razorpay');
             $pay = $this->Sk_Customer_wallet_model->start_razorpay_topup(
                 $this->user['user_id'],
                 $amountRm,
@@ -276,7 +277,7 @@ class Sk_User extends Sk_Base_Api {
                 'key_id'            => $pay['key_id'],
                 'prefill'           => $pay['prefill'],
                 'next_step'         => 'wallet_topup_verify',
-                'callback_url'      => site_url('shopkart-api/payment/razorpay-return'),
+                'callback_url'      => sk_razorpay_callback_url(),
                 'redirect'          => true,
             ], 'Complete payment to add funds to your wallet.');
         }

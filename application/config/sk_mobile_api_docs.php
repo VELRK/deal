@@ -1070,7 +1070,7 @@ $config['catalog'] = [
         'path' => 'user/wallet/topup',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. amount in RM (min 100). Returns Razorpay payload. After Curlec success call POST payment/wallet-topup-verify (save reference from this response). If Curlec shows error but bank charged, call GET payment/wallet-topup-status with reference + razorpay ids.',
+        'how' => 'JWT required. amount in RM (min 100). Returns Curlec payload. Open Curlec with callback_url + redirect:true (same as product FPX/card). After bank return, Curlec posts to callback_url. Also call POST payment/wallet-topup-verify. If Curlec closes without handler, GET payment/wallet-topup-status. Same pending/fail messages as product pay: pending=true do not retry; failed=true show message.',
         'query' => [],
         'headers' => ['Content-Type' => 'application/json'],
         'body' => ['amount' => 10],
@@ -1080,10 +1080,13 @@ $config['catalog'] = [
             'data' => [
                 'gateway' => 'razorpay',
                 'reference' => 'TOPUP-XXXX',
-                'amount_rm' => 10,
-                'points' => 50,
+                'amount_rm' => 100,
+                'points' => 500,
                 'razorpay_order_id' => 'order_xxx',
                 'key_id' => 'rzp_test_xxx',
+                'callback_url' => 'https://2deal.my/shopkart-api/payment/razorpay-return',
+                'redirect' => true,
+                'next_step' => 'wallet_topup_verify',
             ],
         ],
     ],
@@ -1187,7 +1190,7 @@ $config['catalog'] = [
         'path' => 'checkout',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. Cart must have items. payment_method: razorpay|cod|wallet. Wallet is FULL PAY ONLY (balance must cover order total after wallet discount; free delivery when wallet_free_shipping setting is on). No payment gateway for wallet — do NOT call payment/create-order when payment_method=wallet. Royalty can stack with wallet. Optional promo_code, use_royalty, billing_same, billing_address, notes. address.full_name required. Response includes payment.requires_gateway (false for wallet), payment.next_step: complete|create_payment_order.',
+        'how' => 'JWT required. Cart must have items. payment_method: razorpay|cod|wallet. Wallet is FULL PAY ONLY (balance must cover order total after wallet discount; free delivery when wallet_free_shipping setting is on). No Curlec for wallet — do NOT call payment/create-order when payment.next_step=complete. Show data.message and clear local cart using data.cart_clear_lines (product_id list). Royalty can stack with wallet. Optional promo_code, use_royalty, billing_same, billing_address, notes. address.full_name required. payment.next_step: complete (wallet/COD/fully paid) | create_payment_order (open Curlec).',
         'query' => [],
         'headers' => ['Content-Type' => 'application/json', 'X-Order-Source' => 'app'],
         'body' => [
@@ -1213,7 +1216,7 @@ $config['catalog'] = [
         ],
         'sample_response' => [
             'success' => true,
-            'message' => 'Order placed successfully.',
+            'message' => 'Paid with wallet. Your order is confirmed.',
             'data' => [
                 'order' => [
                     'id' => 101,
@@ -1222,6 +1225,10 @@ $config['catalog'] = [
                     'payment_status' => 'paid',
                     'payment_method' => 'wallet',
                     'status' => 'confirmed',
+                ],
+                'confirmed' => true,
+                'cart_clear_lines' => [
+                    ['product_id' => 12, 'variant_id' => 3],
                 ],
                 'payment' => [
                     'requires_gateway' => false,
@@ -1366,6 +1373,7 @@ $config['catalog'] = [
                 'currency' => 'MYR',
                 'key_id' => 'rzp_test_xxx',
                 'callback_url' => 'https://2deal.my/shopkart-api/payment/razorpay-return',
+                'redirect' => true,
                 'prefill' => [
                     'name' => 'Siti Aminah',
                     'contact' => '+60123456789',
@@ -1383,7 +1391,7 @@ $config['catalog'] = [
         'path' => 'payment/verify',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. After Curlec success OR failure callback. If captured: confirmed=true. If Touch n Go still processing (payment_pending_gateway): pending=true, HTTP 200, do not retry. If card_declined / payment_session_expired / GATEWAY_ERROR: success=false, HTTP 200, data.failed=true, data.retry_allowed=true, message is user-facing. Open My Orders Complete payment to retry. Never treat pending as a hard fail.',
+        'how' => 'JWT required. After Curlec success OR failure for product purchase. If captured: confirmed=true and cart_clear_lines — remove those product_ids from the app cart (DB is already cleared). If Touch n Go still processing (payment_pending_gateway): pending=true, HTTP 200, do not retry. If card_declined / payment_session_expired / GATEWAY_ERROR: success=false, HTTP 200, data.failed=true, data.retry_allowed=true, message is user-facing. Open My Orders Complete payment to retry. Never treat pending as a hard fail.',
         'query' => [],
         'headers' => ['Content-Type' => 'application/json'],
         'body' => [
@@ -1401,6 +1409,9 @@ $config['catalog'] = [
                 'order_number' => 'SK-20260728-001',
                 'payment_status' => 'paid',
                 'status' => 'confirmed',
+                'cart_clear_lines' => [
+                    ['product_id' => 12, 'variant_id' => 3],
+                ],
                 'order' => ['id' => 101, 'payment_status' => 'paid', 'status' => 'confirmed'],
             ],
         ],
@@ -1435,7 +1446,7 @@ $config['catalog'] = [
         'path' => 'payment/wallet-topup-verify',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. After Curlec wallet top-up success. Body: razorpay_order_id, razorpay_payment_id, razorpay_signature (optional if server can confirm via Razorpay API), reference (optional if razorpay_order_id saved). Returns credited:true, balance, points, wallet on success.',
+        'how' => 'JWT required. After Curlec wallet top-up (FPX / card / TnG). Same rules as payment/verify: credited=true on success; pending=true HTTP 200 do not retry; failed=true HTTP 200 show message. Body: razorpay_order_id, razorpay_payment_id, razorpay_signature (optional if server can confirm via Razorpay API), reference (optional if razorpay_order_id saved).',
         'query' => [],
         'headers' => ['Content-Type' => 'application/json'],
         'body' => [
@@ -1449,6 +1460,8 @@ $config['catalog'] = [
             'message' => 'Wallet topped up successfully.',
             'data' => [
                 'credited' => true,
+                'pending' => false,
+                'failed' => false,
                 'reference' => 'TOPUP-XXXX',
                 'balance' => 110,
                 'balance_rm' => 110,
@@ -1465,7 +1478,7 @@ $config['catalog'] = [
         'path' => 'payment/wallet-topup-status',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. Query reference and/or razorpay_order_id, razorpay_payment_id. Use after Curlec closes if verify was not called — credits wallet when payment captured.',
+        'how' => 'JWT required. Query reference and/or razorpay_order_id, razorpay_payment_id. Use after Curlec closes if verify was not called. Credits wallet when captured. Same pending/fail messages as wallet-topup-verify.',
         'query' => [
             'reference' => 'TOPUP-12-1234567890-abc',
             'razorpay_order_id' => 'order_xxx',

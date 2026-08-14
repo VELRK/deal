@@ -334,6 +334,25 @@ class Sk_Payment extends Sk_Base_Api {
         );
 
         if (empty($result['success'])) {
+            if (!empty($result['pending'])) {
+                $payload = $result['response'] ?? sk_razorpay_pending_wallet_response(
+                    $reference,
+                    $result['message'] ?? sk_razorpay_pending_message()
+                );
+                return $this->success($payload, $result['message'] ?? sk_razorpay_pending_message());
+            }
+            $pay = $rzpPaymentId !== '' ? sk_razorpay_fetch_payment($rzpPaymentId, $settings) : null;
+            $outcome = sk_razorpay_outcome_from_gateway($pay);
+            if ($outcome['kind'] === 'pending') {
+                return $this->success(
+                    sk_razorpay_pending_wallet_response($reference, $outcome['message']),
+                    $outcome['message']
+                );
+            }
+            if ($outcome['kind'] === 'failed' || !empty($result['failed'])) {
+                $payload = $result['response'] ?? sk_razorpay_failed_wallet_response($reference, $outcome);
+                return $this->error($payload['message'] ?? $outcome['message'], 200, $payload);
+            }
             return $this->error($result['message'] ?? 'Payment verification failed.', 400);
         }
 
@@ -386,6 +405,18 @@ class Sk_Payment extends Sk_Base_Api {
                     $result['message'] ?? 'Wallet topped up successfully!'
                 );
                 return $this->success($payload, $result['message'] ?? 'Wallet topped up successfully!');
+            }
+            if (!empty($result['pending'])) {
+                $msg = $result['message'] ?? sk_razorpay_pending_message();
+                return $this->success(
+                    $result['response'] ?? sk_razorpay_pending_wallet_response($reference, $msg),
+                    $msg
+                );
+            }
+            $pay = $rzpPaymentId !== '' ? sk_razorpay_fetch_payment($rzpPaymentId, $settings) : null;
+            $outcome = sk_razorpay_outcome_from_gateway($pay);
+            if ($outcome['kind'] === 'failed') {
+                return $this->error($outcome['message'], 200, sk_razorpay_failed_wallet_response($reference, $outcome));
             }
         }
 

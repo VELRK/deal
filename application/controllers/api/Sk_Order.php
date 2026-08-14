@@ -408,7 +408,12 @@ class Sk_Order extends Sk_Base_Api {
             $this->Sk_Affiliate_model->record_order_commission($affiliate_id, $order_id, $subtotal, $user_id);
         }
 
-        // Clear cart
+        // Clear paid products from cart (wallet / COD / fully paid). App must also drop these from local cache.
+        $this->load->helper('sk_razorpay');
+        $cartClearLines = [];
+        if ($confirm_now) {
+            $cartClearLines = sk_cart_remove_items_for_paid_order($user_id, $order_id);
+        }
         $this->db->where('user_id', $user_id)->delete('cart');
 
         $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
@@ -431,14 +436,23 @@ class Sk_Order extends Sk_Base_Api {
             sk_whatsapp_notify_order_status($order, $waStatus, $settings);
         }
 
+        $confirmMsg = 'Order placed successfully.';
+        if ($confirm_now && $payment_method === 'wallet') {
+            $confirmMsg = 'Paid with wallet. Your order is confirmed.';
+        } elseif ($is_razorpay_due) {
+            $confirmMsg = 'Order saved. Complete Curlec payment to confirm.';
+        }
+
         $this->success([
             'order' => $order,
+            'confirmed' => $confirm_now,
+            'cart_clear_lines' => $cartClearLines,
             'payment' => [
                 'requires_gateway' => $is_razorpay_due,
                 'gateway_amount'   => $gateway_amount,
                 'next_step'        => $is_razorpay_due ? 'create_payment_order' : 'complete',
             ],
-        ], 'Order placed successfully.', 200);
+        ], $confirmMsg, 200);
     }
 
     public function index() {
