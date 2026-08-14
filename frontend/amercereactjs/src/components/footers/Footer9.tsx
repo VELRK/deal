@@ -291,19 +291,9 @@ export default function Footer9({
                       className="footer-logo"
                     />
                   </Link>
-                  <p className="luxury-tagline">Explore the art of fashion</p>
+                  <p className="luxury-tagline"></p>
 
                   <div className="luxury-brand-contact">
-                    <div className="luxury-brand-contact-item">
-                      <span className="luxury-brand-icon">📍</span>
-                      <a
-                        href={footerStore.addressHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {footerStore.address}
-                      </a>
-                    </div>
 
                     {footerStore.phone && (
                       <div className="luxury-brand-contact-item">
@@ -359,9 +349,9 @@ export default function Footer9({
                       </li>
                     ))}
                     <li>
-                      <button 
-                        type="button" 
-                        className="luxury-footer-link bg-transparent border-0 p-0 text-start" 
+                      <button
+                        type="button"
+                        className="luxury-footer-link bg-transparent border-0 p-0 text-start"
                         onClick={() => openModal("affiliateEnquiry")}
                       >
                         Affiliate Enquiry
