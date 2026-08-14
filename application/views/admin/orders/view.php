@@ -282,6 +282,14 @@
       <div class="card-body">
         <p class="mb-1 fw-semibold"><?= htmlspecialchars($order['customer_name'] ?? '-') ?></p>
         <p class="mb-1 text-muted small"><?= htmlspecialchars($order['customer_email'] ?? '-') ?></p>
+        <?php
+          $src = strtolower(trim((string) ($order['order_source'] ?? 'unknown')));
+          $srcBadge = $src === 'web' ? 'primary' : ($src === 'app' ? 'success' : 'secondary');
+        ?>
+        <p class="mb-1 small">
+          <span class="text-muted">Source:</span>
+          <span class="badge text-bg-<?= $srcBadge ?>"><?= htmlspecialchars(Sk_Order_model::source_label($src)) ?></span>
+        </p>
         <?php if (!empty($order['invoice_emailed_at'])): ?>
         <p class="mb-0 small text-success"><i class="bi bi-check-circle me-1"></i>Invoice emailed: <?= date('d M Y, h:i A', strtotime($order['invoice_emailed_at'])) ?></p>
         <?php endif; ?>

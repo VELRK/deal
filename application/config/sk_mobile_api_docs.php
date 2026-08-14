@@ -21,6 +21,7 @@ $config['guide'] = [
         '6. Affiliate portal APIs use affiliate JWT from Affiliate Login (not customer JWT). Approve the affiliate in Admin before login succeeds.',
         '7. OTP signup: do NOT invent names like SER001 / User 1234. New users get empty name + email null; collect real name (required) and optional company/email on checkout or profile.',
         '8. Checkout address.full_name is saved onto the user account. Optional email must be unique (or omit/null). Optional address.company_name for invoices.',
+        '9. Checkout must send order_source: "app" (or header X-Order-Source: app) so Admin Orders can show Web vs App.',
     ],
 ];
 
@@ -1186,9 +1187,9 @@ $config['catalog'] = [
         'path' => 'checkout',
         'auth' => true,
         'verified' => true,
-        'how' => 'JWT required. Cart must have items. payment_method: razorpay|cod|wallet. Wallet is FULL PAY ONLY (balance must cover order total after wallet discount; free delivery when wallet_free_shipping setting is on). No payment gateway for wallet — do not combine with use_wallet+razorpay. Royalty cannot combine with wallet. Optional promo_code, use_royalty (COD/online remainder), billing_same, billing_address, notes. address.full_name required (real name — rejects User/SER/USR/CUST+digits). Optional address.company_name. Optional email (top-level or address.email) — unique if set, else omit/null. On success, full_name (+ optional email) is synced onto the user account. Status 201.',
+        'how' => 'JWT required. Cart must have items. payment_method: razorpay|cod|wallet. Wallet is FULL PAY ONLY (balance must cover order total after wallet discount; free delivery when wallet_free_shipping setting is on). No payment gateway for wallet — do not combine with use_wallet+razorpay. Royalty cannot combine with wallet. Optional promo_code, use_royalty (COD/online remainder), billing_same, billing_address, notes. address.full_name required (real name — rejects User/SER/USR/CUST+digits). Optional address.company_name. Optional email (top-level or address.email) — unique if set, else omit/null. On success, full_name (+ optional email) is synced onto the user account. Send order_source: "app" (or header X-Order-Source: app) so Admin shows App vs Web. Status 201.',
         'query' => [],
-        'headers' => ['Content-Type' => 'application/json'],
+        'headers' => ['Content-Type' => 'application/json', 'X-Order-Source' => 'app'],
         'body' => [
             'payment_method' => 'wallet',
             'use_wallet' => true,
@@ -1196,6 +1197,7 @@ $config['catalog'] = [
             'promo_code' => '',
             'billing_same' => true,
             'note' => '',
+            'order_source' => 'app',
             'email' => 'siti@example.com',
             'address' => [
                 'full_name' => 'Siti Aminah',

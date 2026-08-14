@@ -5,6 +5,7 @@ $qs = function (array $extra = []) use ($filters, $tab) {
         'tab'            => $extra['tab'] ?? $tab,
         'status'         => array_key_exists('status', $extra) ? $extra['status'] : ($filters['status'] ?? ''),
         'payment_status' => array_key_exists('payment_status', $extra) ? $extra['payment_status'] : ($filters['payment_status'] ?? ''),
+        'order_source'   => array_key_exists('order_source', $extra) ? $extra['order_source'] : ($filters['order_source'] ?? ''),
         'search'         => array_key_exists('search', $extra) ? $extra['search'] : ($filters['search'] ?? ''),
         'page'           => $extra['page'] ?? null,
     ], static function ($v) {
@@ -66,6 +67,12 @@ $qs = function (array $extra = []) use ($filters, $tab) {
           <option value="<?= $s ?>" <?= ($filters['payment_status']??'')===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
         <?php endforeach; ?>
       </select>
+      <select name="order_source" class="form-select form-select-sm" style="max-width:140px;">
+        <option value="">All Sources</option>
+        <option value="web" <?= ($filters['order_source'] ?? '') === 'web' ? 'selected' : '' ?>>Web</option>
+        <option value="app" <?= ($filters['order_source'] ?? '') === 'app' ? 'selected' : '' ?>>App</option>
+        <option value="unknown" <?= ($filters['order_source'] ?? '') === 'unknown' ? 'selected' : '' ?>>Unknown</option>
+      </select>
       <button class="btn btn-sm btn-outline-warning px-3">Filter</button>
       <a href="<?= site_url('admin/orders?tab=' . urlencode($tab)) ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
     </form>
@@ -83,7 +90,7 @@ $qs = function (array $extra = []) use ($filters, $tab) {
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead>
-          <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Coupon</th><th>Total</th><th>Status</th><th>Payment</th><th>Date</th><th></th></tr>
+          <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Coupon</th><th>Total</th><th>Source</th><th>Status</th><th>Payment</th><th>Date</th><th></th></tr>
         </thead>
         <tbody>
           <?php foreach ($orders as $o): ?>
@@ -112,6 +119,13 @@ $qs = function (array $extra = []) use ($filters, $tab) {
             <td class="fw-semibold"><?= $currency . number_format($o['total'],2) ?></td>
             <td>
               <?php
+                $src = strtolower(trim((string) ($o['order_source'] ?? 'unknown')));
+                $srcBadge = $src === 'web' ? 'primary' : ($src === 'app' ? 'success' : 'secondary');
+              ?>
+              <span class="badge text-bg-<?= $srcBadge ?>"><?= htmlspecialchars(Sk_Order_model::source_label($src)) ?></span>
+            </td>
+            <td>
+              <?php
                 $st = $o['status'] ?? '';
                 $badgeClass = $st === 'payment_attempt' ? 'pending' : $st;
               ?>
@@ -130,7 +144,7 @@ $qs = function (array $extra = []) use ($filters, $tab) {
           </tr>
           <?php endforeach; ?>
           <?php if (empty($orders)): ?>
-          <tr><td colspan="9" class="text-center py-5 text-muted"><?= $tab === 'abandoned' ? 'No abandoned orders.' : 'No orders found.' ?></td></tr>
+          <tr><td colspan="10" class="text-center py-5 text-muted"><?= $tab === 'abandoned' ? 'No abandoned orders.' : 'No orders found.' ?></td></tr>
           <?php endif; ?>
         </tbody>
       </table>

@@ -38,6 +38,7 @@ http.interceptors.request.use((config) => {
     // Backup header when Apache strips Authorization
     config.headers["X-Auth-Token"] = `Bearer ${token}`;
   }
+  config.headers["X-Order-Source"] = "web";
 
   let sid = localStorage.getItem("sk_sid");
   if (!sid) {

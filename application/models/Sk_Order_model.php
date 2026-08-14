@@ -3,6 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Sk_Order_model extends CI_Model {
 
+    public function ensure_order_source_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('order_source', 'orders')) {
+            $this->db->query(
+                "ALTER TABLE `orders` ADD COLUMN `order_source` VARCHAR(16) NOT NULL DEFAULT 'unknown' AFTER `payment_method`"
+            );
+        }
+    }
+
     public function create($data, $items) {
         $data['created_at'] = date('Y-m-d H:i:s');
         // Temporary unique value until we have insert_id for G2D10001-style number.
@@ -194,6 +207,9 @@ class Sk_Order_model extends CI_Model {
         if (!empty($filters['payment_status'])) {
             $this->db->where('o.payment_status', $filters['payment_status']);
         }
+        if (!empty($filters['order_source']) && in_array($filters['order_source'], ['web', 'app', 'unknown'], true)) {
+            $this->db->where('o.order_source', $filters['order_source']);
+        }
         if (!empty($filters['search'])) {
             $this->db->like('o.order_number', $filters['search']);
         }
@@ -212,6 +228,20 @@ class Sk_Order_model extends CI_Model {
             'returned'        => 'Returned',
         ];
         return $map[$status] ?? ucfirst(str_replace('_', ' ', $status));
+    }
+
+    /** Admin label for checkout channel. */
+    public static function source_label(?string $source): string {
+        $map = [
+            'web'     => 'Web',
+            'app'     => 'App',
+            'unknown' => 'Unknown',
+        ];
+        $key = strtolower(trim((string) $source));
+        if ($key === '' || !isset($map[$key])) {
+            return 'Unknown';
+        }
+        return $map[$key];
     }
 
     /**

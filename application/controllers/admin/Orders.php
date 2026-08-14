@@ -13,6 +13,7 @@ class Orders extends Sk_Base {
     }
 
     public function index() {
+        $this->Sk_Order_model->ensure_order_source_schema();
         $page   = max(1, (int)$this->input->get('page'));
         $limit  = 15;
         $offset = ($page - 1) * $limit;
@@ -25,10 +26,15 @@ class Orders extends Sk_Base {
         if ($tab === 'orders' && in_array($statusFilter, ['payment_attempt', 'abandoned'], true)) {
             $statusFilter = '';
         }
+        $sourceFilter = strtolower(trim((string) $this->input->get('order_source', TRUE)));
+        if (!in_array($sourceFilter, ['web', 'app', 'unknown'], true)) {
+            $sourceFilter = '';
+        }
         $filters = [
             'tab'            => $tab,
             'status'         => $statusFilter,
             'payment_status' => $this->input->get('payment_status', TRUE),
+            'order_source'   => $sourceFilter,
             'search'         => $this->input->get('search', TRUE),
         ];
 
@@ -42,6 +48,7 @@ class Orders extends Sk_Base {
         // Counts for tab badges (search/payment filters apply; status tab is fixed)
         $baseCounts = [
             'payment_status' => $filters['payment_status'],
+            'order_source'   => $filters['order_source'],
             'search'         => $filters['search'],
         ];
         $data['count_orders'] = $this->Sk_Order_model->count_admin($baseCounts + ['tab' => 'orders']);
@@ -50,6 +57,7 @@ class Orders extends Sk_Base {
     }
 
     public function view($id) {
+        $this->Sk_Order_model->ensure_order_source_schema();
         $data['title'] = 'Order Detail';
         $data['order'] = $this->Sk_Order_model->get_by_id($id);
         if (!$data['order']) show_404();

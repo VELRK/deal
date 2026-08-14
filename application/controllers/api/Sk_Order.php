@@ -282,6 +282,7 @@ class Sk_Order extends Sk_Base_Api {
         }
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
+        $this->_ensure_order_source_schema();
         $this->Sk_Order_model->ensure_payment_attempt_status();
         $this->load->helper(['sk_jt_express', 'sk_vendor_dashboard']);
         sk_jt_express_ensure_schema();
@@ -302,6 +303,7 @@ class Sk_Order extends Sk_Base_Api {
             'wallet_amount'    => $wallet_amount,
             'royalty_used_points' => $royalty_used_points,
             'royalty_used_rm'     => $royalty_used_rm,
+            'order_source'     => $this->_resolve_order_source($data),
             'payment_method'   => $payment_method,
             'payment_status'   => $is_paid_now ? 'paid' : 'pending',
             'status'           => $confirm_now ? 'confirmed' : ($is_razorpay_due ? 'payment_attempt' : 'pending'),
@@ -601,6 +603,32 @@ class Sk_Order extends Sk_Base_Api {
                 $this->db->query("ALTER TABLE `orders` ADD COLUMN `{$col}` {$def}");
             }
         }
+    }
+
+    private function _ensure_order_source_schema(): void {
+        $this->Sk_Order_model->ensure_order_source_schema();
+    }
+
+    /**
+     * Resolve checkout channel: web | app | unknown.
+     * Body order_source/platform, or headers X-Order-Source / X-Client-Platform.
+     */
+    private function _resolve_order_source(array $data): string {
+        $raw = $data['order_source'] ?? ($data['platform'] ?? null);
+        if ($raw === null || trim((string) $raw) === '') {
+            $raw = $this->input->get_request_header('X-Order-Source', true);
+        }
+        if ($raw === null || trim((string) $raw) === '') {
+            $raw = $this->input->get_request_header('X-Client-Platform', true);
+        }
+        $v = strtolower(trim((string) $raw));
+        if (in_array($v, ['web', 'website'], true)) {
+            return 'web';
+        }
+        if (in_array($v, ['app', 'ios', 'android', 'mobile'], true)) {
+            return 'app';
+        }
+        return 'unknown';
     }
 
     /**
