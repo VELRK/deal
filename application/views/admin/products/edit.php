@@ -22,6 +22,10 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
 </div>
 
 <form action="<?= site_url('admin/products/update/'.$p['id']) ?>" method="POST" enctype="multipart/form-data">
+  <?php /* First file input so PHP max_file_uploads cannot drop the main photo behind variant/color files. */ ?>
+  <input type="file" name="thumbnail" id="productThumbnail" class="sk-img-preview-input"
+         data-target="#thumbPreview" accept="image/*"
+         style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
 
   <div class="row g-3">
 
@@ -354,8 +358,10 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
           <?php else: ?>
             <img id="thumbPreview" src="#" style="display:none;max-height:180px;" class="img-fluid rounded mb-2 border">
           <?php endif; ?>
-          <input type="file" name="thumbnail" class="form-control form-control-sm sk-img-preview-input"
-                 data-target="#thumbPreview" accept="image/*">
+          <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                  onclick="document.getElementById('productThumbnail').click()">
+            Choose image
+          </button>
           <small class="text-muted">JPG, PNG, GIF or WebP, max 8MB. Leave blank to keep current.</small>
         </div>
       </div>

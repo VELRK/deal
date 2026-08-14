@@ -54,7 +54,7 @@
           <tr>
             <td>
               <?php if ($p['thumbnail']): ?>
-                <img src="<?= base_url($p['thumbnail']) ?>" class="rounded" width="48" height="48" style="object-fit:cover;">
+                <img src="<?= base_url($p['thumbnail']) ?>?v=<?= (int)@filemtime(FCPATH . $p['thumbnail']) ?>" class="rounded" width="48" height="48" style="object-fit:cover;">
               <?php else: ?>
                 <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
                   <i class="bi bi-image text-muted"></i>

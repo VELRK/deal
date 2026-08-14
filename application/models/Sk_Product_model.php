@@ -341,7 +341,10 @@ class Sk_Product_model extends CI_Model {
             $product['sale_price'] = $display['sale_price'] ?? null;
             $product['default_variant_stock'] = (int)($display['stock'] ?? 0);
             if (!empty($display['sku'])) $product['sku'] = $display['sku'];
-            if (!empty($display['image'])) $product['thumbnail'] = $display['image'];
+            // Keep products.thumbnail as the catalogue main image; pack photos stay on variants.
+            if (empty($product['thumbnail']) && !empty($display['image'])) {
+                $product['thumbnail'] = $display['image'];
+            }
             $product['variant_count'] = count($variants);
             $this->apply_stock_availability($product);
         } else {
@@ -541,7 +544,9 @@ class Sk_Product_model extends CI_Model {
         $product['sale_price'] = $chosen['sale_price'] ?? null;
         $product['default_variant_stock'] = (int)($chosen['stock'] ?? 0);
         if (!empty($chosen['sku'])) $product['sku'] = $chosen['sku'];
-        if (!empty($chosen['image'])) $product['thumbnail'] = $chosen['image'];
+        if (empty($product['thumbnail']) && !empty($chosen['image'])) {
+            $product['thumbnail'] = $chosen['image'];
+        }
         $product['matched_variant_id'] = $variant_id;
         // Keep product-level stock as total across packs (not the preferred pack alone)
         $this->apply_stock_availability($product);

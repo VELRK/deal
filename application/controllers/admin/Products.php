@@ -166,6 +166,11 @@ class Products extends Sk_Base {
         $data['title']         = 'Edit Product';
         $data['product']       = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($data['product']);
+        // attach_variants swaps thumbnail to the default pack photo — Main Image must show products.thumbnail.
+        $rawThumb = $this->db->select('thumbnail')->where('id', (int)$id)->get('products')->row_array();
+        if (!empty($rawThumb['thumbnail'])) {
+            $data['product']['thumbnail'] = $rawThumb['thumbnail'];
+        }
         $data['categories']    = $this->Sk_Admin_model->get_categories(null, 1);
         $data['subcategories'] = $this->Sk_Admin_model->get_subcategories($data['product']['category_id'], 1);
         $data['brands']        = $this->db->get('brands')->result_array();
@@ -189,6 +194,17 @@ class Products extends Sk_Base {
     public function update($id) {
         $product = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($product);
+        $rawRow = $this->db->select('thumbnail, price, sale_price, stock, weight, hot_sale, sale_start_at, sale_end_at')
+            ->where('id', (int)$id)->get('products')->row_array() ?: [];
+        // Do not use attach_variants overlay as the keep-current fallback.
+        $product['thumbnail'] = $rawRow['thumbnail'] ?? ($product['thumbnail'] ?? null);
+        $product['price'] = $rawRow['price'] ?? ($product['price'] ?? 0);
+        $product['sale_price'] = $rawRow['sale_price'] ?? ($product['sale_price'] ?? null);
+        $product['stock'] = $rawRow['stock'] ?? ($product['stock'] ?? 0);
+        $product['weight'] = $rawRow['weight'] ?? ($product['weight'] ?? null);
+        $product['hot_sale'] = $rawRow['hot_sale'] ?? ($product['hot_sale'] ?? 0);
+        $product['sale_start_at'] = $rawRow['sale_start_at'] ?? ($product['sale_start_at'] ?? null);
+        $product['sale_end_at'] = $rawRow['sale_end_at'] ?? ($product['sale_end_at'] ?? null);
 
         $hadThumbUpload = !empty($_FILES['thumbnail']['name']);
         $uploadedThumb = $this->upload_file('thumbnail', 'products');
@@ -348,7 +364,6 @@ class Products extends Sk_Base {
             ? (int)$postedStock
             : (int)($product['stock'] ?? 0);
         $main_sku   = $this->input->post('sku', TRUE);
-        $product_thumb = null;
         $upload_failed = false;
 
         $existing_images = [];
@@ -389,10 +404,6 @@ class Products extends Sk_Base {
                 'image'       => $image !== '' ? $image : null,
                 'is_default'  => !empty($row['is_default']),
             ];
-
-            if (!empty($row['is_default']) && $image !== '') {
-                $product_thumb = $image;
-            }
         }
 
         if ($upload_failed) {
@@ -419,9 +430,9 @@ class Products extends Sk_Base {
         $this->Sk_Product_variant_model->replace_for_product((int)$product_id, $parsed);
         $this->Sk_Product_model->sync_product_stock_from_variants((int)$product_id);
 
-        // Do not overwrite a newly uploaded main image with the default variant photo.
-        if ($product_thumb && !$newMainThumb) {
-            $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $product_thumb]);
+        // Main image and pack images stay independent. Never copy a variant photo onto products.thumbnail.
+        if ($newMainThumb) {
+            $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $newMainThumb]);
         }
 
         return $upload_failed;
