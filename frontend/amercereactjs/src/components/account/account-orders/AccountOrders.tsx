@@ -168,12 +168,12 @@ export default function AccountOrders() {
         prev.map((o) =>
           o.id === order.id
             ? {
-                ...o,
-                tracking_number: data.tracking_number || o.tracking_number,
-                courier_status: data.courier_status || o.courier_status,
-                status: (data.order_status as string) || o.status,
-                latest_track: data.events?.[0]?.label || data.courier_status || o.latest_track,
-              }
+              ...o,
+              tracking_number: data.tracking_number || o.tracking_number,
+              courier_status: data.courier_status || o.courier_status,
+              status: (data.order_status as string) || o.status,
+              latest_track: data.events?.[0]?.label || data.courier_status || o.latest_track,
+            }
             : o
         )
       );
@@ -1368,12 +1368,12 @@ export default function AccountOrders() {
                             liveEvents.length > 0
                               ? liveEvents
                               : (selectedOrder.jt_tracks ?? []).map((ev) => ({
-                                  time: ev.scanTime || ev.time || "",
-                                  desc: ev.desc || ev.remark || ev.scanType || "",
-                                  label: [ev.scanTime || ev.time, ev.desc || ev.remark || ev.scanType]
-                                    .filter(Boolean)
-                                    .join(" — "),
-                                }));
+                                time: ev.scanTime || ev.time || "",
+                                desc: ev.desc || ev.remark || ev.scanType || "",
+                                label: [ev.scanTime || ev.time, ev.desc || ev.remark || ev.scanType]
+                                  .filter(Boolean)
+                                  .join(" — "),
+                              }));
                           if (events.length === 0) {
                             return (
                               <p className="mb-0 small text-muted">
@@ -1429,32 +1429,9 @@ export default function AccountOrders() {
 
                             {/* Card actions bottom */}
                             <div className="product-card-footer">
-                              {statusGroup === "delivered" ? (
-                                <>
-                                  <button
-                                    className="action-btn-flat"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setModalAction({ type: "return", orderId: selectedOrder.id });
-                                    }}
-                                  >
-                                    Return
-                                  </button>
-                                  <button
-                                    className="action-btn-flat"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setModalAction({ type: "exchange", orderId: selectedOrder.id });
-                                    }}
-                                  >
-                                    Exchange
-                                  </button>
-                                </>
-                              ) : (
-                                <span style={{ padding: "10px 16px", fontSize: "12px", color: "#888", fontWeight: 600 }}>
-                                  No actions available
-                                </span>
-                              )}
+                              <span style={{ padding: "10px 16px", fontSize: "12px", color: "#888", fontWeight: 600 }}>
+                                No actions available
+                              </span>
                             </div>
                           </div>
                         );
