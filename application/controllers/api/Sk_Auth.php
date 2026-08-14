@@ -329,21 +329,21 @@ class Sk_Auth extends Sk_Base_Api {
         $isNew = false;
 
         if (!$user) {
-            // New user — auto-register with phone (Flipkart/Amazon style OTP login)
+            // New user — auto-register with phone only (Flipkart/Amazon style OTP login).
+            // Real name + optional email are collected on checkout / profile — never SER001 / User ####.
             $isNew = true;
-            $digits = preg_replace('/\D/', '', $normalized);
-            $displayName = $nameInput !== '' ? $nameInput : ('User ' . substr($digits, -4));
-            $placeholder_email = 'ph_' . $digits . '@shopkart.app';
+            $this->Sk_User_model->ensure_otp_user_schema();
+            $displayName = $nameInput !== '' ? $nameInput : '';
             $user_id = $this->Sk_User_model->create([
                 'name'     => $displayName,
-                'email'    => $placeholder_email,
+                'email'    => null,
                 'password' => bin2hex(random_bytes(16)),
                 'phone'    => $normalized,
                 'status'   => 1,
             ]);
             $user = $this->Sk_User_model->get_by_id($user_id);
-        } elseif ($nameInput !== '' && preg_match('/^User\s+\d{2,6}$/', (string) ($user['name'] ?? ''))) {
-            // Upgrade placeholder "User 1982" when the client finally sends a real name
+        } elseif ($nameInput !== '' && $this->_is_placeholder_user_name((string) ($user['name'] ?? ''))) {
+            // Upgrade placeholder / empty name when the client finally sends a real name
             $this->Sk_User_model->update((int) $user['id'], ['name' => $nameInput]);
             $user = $this->Sk_User_model->get_by_id($user['id']);
         }
@@ -359,16 +359,15 @@ class Sk_Auth extends Sk_Base_Api {
         }
 
         $this->Sk_User_model->update_last_login($user['id']);
-        $token = $this->sk_jwt->encode(['user_id' => $user['id'], 'email' => $user['email']]);
+        $token = $this->sk_jwt->encode([
+            'user_id' => $user['id'],
+            'email'   => (string) ($user['email'] ?? ''),
+        ]);
 
         $email = (string) ($user['email'] ?? '');
         $name  = trim((string) ($user['name'] ?? ''));
         $profileComplete = $name !== ''
-            && !preg_match('/^User\s+\d{2,6}$/i', $name)
-            && $email !== ''
-            && strpos($email, 'ph_') !== 0
-            && stripos($email, '@shopkart.app') === false
-            && stripos($email, '@2deal.app') === false;
+            && !$this->_is_placeholder_user_name($name);
         $addrCount = 0;
         if (method_exists($this->Sk_User_model, 'get_addresses')) {
             $addrCount = count($this->Sk_User_model->get_addresses((int) $user['id']));
@@ -411,8 +410,12 @@ class Sk_Auth extends Sk_Base_Api {
 
         $data = $this->body();
         $confirm = !empty($data['confirm']) || !empty($data['delete']) || (($data['confirm'] ?? '') === 'DELETE');
-        // Password required for email/password accounts (not OTP placeholder emails)
-        $isOtpAccount = strpos((string)$user['email'], '@shopkart.app') !== false;
+        // Password required for email/password accounts (not phone-OTP accounts without a real email)
+        $emailLower = strtolower((string)($user['email'] ?? ''));
+        $isOtpAccount = $emailLower === ''
+            || strpos($emailLower, 'ph_') === 0
+            || strpos($emailLower, '@shopkart.app') !== false
+            || strpos($emailLower, '@2deal.app') !== false;
         $password = (string)($data['password'] ?? '');
         if (!$isOtpAccount) {
             if ($password === '') {
@@ -438,7 +441,19 @@ class Sk_Auth extends Sk_Base_Api {
 
     private function _safe_user($user) {
         unset($user['password'], $user['verify_token'], $user['reset_token'], $user['reset_expires']);
+        if (array_key_exists('email', $user) && ($user['email'] === null || $user['email'] === '')) {
+            $user['email'] = null;
+        }
         return $user;
+    }
+
+    /** Auto-generated OTP names like "User 1982", "SER001" — not a real customer name. */
+    private function _is_placeholder_user_name(string $name): bool {
+        $name = trim($name);
+        if ($name === '') {
+            return true;
+        }
+        return (bool) preg_match('/^(User|SER|USR|CUST)\s*\d{1,8}$/i', $name);
     }
 
     /** Local dev only: accept fixed OTP when iSMS is misconfigured or unreachable. */

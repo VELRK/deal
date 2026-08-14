@@ -13,11 +13,13 @@ export function isPlaceholderEmail(email?: string | null): boolean {
 
 export function isPlaceholderName(name?: string | null): boolean {
   if (!name || !name.trim()) return true;
-  return /^User\s+\d{2,6}$/i.test(name.trim());
+  const n = name.trim();
+  // OTP / auto-generated labels: "User 1982", "SER001", "USR1234", etc.
+  return /^(User|SER|USR|CUST)\s*\d{1,8}$/i.test(n);
 }
 
-/** New / incomplete OTP accounts still need name + real email at checkout. */
+/** Incomplete until a real customer name is set (email is optional). */
 export function isProfileIncomplete(user?: ApiUser | null): boolean {
   if (!user) return true;
-  return isPlaceholderName(user.name) || isPlaceholderEmail(user.email);
+  return isPlaceholderName(user.name);
 }

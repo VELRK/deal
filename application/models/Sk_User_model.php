@@ -4,6 +4,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Sk_User_model extends CI_Model {
 
     public function create($data) {
+        if (array_key_exists('email', $data)) {
+            $email = is_string($data['email']) ? strtolower(trim($data['email'])) : '';
+            $data['email'] = $email !== '' ? $email : null;
+        }
         $data['password']   = password_hash($data['password'], PASSWORD_BCRYPT);
         $data['verify_token'] = bin2hex(random_bytes(32));
         $data['created_at'] = date('Y-m-d H:i:s');
@@ -76,11 +80,36 @@ class Sk_User_model extends CI_Model {
     }
 
     public function update($id, $data) {
+        if (array_key_exists('email', $data)) {
+            if ($data['email'] === null) {
+                // keep null
+            } elseif (is_string($data['email'])) {
+                $email = strtolower(trim($data['email']));
+                $data['email'] = $email !== '' ? $email : null;
+            }
+        }
         if (!empty($data['password'])) {
             $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         }
         $this->db->where('id', $id)->update('users', $data);
         return $this->db->affected_rows();
+    }
+
+    /**
+     * Phone-OTP users store email as NULL until they optionally add one at checkout.
+     * Also clears legacy ph_*@shopkart.app placeholders when migrating.
+     */
+    public function ensure_otp_user_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->table_exists('users') || !$this->db->field_exists('email', 'users')) {
+            return;
+        }
+        // Allow NULL so OTP accounts do not need fake emails
+        $this->db->query('ALTER TABLE `users` MODIFY COLUMN `email` VARCHAR(191) NULL DEFAULT NULL');
     }
 
     public function update_last_login($id) {

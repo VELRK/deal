@@ -18,6 +18,12 @@ class Sk_User extends Sk_Base_Api {
         $allowed = ['name', 'phone'];
         $update  = [];
         foreach ($allowed as $f) { if (isset($data[$f])) $update[$f] = $data[$f]; }
+        if (isset($update['name'])) {
+            $update['name'] = trim((string) $update['name']);
+            if (mb_strlen($update['name']) > 100) {
+                $update['name'] = mb_substr($update['name'], 0, 100);
+            }
+        }
         if (isset($update['phone']) && trim((string) $update['phone']) !== '') {
             $this->load->helper('sk_isms');
             $normalized = sk_isms_normalize_phone($update['phone'], $this->get_settings());
@@ -30,28 +36,42 @@ class Sk_User extends Sk_Base_Api {
             if (strlen($data['password']) < 6) return $this->error('Password must be at least 6 characters.');
             $update['password'] = $data['password'];
         }
-        // Allow email update when current email is a placeholder (OTP-only accounts)
-        if (!empty($data['email'])) {
+        // Email: optional. Empty → keep current or leave null. Non-empty → unique.
+        if (array_key_exists('email', $data)) {
+            $this->Sk_User_model->ensure_otp_user_schema();
             $current = $this->Sk_User_model->get_by_id($this->user['user_id']);
-            $curEmail = strtolower((string) ($current['email'] ?? ''));
-            $isPlaceholder = strpos($curEmail, 'ph_') === 0
+            $curEmail = strtolower(trim((string) ($current['email'] ?? '')));
+            $isPlaceholder = $curEmail === ''
+                || strpos($curEmail, 'ph_') === 0
                 || strpos($curEmail, '@shopkart.app') !== false
                 || strpos($curEmail, '@2deal.app') !== false;
-            if ($isPlaceholder) {
-                $newEmail = trim($data['email']);
+            $newEmail = strtolower(trim((string) $data['email']));
+            if ($newEmail === '') {
+                if ($isPlaceholder) {
+                    $update['email'] = null;
+                }
+            } else {
                 if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
                     return $this->error('Invalid email address.');
                 }
-                $existing = $this->Sk_User_model->get_by_email($newEmail);
-                if ($existing && (int) $existing['id'] !== (int) $this->user['user_id']) {
+                if ($this->Sk_User_model->email_exists($newEmail, (int) $this->user['user_id'])) {
                     return $this->error('This email is already in use.');
                 }
-                $update['email'] = $newEmail;
+                // Allow set/replace when current is empty/placeholder, or same account updating
+                if ($isPlaceholder || $curEmail === $newEmail || $curEmail === '') {
+                    $update['email'] = $newEmail;
+                } elseif ($curEmail !== $newEmail) {
+                    // Also allow changing a real email (unique)
+                    $update['email'] = $newEmail;
+                }
             }
         }
         $this->Sk_User_model->update($this->user['user_id'], $update);
         $user = $this->Sk_User_model->get_by_id($this->user['user_id']);
         unset($user['password'],$user['verify_token'],$user['reset_token'],$user['reset_expires']);
+        if (array_key_exists('email', $user) && ($user['email'] === null || $user['email'] === '')) {
+            $user['email'] = null;
+        }
         $this->success($user, 'Profile updated.');
     }
 

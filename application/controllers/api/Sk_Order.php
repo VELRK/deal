@@ -334,6 +334,9 @@ class Sk_Order extends Sk_Base_Api {
             'company_name' => $addr['company_name'] ?? '',
         ]);
 
+        // Persist real name (+ optional unique email) from checkout onto the user account
+        $this->_sync_user_from_checkout($user_id, $addr, $data);
+
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
 
         if ($wallet_amount > 0) {
@@ -576,6 +579,57 @@ class Sk_Order extends Sk_Base_Api {
             if (!$this->db->field_exists($col, 'orders')) {
                 $this->db->query("ALTER TABLE `orders` ADD COLUMN `{$col}` {$def}");
             }
+        }
+    }
+
+    /**
+     * Save checkout delivery name (and optional email) onto the user row.
+     * Replaces empty / SER001 / User #### placeholders with the real name from the cart form.
+     */
+    private function _sync_user_from_checkout(int $user_id, array $addr, array $data): void {
+        $user = $this->Sk_User_model->get_by_id($user_id);
+        if (!$user) {
+            return;
+        }
+        $this->Sk_User_model->ensure_otp_user_schema();
+        $update = [];
+
+        $fullName = trim((string) ($addr['full_name'] ?? ''));
+        $curName = trim((string) ($user['name'] ?? ''));
+        $isPlaceholderName = $curName === ''
+            || (bool) preg_match('/^(User|SER|USR|CUST)\s*\d{1,8}$/i', $curName);
+        if ($fullName !== '' && ($isPlaceholderName || strcasecmp($curName, $fullName) !== 0)) {
+            if (mb_strlen($fullName) > 100) {
+                $fullName = mb_substr($fullName, 0, 100);
+            }
+            $update['name'] = $fullName;
+        }
+
+        // Optional email from checkout body or nested address
+        $emailRaw = $data['email'] ?? ($data['customer_email'] ?? ($addr['email'] ?? null));
+        if ($emailRaw !== null) {
+            $newEmail = strtolower(trim((string) $emailRaw));
+            $curEmail = strtolower(trim((string) ($user['email'] ?? '')));
+            $isPlaceholderEmail = $curEmail === ''
+                || strpos($curEmail, 'ph_') === 0
+                || strpos($curEmail, '@shopkart.app') !== false
+                || strpos($curEmail, '@2deal.app') !== false;
+
+            if ($newEmail === '') {
+                if ($isPlaceholderEmail) {
+                    $update['email'] = null;
+                }
+            } elseif (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+                if (!$this->Sk_User_model->email_exists($newEmail, $user_id)) {
+                    if ($isPlaceholderEmail || $curEmail !== $newEmail) {
+                        $update['email'] = $newEmail;
+                    }
+                }
+            }
+        }
+
+        if ($update) {
+            $this->Sk_User_model->update($user_id, $update);
         }
     }
 }

@@ -78,6 +78,7 @@ export default function Checkout() {
   /* ── Address form fields ── */
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   // Ignore system-generated placeholder emails (OTP auto-register)
   const realEmail = (email?: string) =>
     email && !isPlaceholderEmail(email) ? email : "";
@@ -99,6 +100,7 @@ export default function Checkout() {
     const parts = addr.full_name.split(" ");
     setFirstName(parts[0] ?? "");
     setLastName(parts.slice(1).join(" "));
+    setCompanyName(addr.company_name ?? "");
     setAddrEmail(realEmail(user?.email));
     setAddrPhone(addr.phone ?? "");
     setAddrCity(addr.city ?? "");
@@ -116,6 +118,7 @@ export default function Checkout() {
     setShowAddForm(false);
     setFirstName("");
     setLastName("");
+    setCompanyName("");
     setAddrEmail("");
     setAddrPhone("");
     setAddrCity("");
@@ -400,13 +403,14 @@ export default function Checkout() {
     }
     return {
       full_name: `${firstName} ${lastName}`.trim(),
-      company_name: "",
+      company_name: companyName.trim(),
       phone: addrPhone,
       line1: addrStreet,
       city: addrCity,
       state: addrState,
       pincode: addrZip,
       country: "Malaysia",
+      email: addrEmail.trim(),
     };
   };
 
@@ -434,16 +438,16 @@ export default function Checkout() {
     if (!isLoggedIn) { setOrderError("Please log in to place an order."); return; }
     if (cartProducts.length === 0) { setOrderError("Your cart is empty."); return; }
 
-    // New OTP users: collect name + email on first checkout
-    if (needsProfile || needsAddress) {
+    // New OTP users: require a real name (email is optional)
+    if (needsProfile || needsAddress || needsName) {
       if (!firstName.trim()) {
         setOrderError("Please enter your full name.");
         return;
       }
-      if (!addrEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addrEmail.trim())) {
-        setOrderError("Please enter a valid email address.");
-        return;
-      }
+    }
+    if (addrEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addrEmail.trim())) {
+      setOrderError("Please enter a valid email address, or leave email blank.");
+      return;
     }
 
     const addr = getDeliveryAddress();
@@ -474,15 +478,26 @@ export default function Checkout() {
 
     setOrderPlacing(true);
     try {
-      // Save profile details for new OTP users before placing the order
-      if (needsProfile) {
-        const fullName = `${firstName} ${lastName}`.trim();
-        const profileRes = await userAPI.updateProfile({
-          name: fullName,
-          email: addrEmail.trim(),
-        });
-        const updated = (profileRes.data as { data?: typeof user })?.data;
-        if (updated) useAuthStore.getState().setUser(updated);
+      // Always persist checkout name (+ optional email) onto the account
+      const fullName = `${firstName} ${lastName}`.trim() || addr.full_name;
+      if (fullName || addrEmail.trim() || needsProfile || needsEmail) {
+        try {
+          const profilePayload: { name?: string; email?: string } = {};
+          if (fullName) profilePayload.name = fullName;
+          // Send email key so backend can store real email or null
+          profilePayload.email = addrEmail.trim();
+          const profileRes = await userAPI.updateProfile(profilePayload);
+          const updated = (profileRes.data as { data?: typeof user })?.data;
+          if (updated) useAuthStore.getState().setUser(updated);
+        } catch (profileErr: unknown) {
+          const msg = (profileErr as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          if (msg && /email/i.test(msg)) {
+            setOrderError(msg);
+            setOrderPlacing(false);
+            return;
+          }
+          console.warn("Checkout profile save:", msg || profileErr);
+        }
       }
 
       // Save delivery address into My Addresses (first order / new address form)
@@ -492,6 +507,7 @@ export default function Checkout() {
         try {
           const saveRes = await userAPI.saveAddress({
             full_name: addr.full_name,
+            company_name: addr.company_name || "",
             phone: phoneForSave || addr.phone || user?.phone || "",
             line1: addr.line1,
             line2: addr.line2 ?? "",
@@ -574,6 +590,7 @@ export default function Checkout() {
       // 3. Place order
       const res = await ordersAPI.checkout({
         address: addr,
+        email: addrEmail.trim() || undefined,
         billing_same: billingSame,
         billing_address: billing,
         payment_method: paymentMethod,
@@ -806,6 +823,9 @@ export default function Checkout() {
                             </div>
                           </div>
                           <div className="address-card-name">{a.full_name}</div>
+                          {a.company_name ? (
+                            <div className="address-card-details text-muted">{a.company_name}</div>
+                          ) : null}
                           <div className="address-card-details">
                             {a.line1}{a.line2 ? `, ${a.line2}` : ""}<br />
                             {a.city}, {a.state} – {a.pincode}
@@ -840,8 +860,8 @@ export default function Checkout() {
                   <h5 className="address-no-data-title mb-2">Complete your profile</h5>
                   <p className="address-no-data-desc mb-3">
                     {user?.phone
-                      ? `Account: +${String(user.phone).replace(/^\+/, "")}. Add missing details once.`
-                      : "Add missing details once — saved to this phone account."}
+                      ? `Account: +${String(user.phone).replace(/^\+/, "")}. Enter your real name (email optional).`
+                      : "Enter your real name once — saved to this phone account. Email is optional."}
                   </p>
                   <div className="row g-3">
                     {needsName && (
@@ -865,17 +885,25 @@ export default function Checkout() {
                             placeholder="Last name"
                           />
                         </div>
+                        <div className="col-md-6">
+                          <label className="form-label small fw-semibold">Company name <span className="text-muted fw-normal">(optional)</span></label>
+                          <input
+                            className="premium-input"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="Company / business name"
+                          />
+                        </div>
                       </>
                     )}
                     {needsEmail && (
                       <div className="col-md-6">
-                        <label className="form-label small fw-semibold">Email *</label>
+                        <label className="form-label small fw-semibold">Email <span className="text-muted fw-normal">(optional)</span></label>
                         <input
                           type="email"
                           className="premium-input"
                           value={addrEmail}
                           onChange={(e) => setAddrEmail(e.target.value)}
-                          required
                           placeholder="you@example.com"
                         />
                       </div>
@@ -912,7 +940,7 @@ export default function Checkout() {
                   </div>
                   <p className="address-no-data-desc mb-3">
                     {addresses.length === 0 && needsProfile
-                      ? "Welcome! Add your name, email and delivery address to place your first order."
+                      ? "Welcome! Add your name and delivery address. Company and email are optional."
                       : showAddForm
                         ? "This address is used for this order and saved to your account."
                         : "Add a delivery address to continue."}
@@ -937,19 +965,27 @@ export default function Checkout() {
                         placeholder="Last name"
                       />
                     </div>
-                    {(needsProfile || isPlaceholderEmail(user?.email)) && (
-                      <div className="col-md-6">
-                        <label className="form-label small fw-semibold">Email *</label>
-                        <input
-                          type="email"
-                          className="premium-input"
-                          value={addrEmail}
-                          onChange={(e) => setAddrEmail(e.target.value)}
-                          required
-                          placeholder="you@example.com"
-                        />
-                      </div>
-                    )}
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Company name <span className="text-muted fw-normal">(optional)</span></label>
+                      <input
+                        className="premium-input"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Company / business name"
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">
+                        Email {needsEmail ? <span className="text-muted fw-normal">(optional)</span> : null}
+                      </label>
+                      <input
+                        type="email"
+                        className="premium-input"
+                        value={addrEmail}
+                        onChange={(e) => setAddrEmail(e.target.value)}
+                        placeholder="you@example.com"
+                      />
+                    </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold">Mobile *</label>
                       <input
