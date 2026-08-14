@@ -270,9 +270,19 @@ $route['shopkart/logout'] = 'admin/Login/logout';
 $route['shopkart/vendor/login'] = 'admin/Vendor_login/index';
 $route['shopkart/vendor/login/submit'] = 'admin/Vendor_login/submit';
 $route['shopkart/vendor/logout'] = 'admin/Vendor_login/logout';
+$route['shopkart/vendor/forgot-password'] = 'admin/Vendor_login/forgot_password';
+$route['shopkart/vendor/forgot-password/submit'] = 'admin/Vendor_login/forgot_submit';
+$route['shopkart/vendor/reset-password'] = 'admin/Vendor_login/reset_password';
+$route['shopkart/vendor/reset-password/submit'] = 'admin/Vendor_login/reset_submit';
+$route['shopkart/vendor/account/password'] = 'admin/Vendor_account/password';
 $route['admin/vendor/login'] = 'admin/Vendor_login/index';
 $route['admin/vendor/login/submit'] = 'admin/Vendor_login/submit';
 $route['admin/vendor/logout'] = 'admin/Vendor_login/logout';
+$route['admin/vendor/forgot-password'] = 'admin/Vendor_login/forgot_password';
+$route['admin/vendor/forgot-password/submit'] = 'admin/Vendor_login/forgot_submit';
+$route['admin/vendor/reset-password'] = 'admin/Vendor_login/reset_password';
+$route['admin/vendor/reset-password/submit'] = 'admin/Vendor_login/reset_submit';
+$route['admin/vendor/account/password'] = 'admin/Vendor_account/password';
 
 // Affiliate portal (separate login)
 $route['shopkart/affiliate/login'] = 'admin/Affiliate_login/index';

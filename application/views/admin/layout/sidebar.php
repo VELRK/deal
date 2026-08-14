@@ -101,6 +101,13 @@ function sk_active($seg, $match) { return $seg === $match ? 'active' : ''; }
           <i class="bi bi-wallet2 me-2"></i> My Wallet
         </a>
       </li>
+      <?php if (!empty($vendor_logged_in)): ?>
+      <li class="nav-item">
+        <a href="<?= site_url('admin/vendor/account/password') ?>" class="nav-link sk-nav-link <?= strpos((string) uri_string(), 'vendor/account') !== false ? 'active' : '' ?>">
+          <i class="bi bi-shield-lock me-2"></i> Change Password
+        </a>
+      </li>
+      <?php endif; ?>
       <?php endif; ?>
 
       <li class="nav-item mt-2">

@@ -49,6 +49,9 @@
             <i class="bi bi-eye" id="passIcon"></i>
           </button>
         </div>
+        <div class="text-end mt-1">
+          <a href="<?= site_url('admin/vendor/forgot-password') ?>" class="small">Forgot password?</a>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary w-100 fw-bold py-2">

@@ -66,6 +66,105 @@ class Sk_Vendor_model extends CI_Model {
         return password_verify($plain, $hash);
     }
 
+    /** Columns for email-verified password change / forgot password. */
+    public function ensure_password_reset_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('reset_token', $this->table)) {
+            $this->db->query(
+                "ALTER TABLE `{$this->table}` ADD COLUMN `reset_token` VARCHAR(64) NULL DEFAULT NULL AFTER `password`"
+            );
+        }
+        if (!$this->db->field_exists('reset_expires', $this->table)) {
+            $this->db->query(
+                "ALTER TABLE `{$this->table}` ADD COLUMN `reset_expires` DATETIME NULL DEFAULT NULL AFTER `reset_token`"
+            );
+        }
+    }
+
+    /** 6-digit code for password change / forgot (15 min). */
+    public function set_reset_code(string $email): ?string {
+        $this->ensure_password_reset_schema();
+        $vendor = $this->get_by_email($email);
+        if (!$vendor || ($vendor['status'] ?? '') !== 'approved') {
+            return null;
+        }
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $this->db->where('id', (int) $vendor['id'])->update($this->table, [
+            'reset_token'   => $code,
+            'reset_expires' => date('Y-m-d H:i:s', strtotime('+15 minutes')),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+        return $code;
+    }
+
+    /**
+     * Validate 6-digit email code; swap to a longer reset token (30 min).
+     * @return string|null reset token for reset_password_with_token
+     */
+    public function verify_reset_code(string $email, string $code): ?string {
+        $this->ensure_password_reset_schema();
+        if (!preg_match('/^\d{6}$/', $code)) {
+            return null;
+        }
+        $vendor = $this->db->where('email', $email)
+            ->where('reset_token', $code)
+            ->where('reset_expires >', date('Y-m-d H:i:s'))
+            ->where('deleted_at IS NULL', null, false)
+            ->get($this->table)->row_array();
+        if (!$vendor) {
+            return null;
+        }
+        $token = bin2hex(random_bytes(32));
+        $this->db->where('id', (int) $vendor['id'])->update($this->table, [
+            'reset_token'   => $token,
+            'reset_expires' => date('Y-m-d H:i:s', strtotime('+30 minutes')),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+        return $token;
+    }
+
+    public function reset_password_with_token(string $email, string $token, string $password): bool {
+        $this->ensure_password_reset_schema();
+        if (strlen($token) <= 6 || ctype_digit($token)) {
+            return false;
+        }
+        if (strlen($password) < 6) {
+            return false;
+        }
+        $vendor = $this->db->where('email', $email)
+            ->where('reset_token', $token)
+            ->where('reset_expires >', date('Y-m-d H:i:s'))
+            ->where('deleted_at IS NULL', null, false)
+            ->get($this->table)->row_array();
+        if (!$vendor) {
+            return false;
+        }
+        $this->db->where('id', (int) $vendor['id'])->update($this->table, [
+            'password'      => password_hash($password, PASSWORD_BCRYPT),
+            'reset_token'   => null,
+            'reset_expires' => null,
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+        return true;
+    }
+
+    public function send_password_change_code_email(array $vendor, string $code): bool {
+        $this->load->model('Sk_Admin_model');
+        $this->load->helper('sk_mailer');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $name = trim((string) ($vendor['owner_name'] ?? $vendor['business_name'] ?? 'Vendor'));
+        return sk_mail_password_reset_code(
+            ['email' => $vendor['email'], 'name' => $name],
+            $code,
+            $settings,
+            'Vendor Portal'
+        );
+    }
+
     public function create(array $data, ?array $store = null): int {
         if (empty($data['uuid'])) {
             $data['uuid'] = $this->_uuid();
