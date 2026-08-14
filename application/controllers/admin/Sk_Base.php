@@ -185,7 +185,7 @@ class Sk_Base extends CI_Controller {
             $code = (int)$_FILES[$field]['error'];
             $msg = 'Image upload failed.';
             if ($code === UPLOAD_ERR_INI_SIZE || $code === UPLOAD_ERR_FORM_SIZE) {
-                $msg = 'Image is too large. Use JPG, PNG, GIF or WebP under 5MB.';
+                $msg = 'Image is too large. Use JPG, PNG, GIF or WebP under 8MB.';
             } elseif ($code === UPLOAD_ERR_PARTIAL) {
                 $msg = 'Image upload was incomplete. Please try again.';
             }
@@ -199,7 +199,7 @@ class Sk_Base extends CI_Controller {
         $config = [
             'upload_path'   => $path,
             'allowed_types' => 'jpg|jpeg|png|gif|webp',
-            'max_size'      => 5120,
+            'max_size'      => 8192,
             'file_name'     => uniqid($dir . '_'),
         ];
         $this->load->library('upload', $config);
@@ -211,7 +211,7 @@ class Sk_Base extends CI_Controller {
         $err = strip_tags((string)$this->upload->display_errors('', ''));
         $this->session->set_flashdata(
             'error',
-            $err !== '' ? $err : 'Image upload failed. Use JPG, PNG, GIF or WebP under 5MB.'
+            $err !== '' ? $err : 'Image upload failed. Use JPG, PNG, GIF or WebP under 8MB.'
         );
         return null;
     }

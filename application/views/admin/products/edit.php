@@ -296,53 +296,16 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
 
       <?php $product_variants = $product_variants ?? []; $this->load->view('admin/products/_variant_fields', compact('variant_units', 'product_variants')); ?>
 
-      <!-- Pricing -->
-      <div class="card sk-table-card shadow-sm mb-3">
-        <div class="card-header bg-white border-0 py-3 fw-semibold">
-          <i class="bi bi-tag me-1 text-warning"></i> Pricing & Inventory
-        </div>
-        <div class="card-body">
-          <div class="row g-2">
-            <div class="col-md-3">
-              <label class="form-label">MRP / Price <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <span class="input-group-text">RM</span>
-                <input type="number" name="price" class="form-control" step="0.01" min="0" value="<?= $p['price'] ?>" required>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale Price</label>
-              <div class="input-group">
-                <span class="input-group-text">RM</span>
-                <input type="number" name="sale_price" class="form-control" step="0.01" min="0" value="<?= $p['sale_price'] ?? '' ?>">
-              </div>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-              <div class="form-check form-switch mb-2">
-                <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck"
-                       <?= !empty($p['hot_sale']) ? 'checked' : '' ?>>
-                <label class="form-check-label" for="hotSaleCheck">Enable Hot Sale</label>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale Start (date & hour)</label>
-              <input type="datetime-local" name="sale_start_at" class="form-control" value="<?= htmlspecialchars($saleStartLocal) ?>">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale End (date & hour)</label>
-              <input type="datetime-local" name="sale_end_at" class="form-control" value="<?= htmlspecialchars($saleEndLocal) ?>">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Stock <span class="text-danger">*</span></label>
-              <input type="number" name="stock" class="form-control" value="<?= $p['stock'] ?>" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Weight (kg)</label>
-              <input type="number" name="weight" class="form-control" step="0.1" value="<?= $p['weight'] ?? '' ?>">
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Price / stock / sale stay as saved values. Change them on each pack in Unit & Variants. -->
+      <input type="hidden" name="price" value="<?= htmlspecialchars((string)$p['price']) ?>">
+      <input type="hidden" name="sale_price" value="<?= htmlspecialchars((string)($p['sale_price'] ?? '')) ?>">
+      <input type="hidden" name="stock" value="<?= htmlspecialchars((string)$p['stock']) ?>">
+      <input type="hidden" name="weight" value="<?= htmlspecialchars((string)($p['weight'] ?? '')) ?>">
+      <input type="hidden" name="sale_start_at" value="<?= htmlspecialchars($saleStartLocal) ?>">
+      <input type="hidden" name="sale_end_at" value="<?= htmlspecialchars($saleEndLocal) ?>">
+      <?php if (!empty($p['hot_sale'])): ?>
+        <input type="hidden" name="hot_sale" value="1">
+      <?php endif; ?>
 
     </div>
 
@@ -386,14 +349,14 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
         <div class="card-header bg-white border-0 py-3 fw-semibold">Main Image</div>
         <div class="card-body text-center">
           <?php if ($p['thumbnail']): ?>
-            <img src="<?= base_url($p['thumbnail']) ?>" class="img-fluid rounded mb-2 border"
+            <img src="<?= base_url($p['thumbnail']) ?>?v=<?= (int)@filemtime(FCPATH . $p['thumbnail']) ?>" class="img-fluid rounded mb-2 border"
                  style="max-height:180px;object-fit:contain;" id="thumbPreview">
           <?php else: ?>
             <img id="thumbPreview" src="#" style="display:none;max-height:180px;" class="img-fluid rounded mb-2 border">
           <?php endif; ?>
           <input type="file" name="thumbnail" class="form-control form-control-sm sk-img-preview-input"
                  data-target="#thumbPreview" accept="image/*">
-          <small class="text-muted">Leave blank to keep current</small>
+          <small class="text-muted">JPG, PNG, GIF or WebP, max 8MB. Leave blank to keep current.</small>
         </div>
       </div>
 

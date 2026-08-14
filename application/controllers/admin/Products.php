@@ -150,7 +150,7 @@ class Products extends Sk_Base {
 
         $product_id = $this->Sk_Product_model->create($data);
 
-        $this->_save_product_variants($product_id);
+        $this->_save_product_variants($product_id, $data, $thumbnail);
 
         // Additional images
         if (!empty($_FILES['images']['name'][0])) {
@@ -192,10 +192,11 @@ class Products extends Sk_Base {
 
         $hadThumbUpload = !empty($_FILES['thumbnail']['name']);
         $uploadedThumb = $this->upload_file('thumbnail', 'products');
-        if ($hadThumbUpload && !$uploadedThumb) {
-            // Flash error already set by upload_file — keep existing thumbnail
-        }
+        $thumbUploadFailed = $hadThumbUpload && !$uploadedThumb;
         $thumbnail = $uploadedThumb ?? $product['thumbnail'];
+
+        $postedPrice = array_key_exists('price', $_POST) ? $this->input->post('price') : false;
+        $postedStock = array_key_exists('stock', $_POST) ? $this->input->post('stock') : false;
 
         $data = [
             'name'             => $this->input->post('name', TRUE),
@@ -205,13 +206,23 @@ class Products extends Sk_Base {
             'sku'              => $this->input->post('sku', TRUE),
             'description'      => $this->input->post('description'),
             'short_desc'       => $this->input->post('short_desc', TRUE),
-            'price'            => $this->input->post('price'),
-            'sale_price'       => $this->input->post('sale_price') ?: null,
-            'hot_sale'         => $this->input->post('hot_sale') ? 1 : 0,
-            'sale_start_at'    => $this->_normalize_datetime_input($this->input->post('sale_start_at')),
-            'sale_end_at'      => $this->_normalize_datetime_input($this->input->post('sale_end_at')),
-            'stock'            => $this->input->post('stock'),
-            'weight'           => $this->input->post('weight') ?: null,
+            'price'            => ($postedPrice !== false && $postedPrice !== null && $postedPrice !== '') ? $postedPrice : $product['price'],
+            'sale_price'       => (array_key_exists('sale_price', $_POST) && $this->input->post('sale_price') !== '')
+                ? $this->input->post('sale_price')
+                : ($product['sale_price'] ?? null),
+            'hot_sale'         => array_key_exists('hot_sale', $_POST)
+                ? ($this->input->post('hot_sale') ? 1 : 0)
+                : (int)($product['hot_sale'] ?? 0),
+            'sale_start_at'    => array_key_exists('sale_start_at', $_POST)
+                ? $this->_normalize_datetime_input($this->input->post('sale_start_at'))
+                : ($product['sale_start_at'] ?? null),
+            'sale_end_at'      => array_key_exists('sale_end_at', $_POST)
+                ? $this->_normalize_datetime_input($this->input->post('sale_end_at'))
+                : ($product['sale_end_at'] ?? null),
+            'stock'            => ($postedStock !== false && $postedStock !== null && $postedStock !== '') ? $postedStock : $product['stock'],
+            'weight'           => (array_key_exists('weight', $_POST) && $this->input->post('weight') !== '')
+                ? $this->input->post('weight')
+                : ($product['weight'] ?? null),
             'featured'         => $this->input->post('featured') ? 1 : 0,
             'nav_featured'     => $this->input->post('nav_featured') ? 1 : 0,
             'special_product'  => $this->input->post('special_product') ? 1 : 0,
@@ -281,15 +292,19 @@ class Products extends Sk_Base {
 
         $this->Sk_Product_model->update($id, $data);
 
-        $this->_save_product_variants($id);
+        $variantUploadFailed = $this->_save_product_variants($id, $product, $uploadedThumb);
 
         if (!empty($_FILES['images']['name'][0])) {
             $this->_save_product_images($id);
         }
 
         $this->_clear_product_api_cache();
+        if ($thumbUploadFailed || $variantUploadFailed) {
+            redirect('admin/products/edit/' . $id);
+            return;
+        }
         $this->session->set_flashdata('success', 'Product updated successfully.');
-        redirect('admin/products');
+        redirect('admin/products/edit/' . $id);
     }
 
     public function delete($id) {
@@ -317,12 +332,21 @@ class Products extends Sk_Base {
         $this->json(['success' => true]);
     }
 
-    private function _save_product_variants($product_id) {
+    private function _save_product_variants($product_id, $product = null, $newMainThumb = null) {
         $rows = array_values($this->input->post('product_variants') ?? []);
         $parsed = [];
-        $main_price = (float)$this->input->post('price');
-        $main_sale  = $this->input->post('sale_price') ?: null;
-        $main_stock = (int)$this->input->post('stock');
+        $postedPrice = array_key_exists('price', $_POST) ? $this->input->post('price') : false;
+        $postedStock = array_key_exists('stock', $_POST) ? $this->input->post('stock') : false;
+        $main_price = ($postedPrice !== false && $postedPrice !== null && $postedPrice !== '')
+            ? (float)$postedPrice
+            : (float)($product['price'] ?? 0);
+        $postedSale = array_key_exists('sale_price', $_POST) ? $this->input->post('sale_price') : false;
+        $main_sale  = ($postedSale !== false && $postedSale !== null && $postedSale !== '')
+            ? $postedSale
+            : ($product['sale_price'] ?? null);
+        $main_stock = ($postedStock !== false && $postedStock !== null && $postedStock !== '')
+            ? (int)$postedStock
+            : (int)($product['stock'] ?? 0);
         $main_sku   = $this->input->post('sku', TRUE);
         $product_thumb = null;
         $upload_failed = false;
@@ -372,7 +396,7 @@ class Products extends Sk_Base {
         }
 
         if ($upload_failed) {
-            $this->session->set_flashdata('error', 'One or more variant images failed to upload. Use JPG, PNG, GIF or WebP under 5MB.');
+            $this->session->set_flashdata('error', 'One or more variant images failed to upload. Use JPG, PNG, GIF or WebP under 8MB.');
         }
 
         if (empty($parsed)) {
@@ -395,9 +419,12 @@ class Products extends Sk_Base {
         $this->Sk_Product_variant_model->replace_for_product((int)$product_id, $parsed);
         $this->Sk_Product_model->sync_product_stock_from_variants((int)$product_id);
 
-        if ($product_thumb) {
+        // Do not overwrite a newly uploaded main image with the default variant photo.
+        if ($product_thumb && !$newMainThumb) {
             $this->db->where('id', (int)$product_id)->update('products', ['thumbnail' => $product_thumb]);
         }
+
+        return $upload_failed;
     }
 
     private function _variant_image_key($unit_id, $unit_value) {

@@ -17,7 +17,7 @@ $rows = !empty($product_variants)
   <div class="card-body">
     <p class="small text-muted mb-3">
       Add sellable pack sizes (250g, 500g, 1kg, 1 box, etc.). Each variant can have its own <strong>image, price, sale price and stock</strong>.
-      Leave price/stock empty to use values from Pricing &amp; Inventory.
+      Leave price/stock empty to keep the product's saved price and stock.
     </p>
 
     <div class="row g-2 mb-3">
