@@ -122,24 +122,24 @@ function Wishlist() {
           display: flex;
           align-items: center;
           gap: 24px;
-          padding: 24px;
-          background: #fff;
-          border: 1px solid #f0f0f0;
-          border-radius: 12px;
-          transition: all 0.3s ease;
+          padding: 20px;
+          background: #ffffff;
+          border: none;
+          border-radius: 14px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
         .classic-wishlist-item:hover {
-          border-color: #ddd;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-          transform: translateY(-2px);
+          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+          transform: translateY(-4px);
         }
         .wishlist-item-image {
-          width: 100px;
-          height: 133px;
+          width: 120px;
+          height: 120px;
           flex-shrink: 0;
-          border-radius: 8px;
+          border-radius: 10px;
           overflow: hidden;
-          background: #f9f9f9;
+          background: #f8f8f8;
         }
         .wishlist-item-image img {
           width: 100%;
@@ -209,22 +209,25 @@ function Wishlist() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: #111;
-          color: #fff;
+          background: #3ec1bc;
+          color: #ffffff;
           font-size: 0.85rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           padding: 12px 24px;
-          border-radius: 4px;
+          border-radius: 8px;
           text-decoration: none;
           transition: all 0.3s ease;
-          border: 1px solid #111;
+          border: 1px solid #3ec1bc;
           width: 100%;
         }
         .classic-btn-primary:hover {
-          background: #fff;
-          color: #111;
+          background: #32a19c;
+          border-color: #32a19c;
+          color: #ffffff;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(62, 193, 188, 0.3);
         }
         .classic-btn-remove {
           display: inline-flex;

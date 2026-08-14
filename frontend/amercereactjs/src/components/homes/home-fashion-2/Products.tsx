@@ -8,20 +8,38 @@ function Products() {
   const cards = products.map(toProductCard);
 
   return (
-    <div className="flat-spacing pt-5 flat-animate-tab">
+    <div className="flat-spacing pt-4 pb-5 flat-animate-tab">
       <div className="container">
-        <div className="sect-heading type-2 overflow-auto text-nowrap">
-          <ul className="tab-btn-wrap-v3 style-4 justify-content-sm-center mb-0" role="tablist">
-            <li className="nav-tab-item" role="presentation">
-              <a href="#newest" role="tab" aria-selected className="tf-btn-tab py-4 active">
-                <h2 style={{ fontSize: "36px", color: "#54101d", fontFamily: "serif", fontWeight: "normal", margin: 0 }}>New Arrival</h2>              </a>
-            </li>
-          </ul>
+        <div className="d-flex flex-column align-items-center text-center mb-4">
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "#3ec1bc",
+              textTransform: "uppercase",
+              letterSpacing: "1.5px",
+              marginBottom: "4px",
+            }}
+          >
+            Fresh Collection
+          </span>
+          <h2
+            style={{
+              fontSize: "clamp(28px, 4vw, 36px)",
+              color: "#54101d",
+              fontFamily: "serif",
+              fontWeight: "normal",
+              margin: 0,
+            }}
+          >
+            New Arrival
+          </h2>
         </div>
+
         <div className="tab-content">
           <div className="tab-pane fade active show" role="tabpanel">
             {loading ? (
-              <div className="text-center py-40">Loading…</div>
+              <div className="text-center py-40 text-muted">Loading fresh arrivals…</div>
             ) : (
               <TfSwiper
                 className="wrap-sw-over"
@@ -29,9 +47,9 @@ function Products() {
                 tablet={3}
                 mobileSm={2}
                 mobile={2}
-                spaceLg={30}
-                spaceMd={20}
-                space={10}
+                spaceLg={24}
+                spaceMd={16}
+                space={12}
                 pagination={2}
                 paginationSm={2}
                 paginationMd={3}
@@ -45,10 +63,10 @@ function Products() {
                     product={product}
                     variant="classic"
                     imgWidth={330}
-                    imgHeight={440}
-                    actionBotLabel="Quick Add"
-                    actionBotHref="#quickAdd"
-                    actionBotDataToggle="modal"
+                    imgHeight={330}
+                    actionBotLabel="ADD TO CART"
+                    actionBotHref="#shoppingCart"
+                    actionBotDataToggle="offcanvas"
                   />
                 ))}
               </TfSwiper>

@@ -6,7 +6,6 @@ import { ShopEmptyFilters } from "./ShopListingUi";
 import { ShopListingFooters } from "./ShopListingFooters";
 import { useShopProgressiveLoad } from "./useShopProgressiveLoad";
 import { shopMetaFor } from "./shopProductMeta";
-import { resolveGridProductCardVariant } from "./shopLayoutUtils";
 
 function ProductSkeleton() {
   return (
@@ -27,7 +26,6 @@ export function ShopProductSection() {
     gridCols,
     loading,
     hasNoFilteredItems,
-    variants,
     pagedVisibleProducts,
     progressive,
     infiniteScroll,
@@ -43,7 +41,6 @@ export function ShopProductSection() {
     viewMode,
   });
 
-  const gridCardVariant = resolveGridProductCardVariant(variants);
   const onClear = () => clearAllFilters(dispatch);
 
   return (
@@ -90,7 +87,12 @@ export function ShopProductSection() {
               key={`${product.id}-grid-${i}`}
               product={product}
               wrapperClass={product.cardVariant}
-              variant={gridCardVariant}
+              variant="classic"
+              imgWidth={330}
+              imgHeight={330}
+              actionBotLabel="ADD TO CART"
+              actionBotHref="#shoppingCart"
+              actionBotDataToggle="offcanvas"
               cardClass="grid"
               shopMeta={shopMetaFor(product)}
             />
