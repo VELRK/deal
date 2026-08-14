@@ -1078,7 +1078,7 @@ export default function AccountOrders() {
                   const active = activeTab === tab.id;
                   const count =
                     tab.id === "all"
-                      ? orders.length
+                      ? orders.filter((o) => getOrderStatusGroup(o.status) !== "abandoned").length
                       : orders.filter((o) => getOrderStatusGroup(o.status) === tab.id).length;
 
                   return (
