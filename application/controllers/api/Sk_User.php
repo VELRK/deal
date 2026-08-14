@@ -9,6 +9,12 @@ class Sk_User extends Sk_Base_Api {
         $this->auth_required();
         $user = $this->Sk_User_model->get_by_id($this->user['user_id']);
         unset($user['password'], $user['verify_token'], $user['reset_token'], $user['reset_expires']);
+        if (array_key_exists('email', $user) && ($user['email'] === null || $user['email'] === '')) {
+            $user['email'] = null;
+        }
+        $name = trim((string) ($user['name'] ?? ''));
+        $user['profile_complete'] = $name !== ''
+            && !preg_match('/^(User|SER|USR|CUST)\s*\d{1,8}$/i', $name);
         $this->success($user);
     }
 
@@ -72,6 +78,9 @@ class Sk_User extends Sk_Base_Api {
         if (array_key_exists('email', $user) && ($user['email'] === null || $user['email'] === '')) {
             $user['email'] = null;
         }
+        $name = trim((string) ($user['name'] ?? ''));
+        $user['profile_complete'] = $name !== ''
+            && !preg_match('/^(User|SER|USR|CUST)\s*\d{1,8}$/i', $name);
         $this->success($user, 'Profile updated.');
     }
 

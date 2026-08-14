@@ -14,6 +14,27 @@ class Sk_Order extends Sk_Base_Api {
         if (!$addr || empty($addr['full_name']) || empty($addr['line1'])) {
             return $this->error('Shipping address is required.');
         }
+        $fullNameCheck = trim((string) ($addr['full_name'] ?? ''));
+        if ($fullNameCheck === '' || preg_match('/^(User|SER|USR|CUST)\s*\d{1,8}$/i', $fullNameCheck)) {
+            return $this->error('Please enter your real full name (not a generated code like SER001).');
+        }
+        $addr['full_name'] = $fullNameCheck;
+        $addr['company_name'] = trim((string) ($addr['company_name'] ?? '')) ?: '';
+
+        // Optional email (top-level or nested) — unique when provided
+        $emailRaw = $data['email'] ?? ($data['customer_email'] ?? ($addr['email'] ?? null));
+        if ($emailRaw !== null && trim((string) $emailRaw) !== '') {
+            $emailCheck = strtolower(trim((string) $emailRaw));
+            if (!filter_var($emailCheck, FILTER_VALIDATE_EMAIL)) {
+                return $this->error('Invalid email address.');
+            }
+            $this->Sk_User_model->ensure_otp_user_schema();
+            if ($this->Sk_User_model->email_exists($emailCheck, (int) $this->user['user_id'])) {
+                return $this->error('This email is already in use.');
+            }
+            $data['email'] = $emailCheck;
+            $addr['email'] = $emailCheck;
+        }
 
         $settings = $this->get_settings();
         $this->load->helper('sk_isms');
