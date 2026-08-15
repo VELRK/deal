@@ -407,7 +407,7 @@ export default function Footer9({
           {/* ── Footer bottom bar ── */}
           <div className="luxury-footer-bottom">
             <p className="luxury-copyright">
-              ©{new Date().getFullYear()} 2Deal. All Rights Reserved.
+              ©{new Date().getFullYear()} 2Deal. All Rights Reserved. · deploy-ok-0815
             </p>
             <ul className="luxury-payment-list">
               {footerPaymentIcons.map((icon) => (

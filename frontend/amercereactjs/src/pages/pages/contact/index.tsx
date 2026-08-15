@@ -1,5 +1,4 @@
 import PageTitle from "@/components/pages/contact/PageTitle";
-import Map from "@/components/pages/contact/Map";
 import Contact from "@/components/pages/contact/Contact";
 import PageMeta from "@/components/common/PageMeta";
 
