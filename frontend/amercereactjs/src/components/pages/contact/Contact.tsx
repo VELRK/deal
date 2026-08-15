@@ -474,7 +474,7 @@ function Contact() {
                   </div>
                   <div>
                     <div className="contact-info-label">Call us</div>
-                    <div className="contact-info-val">[Your Phone Number]</div>
+                    <div className="contact-info-val">+60126364666</div>
                   </div>
                 </div>
 

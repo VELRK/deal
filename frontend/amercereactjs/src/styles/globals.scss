@@ -692,6 +692,34 @@
       transform: translateY(0);
     }
   }
+
+  .size-btn {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    &:hover:not(.active) {
+      border-color: #a87754 !important;
+      color: #a87754 !important;
+      background-color: #faf6f2 !important;
+    }
+  }
+}
+
+.classic-media-wrapper {
+  .tf-product-media-main {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tf-product-media-thumbs .swiper-slide {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
+    &:hover {
+      opacity: 0.85;
+      transform: scale(1.02);
+    }
+    &.swiper-slide-thumb-active > div {
+      border-color: #a87754 !important;
+      box-shadow: 0 0 0 2px rgba(168, 119, 84, 0.3) !important;
+    }
+  }
 }
 
 @keyframes fadeInUpClassic {
@@ -704,4 +732,5 @@
     transform: translate3d(0, 0, 0);
   }
 }
+
 

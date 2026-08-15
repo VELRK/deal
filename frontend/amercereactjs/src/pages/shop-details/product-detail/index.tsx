@@ -1,5 +1,4 @@
 import Breadcrumb from "@/components/shop-details/Breadcrumb";
-import ProductDescription from "@/components/shop-details/ProductDescription";
 import RelatedProducts from "@/components/shop-details/RelatedProducts";
 import RecentlyViewed from "@/components/shop-details/RecentlyViewed";
 import ProductSection from "@/components/shop-details/ProductSection";
@@ -16,28 +15,75 @@ export default function Page() {
   const { product: apiProduct, loading } = useProduct(id);
   const setCurrentProduct = useCurrentProductStore((s) => s.setCurrentProduct);
 
-  // Must be before any early returns — Rules of Hooks
   // Track this product as recently viewed
   useEffect(() => {
     if (id) trackView(id);
   }, [id]);
 
-  useEffect(() => {
-    if (!apiProduct) return;
-    const card = {
+  // Robustly collect all product images without duplicates
+  const extraImages = (() => {
+    if (!apiProduct) return [];
+    const seen = new Set<string>();
+    const list: { src: string; dataColor?: string; dataSize?: string }[] = [];
+
+    const addImg = (rawUrl?: string | null, dataColor?: string, dataSize?: string) => {
+      if (!rawUrl || typeof rawUrl !== "string") return;
+      const url = apiImageUrl(rawUrl);
+      if (!url || seen.has(url) || url.includes("no-image.png")) return;
+      seen.add(url);
+      list.push({ src: url, dataColor, dataSize });
+    };
+
+    // 1. Primary Thumbnail
+    addImg(apiProduct.thumbnail);
+
+    // 2. Product Gallery Images
+    (apiProduct.images ?? []).forEach((img) => {
+      if (img && typeof img === "object" && img.image) {
+        addImg(img.image);
+      } else if (typeof img === "string") {
+        addImg(img);
+      }
+    });
+
+    // 3. Variant Images
+    (apiProduct.variants ?? []).forEach((v) => {
+      const vImg = v.image || v.image_url;
+      if (vImg) {
+        addImg(vImg, undefined, v.label);
+      }
+    });
+
+    // 4. Color Images
+    if (Array.isArray(apiProduct.colors_json)) {
+      apiProduct.colors_json.forEach((c) => {
+        if (c && typeof c === "object" && c.image) {
+          addImg(c.image, c.name);
+        }
+      });
+    }
+
+    if (list.length === 0) {
+      list.push({ src: apiImageUrl(apiProduct.thumbnail) || "/frontend/assets/images/product/single/detail-1.jpg" });
+    }
+
+    return list;
+  })();
+
+  const card = apiProduct
+    ? {
       ...toProductCard(apiProduct),
       procurement_sla: apiProduct.procurement_sla,
-      images: [
-        { src: apiImageUrl(apiProduct.thumbnail) },
-        ...(apiProduct.images ?? [])
-          .filter((img) => img.image !== apiProduct.thumbnail)
-          .map((img) => ({ src: apiImageUrl(img.image) })),
-      ],
+      images: extraImages,
       description: apiProduct.description ?? apiProduct.short_desc ?? "",
-    };
+    }
+    : null;
+
+  useEffect(() => {
+    if (!card) return;
     setCurrentProduct(card);
     return () => setCurrentProduct(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiProduct?.id]);
 
   if (loading) {
@@ -48,7 +94,7 @@ export default function Page() {
     );
   }
 
-  if (!apiProduct) {
+  if (!apiProduct || !card) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
         <p className="cl-text-2">Product not found.</p>
@@ -56,27 +102,16 @@ export default function Page() {
     );
   }
 
-  const card = {
-    ...toProductCard(apiProduct),
-    procurement_sla: apiProduct.procurement_sla,
-    images: [
-      { src: apiImageUrl(apiProduct.thumbnail) },
-      ...(apiProduct.images ?? [])
-        .filter((img) => img.image !== apiProduct.thumbnail)
-        .map((img) => ({ src: apiImageUrl(img.image) })),
-    ],
-    description: apiProduct.description ?? apiProduct.short_desc ?? "",
-  };
-
   const unitVariants = card.unitVariants ?? [];
   const initialVariantId = unitVariants.find((v) => v.isDefault)?.id ?? unitVariants[0]?.id ?? null;
 
   // Build color swatches from colors_json (image per color) or fallback to color/color2
   const colors: ColorOption[] = (() => {
     const thumb = apiImageUrl(apiProduct.thumbnail);
-    if (apiProduct.colors_json && apiProduct.colors_json.length > 0) {
+    if (Array.isArray(apiProduct.colors_json) && apiProduct.colors_json.length > 0) {
       return apiProduct.colors_json.map((c) => ({
         label: c.name,
+        hex: c.hex || undefined,
         swatchClass: c.hex ? "" : "bg-gray",
         img: c.image ? apiImageUrl(c.image) : thumb,
       }));
@@ -88,11 +123,27 @@ export default function Page() {
     return fallback;
   })();
 
-  // Build real size options from DB
-  const sizes: SizeOption[] = (apiProduct.sizes ?? []).map((s) => ({ value: s }));
+  // Build real size options from DB (either array or comma-separated string)
+  const rawSizes: string[] = (() => {
+    if (Array.isArray(apiProduct.sizes)) {
+      return apiProduct.sizes.filter(Boolean);
+    }
+    if (typeof (apiProduct.sizes as unknown) === "string" && apiProduct.sizes) {
+      return (apiProduct.sizes as unknown as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    if (Array.isArray(card.sizes)) {
+      return card.sizes.filter(Boolean);
+    }
+    return [];
+  })();
+
+  const sizes: SizeOption[] = rawSizes.map((s) => ({ value: s }));
 
   const initialColor = colors[0]?.label ?? "";
-  const initialSize  = sizes[0]?.value ?? "";
+  const initialSize = sizes[0]?.value ?? "";
 
   return (
     <>
@@ -112,9 +163,8 @@ export default function Page() {
         initialVariantId={initialVariantId}
         initialColor={initialColor}
         initialSize={initialSize}
-        extraImages={card.images}
+        extraImages={extraImages}
       />
-      <ProductDescription product={card} productId={apiProduct.id} />
       <RelatedProducts />
       <RecentlyViewed excludeSlug={id} />
     </>

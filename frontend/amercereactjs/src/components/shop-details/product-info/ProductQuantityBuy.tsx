@@ -97,8 +97,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     }
   };
 
-  const [showDesc, setShowDesc] = useState(false);
-  const [showSpecs, setShowSpecs] = useState(true);
 
   if (isOutOfStock) {
     return (
@@ -113,27 +111,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
     );
   }
 
-  const specs = [
-    { label: "Pack Size", value: selectedVariant?.label ?? product.unit_label },
-    { label: "Brand", value: product.brand_name },
-    { label: "Model Name", value: product.model_name },
-    { label: "Style Code", value: product.style_code },
-    { label: "Pattern", value: product.pattern },
-    { label: "Color", value: product.color },
-    { label: "Brand Color", value: product.brand_color },
-    { label: "EAN / Barcode", value: product.ean },
-    { label: "HSN Code", value: product.hsn_code },
-    { label: "Tax Code", value: product.tax_code },
-    { label: "Pack Of", value: product.pack_of },
-    { label: "Weight", value: product.weight ? `${product.weight} kg` : undefined },
-    { label: "Dimensions (L×B×H)", value: (product.package_length && product.package_breadth && product.package_height) ? `${product.package_length} × ${product.package_breadth} × ${product.package_height} cm` : undefined },
-    { label: "Min Order Qty", value: product.min_order_qty },
-    { label: "Procurement SLA", value: product.procurement_sla ? `${product.procurement_sla} Business Days` : undefined },
-    { label: "Procurement Type", value: product.procurement_type },
-    { label: "Return Policy", value: product.return_policy ? String(product.return_policy).replace(/<[^>]*>?/gm, '').replace(/retur policy\s*-\s*/i, '').trim() : undefined },
-    { label: "Manufacturer", value: product.manufacturer_name },
-    { label: "Manufacturer Address", value: product.manufacturer_address },
-  ].filter(item => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
 
   return (
     <div className="tf-product-total-quantity mt-4">
@@ -209,50 +186,6 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
         </button>
       </div>
 
-      {specs.length > 0 && (
-        <div className="classic-specs-card">
-          <div
-            className="specs-header"
-            onClick={() => setShowSpecs(!showSpecs)}
-          >
-            <h4>Specifications &amp; Details</h4>
-            <i className={`icon ${showSpecs ? "icon-minus" : "icon-plus"}`} style={{ fontSize: "12px", color: "#a87754" }} />
-          </div>
-          {showSpecs && (
-            <div className="specs-body">
-              <div className="specs-grid">
-                {specs.map((item, index) => (
-                  <div key={index} className="spec-item">
-                    <span className="spec-label">{item.label}</span>
-                    <span className="spec-value">{String(item.value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {product.description && (
-        <div className="classic-specs-card" style={{ marginTop: "16px" }}>
-          <div
-            className="specs-header"
-            onClick={() => setShowDesc(!showDesc)}
-          >
-            <h4>Product Story &amp; Details</h4>
-            <i className={`icon ${showDesc ? "icon-minus" : "icon-plus"}`} style={{ fontSize: "12px", color: "#a87754" }} />
-          </div>
-          {showDesc && (
-            <div className="specs-body">
-              <div
-                className="text-muted font-classic"
-                style={{ fontSize: "14px", lineHeight: "1.7", color: "#444" }}
-                dangerouslySetInnerHTML={{ __html: product.description }}
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

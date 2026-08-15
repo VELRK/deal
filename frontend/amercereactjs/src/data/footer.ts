@@ -6,8 +6,8 @@ import type {
 
 export const footerStore: FooterStore = {
   supportLabel: "24/7 Support Center:",
-  phone: "",
-  phoneHref: "#",
+  phone: "+60126364666",
+  phoneHref: "tel:+60126364666",
   address: "Lot No. 2A/9 Anzen Business Park, No. 3-9, Jalan 4/37A, Kawasan Industri Taman Bukit Maluri, 52100 Kepong, KL",
   addressHref: "https://maps.google.com/?q=52100+Kepong,+Kuala+Lumpur",
   email: "golden2deal@gmail.com",
@@ -27,11 +27,11 @@ export const footerCompanyLinks: FooterLinkGroup = {
 export const footerCustomerLinks: FooterLinkGroup = {
   title: "CUSTOMER",
   links: [
-    { label: "Track Order",        href: "/track-order" },
-    { label: "Return & Refund",    href: "/return-refund" },
-    { label: "Privacy Policy",     href: "/privacy-policy" },
+    { label: "Track Order", href: "/track-order" },
+    { label: "Return & Refund", href: "/return-refund" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Terms & Conditions", href: "/terms-and-conditions" },
-    { label: "Orders FAQs",        href: "/orders-faq" },
+    { label: "Orders FAQs", href: "/orders-faq" },
   ],
 };
 

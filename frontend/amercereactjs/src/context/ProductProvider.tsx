@@ -54,6 +54,22 @@ export function ProductProvider({
   }, [unitVariants, initialVariantId]);
 
   useEffect(() => {
+    if (sizes.length > 0) {
+      if (!currentSize || !sizes.some((s) => s.value === currentSize)) {
+        setCurrentSize(initialSize && sizes.some((s) => s.value === initialSize) ? initialSize : sizes[0].value);
+      }
+    }
+  }, [sizes, initialSize, currentSize]);
+
+  useEffect(() => {
+    if (colors.length > 0) {
+      if (!currentColor || !colors.some((c) => c.label.toLowerCase() === currentColor.toLowerCase())) {
+        setCurrentColor(initialColor || colors[0].label);
+      }
+    }
+  }, [colors, initialColor, currentColor]);
+
+  useEffect(() => {
     setQuantity(1);
     setActiveImageIndex(0);
   }, [currentVariantId]);
