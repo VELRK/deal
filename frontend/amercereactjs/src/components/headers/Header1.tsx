@@ -41,8 +41,8 @@ export default function Header1() {
                 src="/frontend/assets/logo/logo.png"
                 alt="2Deal"
                 style={{
-                  width: "60px",
-                  height: "60px",
+                  width: "80px",
+                  height: "80px",
                   objectFit: "contain",
                   borderRadius: "12px",
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",

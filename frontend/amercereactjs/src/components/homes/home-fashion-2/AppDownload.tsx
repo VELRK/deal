@@ -108,10 +108,10 @@ export default function AppDownload() {
             </p>
             <div className="d-flex align-items-center justify-content-center justify-content-lg-start gap-3 flex-wrap mt-2">
               <a href="https://play.google.com/store/apps/details?id=com.twodeal.consumer&hl=en_IN" target="_blank" rel="noopener noreferrer" className="store-btn store-btn-animated play-store" style={{ display: 'inline-block' }}>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" height="55" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" style={{ width: "150px", height: "auto" }} />
               </a>
               <a href="https://apps.apple.com/in/app/2deal/id6747821455" target="_blank" rel="noopener noreferrer" className="store-btn store-btn-animated app-store" style={{ display: 'inline-block' }}>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="Download on the App Store" height="55" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="Download on the App Store" style={{ width: "150px", height: "auto" }} />
               </a>
             </div>
           </div>
