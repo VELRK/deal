@@ -11,7 +11,6 @@ const ContactPage = () => {
         description={"Shop incense, soaps, and food products online."}
       />
       <PageTitle />
-      <Map />
       <Contact />
     </>
   );

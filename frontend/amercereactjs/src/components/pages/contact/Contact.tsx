@@ -298,16 +298,29 @@ function Contact() {
         @keyframes contact-spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      <section className="contact-section" style={{ padding: "32px 0 64px" }}>
+      <section className="contact-section" style={{ padding: "0 0 64px" }}>
+        {/* ── Top Map ── */}
+        <div style={{ width: "100%", height: "450px", marginBottom: "40px" }}>
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d3983.6513708604903!2d101.65593719482422!3d3.186047315597534!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc4886acda72f1%3A0x63e087ddf30ac1d!2sM-avenue%2C%2051200%20Kuala%20Lumpur%2C%20Federal%20Territory%20of%20Kuala%20Lumpur%2C%20Malaysia!5e0!3m2!1sen!2sin!4v1786777124626!5m2!1sen!2sin"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          ></iframe>
+        </div>
+
         <div className="container">
 
           {/* ── Clean Header ── */}
-          <div className="contact-header">
+          {/* <div className="contact-header">
             <h1>Contact Us</h1>
             <p>
               We'd love to hear from you. Please fill out the form below or reach out to us directly.
             </p>
-          </div>
+          </div> */}
 
           {/* ── Two-column grid ── */}
           <div className="contact-grid">
@@ -444,16 +457,6 @@ function Contact() {
             <div>
               <div className="contact-section-label">Our Location</div>
               <h2 className="contact-form-title" style={{ marginBottom: "20px" }}>Find Us</h2>
-
-              <div className="contact-map">
-                <iframe
-                  title="2Deal Location"
-                  src="https://maps.google.com/maps?q=Kawasan%20Industri%20Taman%20Bukit%20Maluri,%2052100%20Kepong%20Kuala%20Lumpur,%20Malaysia&t=m&z=15&output=embed"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
 
               <div className="contact-info-card">
                 {/* Email */}
