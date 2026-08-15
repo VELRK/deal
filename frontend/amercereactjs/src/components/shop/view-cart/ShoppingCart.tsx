@@ -9,6 +9,7 @@ import { promoAPI, siteSettingsAPI, cartAPI, userAPI, type RoyaltyCartInfo } fro
 import { useModalStore } from "@/store/modalStore";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { saveUseRoyalty } from "@/utils/royaltyStorage";
+import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, royaltyUnlockMinRm } from "@/utils/royaltyUnlock";
 import { removeLineFromCart } from "@/utils/cartSync";
 
 export default function ShoppingCart() {
@@ -81,7 +82,7 @@ export default function ShoppingCart() {
     const applyRoyalty = (r: RoyaltyCartInfo | null) => {
       if (cancelled) return;
       setRoyalty(r);
-      if (r && !r.can_redeem && useRoyalty) { setUseRoyalty(false); saveUseRoyalty(false); }
+      if (r && !royaltyIsUnlocked(r) && useRoyalty) { setUseRoyalty(false); saveUseRoyalty(false); }
     };
     userAPI.getRoyalty()
       .then((res) => {
@@ -140,7 +141,10 @@ export default function ShoppingCart() {
     !!royalty
     && royalty.enabled !== false
     && (!!royalty.show_on_cart || !!royalty.can_redeem || Number(royalty.points) > 0);
-  const canPayWithRoyalty = royaltyEligible && billTotal > 0;
+  const royaltyUnlocked = royaltyEligible && royaltyIsUnlocked(royalty);
+  const royaltyNeedRm = royaltyRemainingToUnlock(royalty);
+  const royaltyUnlockHint = !royaltyUnlocked ? royaltyUnlockMessage(royalty) : "";
+  const canPayWithRoyalty = royaltyUnlocked && billTotal > 0;
   const royaltyRm = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royalty?.balance_rm || 0), billTotal) : 0;
   const amountDue = Math.max(0, billTotal - royaltyRm);
@@ -407,8 +411,19 @@ export default function ShoppingCart() {
           padding: 14px;
         }
         .royalty-box.active { background: #fffbeb; }
+        .royalty-box.locked { border-color: #e2e8f0; background: #f8fafc; }
         .royalty-box .royalty-title { font-size: 13px; font-weight: 700; color: #92400e; }
         .royalty-box .royalty-sub { font-size: 12px; color: #78350f; margin-top: 3px; }
+        .royalty-unlock-note {
+          margin-top: 8px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #92400e;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: 8px;
+          padding: 8px 10px;
+        }
         .royalty-apply-btn {
           font-size: 12px;
           font-weight: 700;
@@ -830,7 +845,7 @@ export default function ShoppingCart() {
                     {promoError && <p className="promo-error">{promoError}</p>}
 
                     {royaltyEligible && (
-                      <div className={`royalty-box${useRoyalty ? " active" : ""}`}>
+                      <div className={`royalty-box${useRoyalty ? " active" : ""}${!royaltyUnlocked ? " locked" : ""}`}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
                           <div>
                             <div className="royalty-title">💎 Pay with Royalty Points</div>
@@ -839,15 +854,32 @@ export default function ShoppingCart() {
                               &nbsp;·&nbsp;{royalty!.conversion_label ?? "500 pts = RM 100"}
                               {billTotal <= 0
                                 ? " · Add items to apply"
-                                : useRoyalty && royaltyRm > 0
-                                  ? ` · Pays ${formatPrice(royaltyRm)}; due ${formatPrice(amountDue)} (wallet / COD / online at checkout)`
-                                  : " · Deducts from bill; pay remainder with wallet / COD / online at checkout"}
+                                : !royaltyUnlocked
+                                  ? ` · Unlocks at ${formatPrice(royaltyUnlockMinRm(royalty))} and above`
+                                  : useRoyalty && royaltyRm > 0
+                                    ? ` · Pays ${formatPrice(royaltyRm)}; due ${formatPrice(amountDue)} (wallet / online at checkout)`
+                                    : " · Deducts from bill; pay remainder with wallet / online at checkout"}
                             </div>
+                            {!royaltyUnlocked && royaltyUnlockHint && (
+                              <div className="royalty-unlock-note">
+                                {royaltyNeedRm > 0
+                                  ? `You have ${formatPrice(royaltyNeedRm)} left to unlock royalty points.`
+                                  : royaltyUnlockHint}
+                              </div>
+                            )}
                           </div>
                           {useRoyalty ? (
                             <button type="button" className="royalty-remove-btn" onClick={() => toggleRoyalty(false)}>Remove</button>
                           ) : (
-                            <button type="button" className="royalty-apply-btn" disabled={!canPayWithRoyalty} onClick={() => toggleRoyalty(true)}>Apply</button>
+                            <button
+                              type="button"
+                              className="royalty-apply-btn"
+                              disabled={!canPayWithRoyalty}
+                              title={!royaltyUnlocked ? royaltyUnlockHint : undefined}
+                              onClick={() => toggleRoyalty(true)}
+                            >
+                              {royaltyUnlocked ? "Apply" : "Locked"}
+                            </button>
                           )}
                         </div>
                       </div>

@@ -243,6 +243,11 @@ export interface RoyaltyCartInfo {
   balance_rm: number;
   min_redeem_points: number;
   min_redeem_rm?: number;
+  /** Production unlock threshold (usually RM 100), for messaging. */
+  unlock_min_rm?: number;
+  unlock_min_points?: number;
+  /** How much royalty balance (RM) is still needed before Apply unlocks. */
+  remaining_rm_to_unlock?: number;
   can_redeem: boolean;
   show_on_cart: boolean;
   conversion_label?: string;

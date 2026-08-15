@@ -22,6 +22,9 @@ export default function AccountRoyalty() {
     balance_rm: number;
     min_redeem_points: number;
     min_redeem_rm?: number;
+    unlock_min_rm?: number;
+    unlock_min_points?: number;
+    remaining_rm_to_unlock?: number;
     can_redeem: boolean;
     conversion_label?: string;
     earn_label?: string;
@@ -131,10 +134,15 @@ export default function AccountRoyalty() {
               ≈ {formatPrice(info.balance_rm)} · {info.conversion_label ?? "500 pts = Rs 100"}
             </div>
             {info.hint && <div className="royalty-hint">{info.hint}</div>}
+            {!info.can_redeem && Number(info.remaining_rm_to_unlock ?? 0) > 0 && (
+              <div className="royalty-hint" style={{ marginTop: 10 }}>
+                You have {formatPrice(Number(info.remaining_rm_to_unlock))} left to unlock royalty points.
+              </div>
+            )}
             <p className="mt-3 mb-0 small text-muted">
               Royalty points are separate from your wallet. Earn after paid / COD orders. Pay with points
-              when you have Rs {Number(info.min_redeem_rm ?? 100)}+ (
-              {info.min_redeem_points}+ pts); any remaining bill uses COD or online payment.
+              when you have RM {Number(info.unlock_min_rm ?? info.min_redeem_rm ?? 100)}+ (
+              {info.unlock_min_points ?? info.min_redeem_points}+ pts); any remaining bill uses wallet or online payment.
             </p>
           </div>
         ) : (

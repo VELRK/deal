@@ -12,6 +12,7 @@ import { userAPI, cartAPI, ordersAPI, promoAPI, paymentAPI, siteSettingsAPI } fr
 import type { ApiAddress, RoyaltyCartInfo } from "@/services/api";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { loadUseRoyalty, saveUseRoyalty } from "@/utils/royaltyStorage";
+import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, royaltyUnlockMinRm } from "@/utils/royaltyUnlock";
 import { removeLineFromCart, removePaidProductsFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
@@ -199,7 +200,7 @@ export default function Checkout() {
           if (d) {
             setWalletInfo(d);
             const roy = d.royalty;
-            if (roy && !roy.can_redeem && useRoyalty) {
+            if (roy && !royaltyIsUnlocked(roy) && useRoyalty) {
               setUseRoyalty(false);
               saveUseRoyalty(false);
             }
@@ -355,8 +356,11 @@ export default function Checkout() {
       || !!royaltyInfo.can_redeem
       || Number(royaltyInfo.points) > 0
     );
+  const royaltyUnlocked = royaltyEligible && royaltyIsUnlocked(royaltyInfo);
+  const royaltyNeedRm = royaltyRemainingToUnlock(royaltyInfo);
+  const royaltyUnlockHint = !royaltyUnlocked ? royaltyUnlockMessage(royaltyInfo) : "";
   const canPayWithRoyalty =
-    royaltyEligible
+    royaltyUnlocked
     && billTotal > 0;
   const royaltyRm = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), billTotal)
@@ -366,7 +370,7 @@ export default function Checkout() {
   // Wallet charge if user selects wallet (promo + wallet % + free ship − royalty).
   // Free delivery is fixed for wallet — shipping is never added to wallet payable (no min order).
   const walletBillPreview = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
-  const walletRoyaltyPreview = useRoyalty && royaltyEligible
+  const walletRoyaltyPreview = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), walletBillPreview)
     : 0;
   const walletPayablePreview = Math.round(Math.max(0, walletBillPreview - walletRoyaltyPreview) * 100) / 100;
@@ -1182,7 +1186,11 @@ export default function Checkout() {
               {royaltyEligible && (
                 <div
                   className="payment-card mb-0 mt-3"
-                  style={{ background: useRoyalty ? '#fffbeb' : undefined, borderColor: useRoyalty ? '#fcd34d' : undefined }}
+                  style={{
+                    background: useRoyalty ? '#fffbeb' : (!royaltyUnlocked ? '#f8fafc' : undefined),
+                    borderColor: useRoyalty ? '#fcd34d' : (!royaltyUnlocked ? '#e2e8f0' : undefined),
+                    opacity: royaltyUnlocked || useRoyalty ? 1 : 0.95,
+                  }}
                 >
                   <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                     <div>
@@ -1191,12 +1199,30 @@ export default function Checkout() {
                         {royaltyInfo!.points} pts ({formatPrice(royaltyInfo!.balance_rm)})
                         {billTotal <= 0
                           ? ' · Add items to apply'
-                          : useRoyalty && royaltyRm > 0
-                            ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${
-                                paymentMethod === 'wallet' ? 'wallet' : 'online'
-                              }`
-                            : ' · Deducts from bill; pay remainder with wallet / online'}
+                          : !royaltyUnlocked
+                            ? ` · Unlocks at ${formatPrice(royaltyUnlockMinRm(royaltyInfo))} and above`
+                            : useRoyalty && royaltyRm > 0
+                              ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${
+                                  paymentMethod === 'wallet' ? 'wallet' : 'online'
+                                }`
+                              : ' · Deducts from bill; pay remainder with wallet / online'}
                       </div>
+                      {!royaltyUnlocked && royaltyUnlockHint && (
+                        <div
+                          className="mt-2 small fw-semibold"
+                          style={{
+                            color: '#92400e',
+                            background: '#fffbeb',
+                            border: '1px solid #fde68a',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                          }}
+                        >
+                          {royaltyNeedRm > 0
+                            ? `You have ${formatPrice(royaltyNeedRm)} left to unlock royalty points.`
+                            : royaltyUnlockHint}
+                        </div>
+                      )}
                     </div>
                     {useRoyalty ? (
                       <button type="button" className="btn btn-sm btn-link text-danger p-0 fw-semibold" onClick={() => toggleRoyalty(false)}>Remove</button>
@@ -1205,9 +1231,10 @@ export default function Checkout() {
                         type="button"
                         className="tf-btn btn-sm animate-btn"
                         disabled={!canPayWithRoyalty}
+                        title={!royaltyUnlocked ? royaltyUnlockHint : undefined}
                         onClick={() => toggleRoyalty(true)}
                       >
-                        Apply
+                        {royaltyUnlocked ? 'Apply' : 'Locked'}
                       </button>
                     )}
                   </div>

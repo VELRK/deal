@@ -222,7 +222,7 @@ class Sk_Order extends Sk_Base_Api {
             $testUnlock = sk_royalty_test_unlock($settingsAll);
             $needPts = $testUnlock ? 1 : $minRoyaltyPts;
             $needRm = $testUnlock ? 0.01 : $minRoyaltyRm;
-            if ($availPts < $needPts || $availRm < $needRm) {
+            if ($availPts < $needPts || round($availRm, 2) < round($needRm, 2)) {
                 return $this->error(
                     $testUnlock
                         ? ('No royalty points to apply. You have ' . $availPts . ' pts.')

@@ -69,6 +69,8 @@ function sk_royalty_ensure_schema() {
         'royalty_min_redeem_rm'     => '100',
         // Earn: Rs 5000 purchase → 500 pts (0.1 pts / RM)
         'royalty_earn_points_per_rm'=> '0.1',
+        // Production: RM 100 unlock gate stays ON
+        'royalty_test_unlock'       => '0',
     ];
     $hasGroup = $CI->db->field_exists('group', 'settings');
     foreach ($defaults as $key => $value) {
@@ -80,6 +82,12 @@ function sk_royalty_ensure_schema() {
             $row['group'] = 'wallet';
         }
         $CI->db->insert('settings', $row);
+    }
+
+    // Turn off legacy QA bypass so Apply stays locked until RM 100 royalty balance.
+    $testUnlockRow = $CI->db->where('key', 'royalty_test_unlock')->get('settings')->row_array();
+    if ($testUnlockRow && (string)($testUnlockRow['value'] ?? '') === '1') {
+        $CI->db->where('key', 'royalty_test_unlock')->update('settings', ['value' => '0']);
     }
 
     // Legacy min was 100 pts (RM 20) — raise to 500 pts (RM 100) once
@@ -221,8 +229,8 @@ function sk_royalty_enabled(array $settings = null): bool {
 }
 
 /**
- * TESTING: hide Rs100 unlock gate — show Apply in cart whenever customer has any points.
- * Set to false (or settings royalty_test_unlock=0) before production go-live.
+ * When true, any royalty balance (≥1 pt) can be applied (skips RM 100 gate).
+ * Production default is OFF. Set settings royalty_test_unlock=1 only for QA.
  */
 function sk_royalty_test_unlock(array $settings = null): bool {
     if ($settings === null) {
@@ -230,8 +238,7 @@ function sk_royalty_test_unlock(array $settings = null): bool {
         $CI->load->model('Sk_Admin_model');
         $settings = $CI->Sk_Admin_model->get_settings();
     }
-    // Default ON for testing; set settings key royalty_test_unlock=0 to restore Rs100 gate
-    return ($settings['royalty_test_unlock'] ?? '1') !== '0';
+    return ($settings['royalty_test_unlock'] ?? '0') === '1';
 }
 
 /** Minimum royalty value (Rs) required to show/redeem on cart. Default Rs 100. */

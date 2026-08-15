@@ -52,31 +52,46 @@ class Sk_Royalty_model extends CI_Model {
         $minRedeemPts = sk_royalty_min_redeem_points($settings);
         $enabled = sk_royalty_enabled($settings);
         $testUnlock = sk_royalty_test_unlock($settings);
-        // Testing: any points (≥1) unlock Apply. Production: need RM100 / 500 pts.
+        // Production: Apply only when royalty balance is RM 100 or above (exact 100 counts).
         $canRedeem = $enabled && (
             $testUnlock
                 ? ($points >= 1)
-                : ($balanceRm >= $minRedeemRm && $points >= $minRedeemPts)
+                : (round($balanceRm, 2) >= round($minRedeemRm, 2) && $points >= $minRedeemPts)
         );
+        $remainingRm = $canRedeem
+            ? 0.0
+            : max(0, round($minRedeemRm - $balanceRm, 2));
+        $hint = $canRedeem
+            ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2)
+                . '). Apply on cart/checkout to pay the bill; remaining uses wallet or online.'
+                . ($testUnlock ? ' [TEST: RM100 gate off]' : ''))
+            : (
+                $points > 0
+                    ? ('You need RM ' . number_format($remainingRm, 2)
+                        . ' more to unlock royalty points (min RM '
+                        . number_format($minRedeemRm, 0) . '). You currently have '
+                        . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').')
+                    : ('Earn royalty on every paid order (RM 5000 → 500 pts). Reach RM '
+                        . number_format($minRedeemRm, 0) . ' in royalty balance to unlock Apply.')
+            );
         return [
-            'enabled'           => $enabled,
-            'points'            => $points,
-            'balance_rm'        => $balanceRm,
-            'min_redeem_points' => $testUnlock ? 1 : $minRedeemPts,
-            'min_redeem_rm'     => $testUnlock ? 0.01 : $minRedeemRm,
-            'can_redeem'        => $canRedeem,
-            'show_on_cart'      => $canRedeem,
-            'test_unlock'       => $testUnlock,
-            'points_per_rm'     => $this->points_per_rm(),
-            'conversion_label'  => '500 points = RM 100',
-            'earn_label'        => 'RM 5000 purchase = 500 pts',
-            'hint'              => $canRedeem
-                ? ('You have ' . $points . ' royalty points (RM ' . number_format($balanceRm, 2)
-                    . '). Apply on cart/checkout to pay the bill; remaining uses COD or online.'
-                    . ($testUnlock ? ' [TEST: RM100 gate off]' : ''))
-                : ('Earn royalty on every paid order (RM 5000 → 500 pts). Need RM ' . number_format($minRedeemRm, 0)
-                    . '+ (' . $minRedeemPts . ' pts) balance to unlock. You have '
-                    . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').'),
+            'enabled'                 => $enabled,
+            'points'                  => $points,
+            'balance_rm'              => $balanceRm,
+            'min_redeem_points'       => $testUnlock ? 1 : $minRedeemPts,
+            'min_redeem_rm'           => $testUnlock ? 0.01 : $minRedeemRm,
+            // Always expose production threshold for UI messaging (even in test mode).
+            'unlock_min_rm'           => $minRedeemRm,
+            'unlock_min_points'       => $minRedeemPts,
+            'remaining_rm_to_unlock'  => $remainingRm,
+            'can_redeem'              => $canRedeem,
+            // Show the royalty card on cart/checkout even when locked (so users see progress).
+            'show_on_cart'            => $enabled,
+            'test_unlock'             => $testUnlock,
+            'points_per_rm'           => $this->points_per_rm(),
+            'conversion_label'        => '500 points = RM 100',
+            'earn_label'              => 'RM 5000 purchase = 500 pts',
+            'hint'                    => $hint,
         ];
     }
 
