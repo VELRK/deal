@@ -1,20 +1,22 @@
+import { useModalStore } from "@/store/modalStore";
+
 const services = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m10.5-10.5-2.5 2.5m2.5-2.5 2.5-2.5M10.5 4.5 8 7m4 14a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9c0 2.12.74 4.07 1.97 5.61"/>
-        <path d="M22 2 11 13"/>
+        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m10.5-10.5-2.5 2.5m2.5-2.5 2.5-2.5M10.5 4.5 8 7m4 14a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9c0 2.12.74 4.07 1.97 5.61" />
+        <path d="M22 2 11 13" />
       </svg>
     ),
     title: "Free Shipping",
-    description: "Free shipping above RM 370 in Malaysia."
+    description: "Free shipping above RM 100 in Malaysia."
   },
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
       </svg>
     ),
     title: "Easy Payment",
@@ -23,34 +25,53 @@ const services = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-        <path d="M12 22v-3"/>
+        <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+        <path d="M12 22v-3" />
       </svg>
     ),
     title: "Support",
-    description: "Reach us at +60-3-2733-815\nBetween Monday to Saturday"
+    description: "Reach us at +60126364666\nBetween Monday to Saturday"
+  },
+  {
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5c-1.1 0-2 .9-2 2v2" />
+        <circle cx="8.5" cy="7" r="4" />
+        <polyline points="17 11 19 13 23 9" />
+      </svg>
+    ),
+    title: "Become an Affiliate",
+    description: "Join our affiliate program and earn commission on every sale.",
+    action: "affiliateEnquiry"
   }
 ];
 
 export default function ServicesBanner() {
+  const { openModal } = useModalStore();
+
   return (
     <div style={{ backgroundColor: '#f2f4f5', padding: '40px 0', borderTop: '1px solid #eaeaea', borderBottom: '1px solid #eaeaea' }}>
       <div className="container">
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '30px'
         }}>
           {services.map((svc, idx) => (
-            <div key={idx} style={{
-              display: 'flex',
-              alignItems: 'center',
-              flex: '1 1 300px',
-              gap: '20px'
-            }}>
+            <div
+              key={idx}
+              onClick={() => svc.action && openModal(svc.action as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flex: '1 1 300px',
+                gap: '20px',
+                cursor: svc.action ? 'pointer' : 'default'
+              }}
+            >
               <div style={{
                 minWidth: '70px',
                 width: '70px',

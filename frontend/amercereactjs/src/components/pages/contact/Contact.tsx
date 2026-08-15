@@ -504,7 +504,7 @@ function Contact() {
                   </div>
                   <div>
                     <div className="contact-info-label">Working hours</div>
-                    <div className="contact-info-val">Mon – Sat, 10:00 AM – 7:00 PM</div>
+                    <div className="contact-info-val">Mon – Sat, 10:00 AM – 6:00 PM</div>
                   </div>
                 </div>
               </div>
