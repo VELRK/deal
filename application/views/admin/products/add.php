@@ -276,52 +276,13 @@ function opt($list, $val) {
 
       <?php $product_variants = $product_variants ?? []; $this->load->view('admin/products/_variant_fields', compact('variant_units', 'product_variants')); ?>
 
-      <!-- Pricing & Stock -->
-      <div class="card sk-table-card shadow-sm mb-3">
-        <div class="card-header bg-white border-0 py-3 fw-semibold">
-          <i class="bi bi-tag me-1 text-warning"></i> Pricing & Inventory
-        </div>
-        <div class="card-body">
-          <div class="row g-2">
-            <div class="col-md-3">
-              <label class="form-label">MRP / Price <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <span class="input-group-text">RM</span>
-                <input type="number" name="price" class="form-control" step="0.01" min="0" required>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale / Offer Price</label>
-              <div class="input-group">
-                <span class="input-group-text">RM</span>
-                <input type="number" name="sale_price" class="form-control" step="0.01" min="0" placeholder="Optional">
-              </div>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-              <div class="form-check form-switch mb-2">
-                <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck">
-                <label class="form-check-label" for="hotSaleCheck">Enable Hot Sale</label>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale Start (date & hour)</label>
-              <input type="datetime-local" name="sale_start_at" class="form-control">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Sale End (date & hour)</label>
-              <input type="datetime-local" name="sale_end_at" class="form-control">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Stock Quantity <span class="text-danger">*</span></label>
-              <input type="number" name="stock" class="form-control" min="0" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Weight (kg) <small class="text-muted">for shipping</small></label>
-              <input type="number" name="weight" class="form-control" step="0.1" placeholder="0.7">
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Price / stock / sale: set per pack under Unit & Variants (optional product-level defaults). -->
+      <input type="hidden" name="price" value="0">
+      <input type="hidden" name="sale_price" value="">
+      <input type="hidden" name="stock" value="0">
+      <input type="hidden" name="weight" value="">
+      <input type="hidden" name="sale_start_at" value="">
+      <input type="hidden" name="sale_end_at" value="">
 
       <?php $seo = []; $this->load->view('admin/partials/seo_fields', compact('seo')); ?>
 
@@ -391,7 +352,7 @@ function opt($list, $val) {
           <p class="fw-semibold text-warning mb-2 small"><i class="bi bi-lightbulb me-1"></i>Product Tips</p>
           <ul class="small text-muted mb-0 ps-3">
             <li>Select the correct unit (kg, gram, box, bottle, etc.)</li>
-            <li>Set price and stock in Pricing &amp; Inventory</li>
+            <li>Set price and stock on each pack in Unit &amp; Variants</li>
             <li>Use clear product photos</li>
             <li>Fill HSN and tax for compliance</li>
           </ul>

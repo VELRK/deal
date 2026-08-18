@@ -52,9 +52,7 @@ class Products extends Sk_Base {
 
     public function store() {
         $this->form_validation->set_rules('name',       'Product Name', 'required|trim');
-        $this->form_validation->set_rules('price',      'Price',        'required|numeric');
         $this->form_validation->set_rules('category_id','Category',     'required|integer');
-        $this->form_validation->set_rules('stock',      'Stock',        'required|integer');
 
         if ($this->form_validation->run() === FALSE) {
             $this->session->set_flashdata('error', validation_errors());
@@ -71,12 +69,16 @@ class Products extends Sk_Base {
             'sku'              => $this->input->post('sku', TRUE),
             'description'      => $this->input->post('description'),
             'short_desc'       => $this->input->post('short_desc', TRUE),
-            'price'            => $this->input->post('price'),
+            'price'            => ($this->input->post('price') !== null && $this->input->post('price') !== '')
+                ? $this->input->post('price')
+                : 0,
             'sale_price'       => $this->input->post('sale_price') ?: null,
             'hot_sale'         => $this->input->post('hot_sale') ? 1 : 0,
             'sale_start_at'    => $this->_normalize_datetime_input($this->input->post('sale_start_at')),
             'sale_end_at'      => $this->_normalize_datetime_input($this->input->post('sale_end_at')),
-            'stock'            => $this->input->post('stock'),
+            'stock'            => ($this->input->post('stock') !== null && $this->input->post('stock') !== '')
+                ? $this->input->post('stock')
+                : 0,
             'weight'           => $this->input->post('weight') ?: null,
             'featured'         => $this->input->post('featured') ? 1 : 0,
             'nav_featured'     => $this->input->post('nav_featured') ? 1 : 0,
@@ -167,9 +169,15 @@ class Products extends Sk_Base {
         $data['product']       = $this->Sk_Product_model->get_by_id($id);
         $this->assert_product_vendor_access($data['product']);
         // attach_variants swaps thumbnail to the default pack photo — Main Image must show products.thumbnail.
-        $rawThumb = $this->db->select('thumbnail')->where('id', (int)$id)->get('products')->row_array();
-        if (!empty($rawThumb['thumbnail'])) {
-            $data['product']['thumbnail'] = $rawThumb['thumbnail'];
+        $rawRow = $this->db->select('thumbnail, price, sale_price, stock, weight, hot_sale, sale_start_at, sale_end_at')
+            ->where('id', (int)$id)->get('products')->row_array() ?: [];
+        if (!empty($rawRow['thumbnail'])) {
+            $data['product']['thumbnail'] = $rawRow['thumbnail'];
+        }
+        foreach (['price', 'sale_price', 'stock', 'weight', 'hot_sale', 'sale_start_at', 'sale_end_at'] as $field) {
+            if (array_key_exists($field, $rawRow)) {
+                $data['product'][$field] = $rawRow[$field];
+            }
         }
         $data['categories']    = $this->Sk_Admin_model->get_categories(null, 1);
         $data['subcategories'] = $this->Sk_Admin_model->get_subcategories($data['product']['category_id'], 1);
