@@ -18,7 +18,12 @@ class Products extends Sk_Base {
         $offset    = ($page - 1) * $limit;
 
         $data['title']    = 'Products - 2DEAL Admin';
-        $data['products'] = $this->Sk_Product_model->get_all_admin($limit, $offset, $search, $vendor_id);
+        $products = $this->Sk_Product_model->get_all_admin($limit, $offset, $search, $vendor_id);
+        foreach ($products as &$prod) {
+            $prod['variants'] = $this->Sk_Product_variant_model->get_by_product($prod['id'], false);
+        }
+        unset($prod);
+        $data['products'] = $products;
         $data['total']    = $this->Sk_Product_model->count_all_admin($search, $vendor_id);
         $data['page']     = $page;
         $data['limit']    = $limit;

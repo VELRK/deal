@@ -76,7 +76,19 @@
             <?php endif; ?>
             <td><?= htmlspecialchars($p['category_name'] ?? '-') ?></td>
             <td>
-              <?php if ($p['sale_price']): ?>
+              <?php if (!empty($p['variants'])): ?>
+                <?php foreach ($p['variants'] as $vi => $vr): ?>
+                  <div class="<?= $vi > 0 ? 'mt-1' : '' ?>" style="white-space:nowrap;">
+                    <small class="text-muted"><?= htmlspecialchars($vr['unit_value'] . ($vr['unit_symbol'] ?? '')) ?>:</small>
+                    <?php if (!empty($vr['sale_price'])): ?>
+                      <span class="text-success fw-semibold"><?= $currency . number_format($vr['sale_price'],2) ?></span>
+                      <del class="text-muted small"><?= $currency . number_format($vr['price'],2) ?></del>
+                    <?php else: ?>
+                      <span><?= $currency . number_format($vr['price'],2) ?></span>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              <?php elseif ($p['sale_price']): ?>
                 <span class="text-success fw-semibold"><?= $currency . number_format($p['sale_price'],2) ?></span>
                 <del class="text-muted small ms-1"><?= $currency . number_format($p['price'],2) ?></del>
               <?php else: ?>
@@ -91,16 +103,16 @@
               <?php endif; ?>
             </td>
             <td>
-              <button onclick="skToggleStatus('<?= site_url('admin/products/toggle/'.$p['id']) ?>', this)"
+              <button onclick="skToggleStatus('<?= site_url('shopkart/products/toggle/'.$p['id']) ?>', this)"
                       class="btn btn-sm <?= $p['status']==='active' ? 'btn-success' : 'btn-secondary' ?>">
                 <?= ucfirst($p['status']) ?>
               </button>
             </td>
             <td>
-              <a href="<?= site_url('admin/products/edit/'.$p['id']) ?>" class="btn btn-sm btn-outline-primary me-1">
+              <a href="<?= site_url('shopkart/products/edit/'.$p['id']) ?>" class="btn btn-sm btn-outline-primary me-1">
                 <i class="bi bi-pencil"></i>
               </a>
-              <button onclick="skConfirmDelete('<?= site_url('admin/products/delete/'.$p['id']) ?>','<?= htmlspecialchars($p['name']) ?>')"
+              <button onclick="skConfirmDelete('<?= site_url('shopkart/products/delete/'.$p['id']) ?>','<?= htmlspecialchars($p['name']) ?>')"
                       class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash"></i>
               </button>
