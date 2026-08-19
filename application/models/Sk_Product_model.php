@@ -172,9 +172,31 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function delete($id) {
-        $this->db->where('id', $id)->delete('product_images');
+        $id = (int)$id;
+        // Disable FK checks so child rows don't block the parent delete
+        $this->db->query('SET FOREIGN_KEY_CHECKS=0');
+        // Remove all child rows
+        $this->db->where('product_id', $id)->delete('product_images');
+        if ($this->db->table_exists('product_variants')) {
+            $this->db->where('product_id', $id)->delete('product_variants');
+        }
+        if ($this->db->table_exists('wishlist')) {
+            $this->db->where('product_id', $id)->delete('wishlist');
+        }
+        if ($this->db->table_exists('cart')) {
+            $this->db->where('product_id', $id)->delete('cart');
+        }
+        if ($this->db->table_exists('product_reviews')) {
+            $this->db->where('product_id', $id)->delete('product_reviews');
+        }
+        if ($this->db->table_exists('sk_testimonials')) {
+            $this->db->where('product_id', $id)->delete('sk_testimonials');
+        }
+        // Delete the product itself
         $this->db->where('id', $id)->delete('products');
-        return $this->db->affected_rows();
+        $affected = $this->db->affected_rows();
+        $this->db->query('SET FOREIGN_KEY_CHECKS=1');
+        return $affected;
     }
 
     public function save_images($product_id, $images) {
