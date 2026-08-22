@@ -46,7 +46,7 @@ class Products extends Sk_Base {
     private function _product_list_page_data(): array {
         $filters = $this->_product_list_filters();
         $page = max(1, (int)($this->input->get('page') ?? 1));
-        $limit = 15;
+        $limit = 100;
         $offset = ($page - 1) * $limit;
         $vendor_id = $filters['vendor_id'];
         $vendor_logged_in = (bool)$this->session->userdata('sk_vendor_login');
