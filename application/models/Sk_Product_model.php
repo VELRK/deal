@@ -598,26 +598,83 @@ class Sk_Product_model extends CI_Model {
         }
     }
 
-    public function count_all_admin($search = '', ?int $vendor_id = null) {
-        if ($vendor_id) $this->db->where('vendor_id', $vendor_id);
-        if ($search) {
-            $this->db->group_start()->like('name', $search)->or_like('sku', $search)->group_end();
-        }
-        return $this->db->count_all_results('products');
+    public function count_all_admin(array $filters = []): int {
+        $this->db->from('products p');
+        $this->_admin_where($filters);
+        return (int)$this->db->count_all_results();
     }
 
-    public function get_all_admin($limit, $offset, $search = '', ?int $vendor_id = null) {
+    public function get_all_admin($limit, $offset, array $filters = []) {
         $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, v.business_name as vendor_name')
                  ->from('products p')
                  ->join('categories c', 'c.id = p.category_id', 'left')
                  ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
                  ->join('vendors v', 'v.id = p.vendor_id', 'left');
-        if ($vendor_id) $this->db->where('p.vendor_id', $vendor_id);
-        if ($search) {
-            $this->db->group_start()->like('p.name', $search)->or_like('p.sku', $search)->group_end();
-        }
+        $this->_admin_where($filters);
         $this->db->order_by('p.created_at', 'DESC')->limit($limit, $offset);
         return $this->db->get()->result_array();
+    }
+
+    private function _admin_where(array $filters): void {
+        $vendor_id = $filters['vendor_id'] ?? null;
+        if ($vendor_id) {
+            $this->db->where('p.vendor_id', (int)$vendor_id);
+        }
+
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $this->db->group_start()
+                ->like('p.name', $search)
+                ->or_like('p.sku', $search)
+                ->group_end();
+        }
+
+        $category_id = (int)($filters['category_id'] ?? 0);
+        if ($category_id > 0) {
+            $this->db->where('p.category_id', $category_id);
+        }
+
+        $subcategory_id = (int)($filters['subcategory_id'] ?? 0);
+        if ($subcategory_id > 0) {
+            $this->db->where('p.subcategory_id', $subcategory_id);
+        }
+
+        $status = trim((string)($filters['status'] ?? ''));
+        if ($status !== '') {
+            $this->db->where('p.status', $status);
+        }
+
+        if (!empty($filters['low_stock'])) {
+            if ($this->db->field_exists('low_stock_alert', 'products')) {
+                $this->db->where('p.stock <= IFNULL(p.low_stock_alert, 5)', null, false);
+            } else {
+                $this->db->where('p.stock <=', 5);
+            }
+        }
+
+        $min_price = $filters['min_price'] ?? '';
+        $max_price = $filters['max_price'] ?? '';
+        $has_min = $min_price !== '' && $min_price !== null;
+        $has_max = $max_price !== '' && $max_price !== null;
+        if ($has_min || $has_max) {
+            $min = $has_min ? (float)$min_price : null;
+            $max = $has_max ? (float)$max_price : null;
+            $mainParts = [];
+            $varParts = [];
+            if ($has_min) {
+                $mainParts[] = "COALESCE(NULLIF(p.sale_price, 0), p.price) >= {$min}";
+                $varParts[] = "COALESCE(NULLIF(pv.sale_price, 0), pv.price) >= {$min}";
+            }
+            if ($has_max) {
+                $mainParts[] = "COALESCE(NULLIF(p.sale_price, 0), p.price) <= {$max}";
+                $varParts[] = "COALESCE(NULLIF(pv.sale_price, 0), pv.price) <= {$max}";
+            }
+            $mainCond = implode(' AND ', $mainParts);
+            $variantSql = $this->db->table_exists('product_variants')
+                ? " OR EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND " . implode(' AND ', $varParts) . ")"
+                : '';
+            $this->db->where("(({$mainCond}){$variantSql})", null, false);
+        }
     }
 
     /**

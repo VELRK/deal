@@ -13,22 +13,36 @@ class Products extends Sk_Base {
     public function index() {
         $search    = $this->input->get('search', TRUE);
         $vendor_id = $this->current_vendor_id() ?: ((int)$this->input->get('vendor_id') ?: null);
-        $page      = (int)($this->input->get('page') ?? 1);
+        $page      = max(1, (int)($this->input->get('page') ?? 1));
         $limit     = 15;
         $offset    = ($page - 1) * $limit;
 
+        $filters = [
+            'search'         => $search,
+            'vendor_id'      => $vendor_id,
+            'category_id'    => (int)$this->input->get('category_id'),
+            'subcategory_id' => (int)$this->input->get('subcategory_id'),
+            'status'         => $this->input->get('status', TRUE),
+            'low_stock'      => $this->input->get('low_stock') ? 1 : 0,
+            'min_price'      => $this->input->get('min_price'),
+            'max_price'      => $this->input->get('max_price'),
+        ];
+
         $data['title']    = 'Products - 2DEAL Admin';
-        $products = $this->Sk_Product_model->get_all_admin($limit, $offset, $search, $vendor_id);
+        $products = $this->Sk_Product_model->get_all_admin($limit, $offset, $filters);
         foreach ($products as &$prod) {
             $prod['variants'] = $this->Sk_Product_variant_model->get_by_product($prod['id'], false);
         }
         unset($prod);
-        $data['products'] = $products;
-        $data['total']    = $this->Sk_Product_model->count_all_admin($search, $vendor_id);
-        $data['page']     = $page;
-        $data['limit']    = $limit;
-        $data['search']   = $search;
-        $data['vendor_id']= $vendor_id;
+        $data['products']      = $products;
+        $data['total']         = $this->Sk_Product_model->count_all_admin($filters);
+        $data['page']          = $page;
+        $data['limit']         = $limit;
+        $data['search']        = $search;
+        $data['vendor_id']     = $vendor_id;
+        $data['filters']       = $filters;
+        $data['categories']    = $this->Sk_Admin_model->get_categories(null, 1);
+        $data['subcategories'] = $this->Sk_Admin_model->get_subcategories(null, 1);
         if ($this->is_super_admin()) {
             $data['vendors'] = $this->Sk_Vendor_model->get_all(['status' => 'approved'], 200, 0)['rows'];
         }

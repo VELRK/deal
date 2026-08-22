@@ -1,22 +1,80 @@
-<?php $currency = $settings['currency_symbol'] ?? 'RM'; ?>
+<?php
+$currency = $settings['currency_symbol'] ?? 'RM';
+$f = $filters ?? [];
+$queryParams = array_filter([
+    'search'         => $f['search'] ?? '',
+    'vendor_id'      => $f['vendor_id'] ?? '',
+    'category_id'    => !empty($f['category_id']) ? (int)$f['category_id'] : '',
+    'subcategory_id' => !empty($f['subcategory_id']) ? (int)$f['subcategory_id'] : '',
+    'status'         => $f['status'] ?? '',
+    'low_stock'      => !empty($f['low_stock']) ? '1' : '',
+    'min_price'      => ($f['min_price'] ?? '') !== '' && ($f['min_price'] ?? '') !== null ? $f['min_price'] : '',
+    'max_price'      => ($f['max_price'] ?? '') !== '' && ($f['max_price'] ?? '') !== null ? $f['max_price'] : '',
+], function ($v) { return $v !== '' && $v !== null; });
+$filterQuery = http_build_query($queryParams);
+?>
 
 <div class="sk-page-header">
   <h5 class="sk-page-title"><i class="bi bi-box-seam me-2 text-warning"></i>Products</h5>
-  <a href="<?= site_url('admin/products/add') ?>" class="btn btn-warning btn-sm fw-semibold">
+  <a href="<?= site_url('shopkart/products/add') ?>" class="btn btn-warning btn-sm fw-semibold">
     <i class="bi bi-plus-lg me-1"></i> Add Product
   </a>
 </div>
 
-<!-- Search -->
+<!-- Filters -->
 <div class="card sk-table-card shadow-sm mb-3">
   <div class="card-body py-2">
-    <form method="GET" class="row g-2 align-items-center">
-      <div class="col-md-4">
-        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by name or SKU..."
-               value="<?= htmlspecialchars($search ?? '') ?>">
+    <form method="GET" class="row g-2 align-items-end" id="productFilterForm">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Search</label>
+        <input type="text" name="search" class="form-control form-control-sm" placeholder="Name or SKU..."
+               value="<?= htmlspecialchars($f['search'] ?? '') ?>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Category</label>
+        <select name="category_id" id="filterCategoryId" class="form-select form-select-sm">
+          <option value="">All categories</option>
+          <?php foreach ($categories ?? [] as $c): ?>
+            <option value="<?= $c['id'] ?>" <?= ((int)($f['category_id'] ?? 0) === (int)$c['id']) ? 'selected' : '' ?>>
+              <?= htmlspecialchars($c['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Subcategory</label>
+        <select name="subcategory_id" id="filterSubcategoryId" class="form-select form-select-sm">
+          <option value="">All subcategories</option>
+          <?php foreach ($subcategories ?? [] as $s): ?>
+            <option value="<?= $s['id'] ?>" data-category="<?= (int)$s['category_id'] ?>"
+              <?= ((int)($f['subcategory_id'] ?? 0) === (int)$s['id']) ? 'selected' : '' ?>>
+              <?= htmlspecialchars($s['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All status</option>
+          <?php foreach (['active', 'inactive', 'draft'] as $st): ?>
+            <option value="<?= $st ?>" <?= ($f['status'] ?? '') === $st ? 'selected' : '' ?>><?= ucfirst($st) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small mb-1">Min RM</label>
+        <input type="number" name="min_price" class="form-control form-control-sm" step="0.01" min="0"
+               value="<?= htmlspecialchars((string)($f['min_price'] ?? '')) ?>" placeholder="0">
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small mb-1">Max RM</label>
+        <input type="number" name="max_price" class="form-control form-control-sm" step="0.01" min="0"
+               value="<?= htmlspecialchars((string)($f['max_price'] ?? '')) ?>" placeholder="Any">
       </div>
       <?php if (!empty($vendors)): ?>
-      <div class="col-md-3">
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Vendor</label>
         <select name="vendor_id" class="form-select form-select-sm">
           <option value="">All vendors</option>
           <?php foreach ($vendors as $v): ?>
@@ -25,9 +83,16 @@
         </select>
       </div>
       <?php endif; ?>
+      <div class="col-md-2">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="low_stock" value="1" id="lowStockCheck"
+                 <?= !empty($f['low_stock']) ? 'checked' : '' ?>>
+          <label class="form-check-label small" for="lowStockCheck">Low stock only</label>
+        </div>
+      </div>
       <div class="col-auto">
-        <button class="btn btn-sm btn-outline-warning px-3">Search</button>
-        <a href="<?= site_url('admin/products') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
+        <button class="btn btn-sm btn-outline-warning px-3">Filter</button>
+        <a href="<?= site_url('shopkart/products') ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
       </div>
     </form>
   </div>
@@ -139,7 +204,7 @@
       <ul class="pagination pagination-sm mb-0">
         <?php for ($i = 1; $i <= $pages; $i++): ?>
           <li class="page-item <?= $i===$page?'active':'' ?>">
-            <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search??'') ?>"><?= $i ?></a>
+            <a class="page-link" href="?<?= $filterQuery ? $filterQuery . '&' : '' ?>page=<?= $i ?>"><?= $i ?></a>
           </li>
         <?php endfor; ?>
       </ul>
@@ -147,3 +212,31 @@
   </div>
   <?php endif; ?>
 </div>
+
+<script>
+(function() {
+  var catSel = document.getElementById('filterCategoryId');
+  var subSel = document.getElementById('filterSubcategoryId');
+  if (!catSel || !subSel) return;
+
+  function filterSubcategories() {
+    var catId = catSel.value;
+    var selected = subSel.value;
+    Array.from(subSel.options).forEach(function(opt, idx) {
+      if (idx === 0) {
+        opt.hidden = false;
+        return;
+      }
+      var match = !catId || opt.dataset.category === catId;
+      opt.hidden = !match;
+      if (!match && opt.selected) subSel.value = '';
+    });
+    if (selected && subSel.querySelector('option[value="' + selected + '"]')?.hidden) {
+      subSel.value = '';
+    }
+  }
+
+  catSel.addEventListener('change', filterSubcategories);
+  filterSubcategories();
+})();
+</script>
