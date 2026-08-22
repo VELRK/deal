@@ -50,10 +50,22 @@ $colspan = $show_vendor_col ? 9 : 8;
     <?php endif; ?>
   </td>
   <td>
-    <?php if ($p['stock'] <= 5): ?>
-      <span class="badge bg-danger"><?= $p['stock'] ?> Low</span>
+    <?php if (!empty($p['variants'])): ?>
+      <?php foreach ($p['variants'] as $vi => $vr): ?>
+        <?php $vStock = (int)($vr['stock'] ?? 0); ?>
+        <div class="<?= $vi > 0 ? 'mt-1' : '' ?>" style="white-space:nowrap;">
+          <small class="text-muted"><?= htmlspecialchars($vr['unit_value'] . ($vr['unit_symbol'] ?? '')) ?>:</small>
+          <?php if ($vStock <= 5): ?>
+            <span class="badge bg-danger"><?= $vStock ?> Low</span>
+          <?php else: ?>
+            <span><?= number_format($vStock) ?></span>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    <?php elseif ($p['stock'] <= 5): ?>
+      <span class="badge bg-danger"><?= (int)$p['stock'] ?> Low</span>
     <?php else: ?>
-      <?= number_format($p['stock']) ?>
+      <?= number_format((int)$p['stock']) ?>
     <?php endif; ?>
   </td>
   <td>
