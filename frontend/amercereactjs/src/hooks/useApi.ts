@@ -152,9 +152,16 @@ export function useNavProducts(limit = 4) {
 
 // ── useCategories ─────────────────────────────────────────────────────────────
 
-function sortByOrder<T extends { sort_order?: number; name?: string }>(items: T[]): T[] {
+function navSortKey(sortOrder?: number): number {
+  const n = sortOrder ?? 0;
+  return n === 0 ? 999999 : n;
+}
+
+function sortByOrder<T extends { sort_order?: number; name?: string; mega_title_sort_order?: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
-    const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    const megaDiff = (a.mega_title_sort_order ?? 9999) - (b.mega_title_sort_order ?? 9999);
+    if (megaDiff !== 0) return megaDiff;
+    const orderDiff = navSortKey(a.sort_order) - navSortKey(b.sort_order);
     if (orderDiff !== 0) return orderDiff;
     return (a.name ?? "").localeCompare(b.name ?? "");
   });

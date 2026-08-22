@@ -232,7 +232,9 @@ class Sk_Admin_model extends CI_Model {
     // ── Categories ────────────────────────────────────────────
     public function get_categories($status = null) {
         if ($status !== null) $this->db->where('status', $status);
-        return $this->db->order_by('sort_order,name')->get('categories')->result_array();
+        return $this->db
+            ->order_by('CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, name ASC', '', false)
+            ->get('categories')->result_array();
     }
 
     public function get_category($id) {
@@ -284,7 +286,9 @@ class Sk_Admin_model extends CI_Model {
     public function get_subcategories($category_id = null, $status = null) {
         if ($category_id !== null) $this->db->where('category_id', $category_id);
         if ($status !== null)      $this->db->where('status', $status);
-        return $this->db->order_by('sort_order,name')->get('subcategories')->result_array();
+        return $this->db
+            ->order_by('CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, name ASC', '', false)
+            ->get('subcategories')->result_array();
     }
 
     public function get_subcategory($id) {
