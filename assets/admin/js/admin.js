@@ -1,5 +1,33 @@
 /* ShopKart Admin - Global JS */
 
+// Remove stuck Bootstrap modal backdrops after close (double-open modals leave a gray overlay).
+function skCleanupModals() {
+  document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+  if (!document.querySelector('.modal.show')) {
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  }
+}
+
+document.addEventListener('hidden.bs.modal', function() {
+  setTimeout(skCleanupModals, 50);
+});
+
+function skShowModal(id) {
+  var el = document.getElementById(id);
+  if (!el || typeof bootstrap === 'undefined') return;
+  bootstrap.Modal.getOrCreateInstance(el).show();
+}
+
+function skHideModal(id) {
+  var el = document.getElementById(id);
+  if (!el || typeof bootstrap === 'undefined') return;
+  var inst = bootstrap.Modal.getInstance(el);
+  if (inst) inst.hide();
+  setTimeout(skCleanupModals, 150);
+}
+
 // Confirm delete — name can be a display name OR a row element ID prefixed with '#'/'row-'
 function skConfirmDelete(url, nameOrRowId) {
   var label = (nameOrRowId && String(nameOrRowId).startsWith('row-')) ? 'this item' : (nameOrRowId || 'this item');
