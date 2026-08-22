@@ -607,9 +607,10 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function get_all_admin($limit, $offset, $search = '', ?int $vendor_id = null) {
-        $this->db->select('p.*, c.name as category_name, v.business_name as vendor_name')
+        $this->db->select('p.*, c.name as category_name, sc.name as subcategory_name, v.business_name as vendor_name')
                  ->from('products p')
                  ->join('categories c', 'c.id = p.category_id', 'left')
+                 ->join('subcategories sc', 'sc.id = p.subcategory_id', 'left')
                  ->join('vendors v', 'v.id = p.vendor_id', 'left');
         if ($vendor_id) $this->db->where('p.vendor_id', $vendor_id);
         if ($search) {

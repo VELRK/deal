@@ -23,12 +23,13 @@
       <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
           <thead class="sk-table-head">
-            <tr><th>#</th><th>Image</th><th>Nav Image</th><th>Name</th><th>Slug</th><th>Products</th><th>Status</th><th class="text-end">Actions</th></tr>
+            <tr><th>#</th><th>Order</th><th>Image</th><th>Nav Image</th><th>Name</th><th>Slug</th><th>Products</th><th>Status</th><th class="text-end">Actions</th></tr>
           </thead>
           <tbody>
             <?php foreach ($categories as $i => $c): ?>
             <tr id="cat-row-<?= $c['id'] ?>">
               <td class="text-muted small"><?= $i+1 ?></td>
+              <td class="text-center"><span class="badge bg-light text-dark border"><?= (int)($c['sort_order'] ?? 0) ?></span></td>
               <td>
                 <?php if ($c['image']): ?>
                   <img src="<?= base_url($c['image']) ?>" width="40" height="40" class="rounded" style="object-fit:cover;">
@@ -69,7 +70,8 @@
     <div class="card sk-table-card shadow-sm">
       <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
-            <tr><th>#</th><th>Image</th><th>Subcategory</th><th>Parent Category</th><th>Menu Title</th><th>Slug</th><th>Status</th><th class="text-end">Actions</th></tr>
+          <thead class="sk-table-head">
+            <tr><th>#</th><th>Order</th><th>Image</th><th>Subcategory</th><th>Parent Category</th><th>Menu Title</th><th>Slug</th><th>Status</th><th class="text-end">Actions</th></tr>
           </thead>
           <tbody>
             <?php
@@ -83,6 +85,7 @@
             ?>
             <tr id="sub-row-<?= $s['id'] ?>">
               <td class="text-muted small"><?= $i+1 ?></td>
+              <td class="text-center"><span class="badge bg-light text-dark border"><?= (int)($s['sort_order'] ?? 0) ?></span></td>
               <td>
                 <?php if ($s['image']): ?>
                   <img src="<?= base_url($s['image']) ?>" width="40" height="40" class="rounded" style="object-fit:cover;">

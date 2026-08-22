@@ -43,6 +43,7 @@
             <th>Name</th>
             <?php if (empty($vendor_id) && empty($impersonating)): ?><th>Vendor</th><?php endif; ?>
             <th>Category</th>
+            <th>Subcategory</th>
             <th>Price</th>
             <th>Stock</th>
             <th>Status</th>
@@ -75,6 +76,7 @@
             <td><small><?= htmlspecialchars($p['vendor_name'] ?? '—') ?></small></td>
             <?php endif; ?>
             <td><?= htmlspecialchars($p['category_name'] ?? '-') ?></td>
+            <td><?= htmlspecialchars($p['subcategory_name'] ?? '—') ?></td>
             <td>
               <?php if (!empty($p['variants'])): ?>
                 <?php foreach ($p['variants'] as $vi => $vr): ?>
@@ -120,7 +122,7 @@
           </tr>
           <?php endforeach; ?>
           <?php if (empty($products)): ?>
-          <tr><td colspan="7" class="text-center py-5 text-muted">No products found.</td></tr>
+          <tr><td colspan="9" class="text-center py-5 text-muted">No products found.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>
