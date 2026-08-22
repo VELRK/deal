@@ -193,7 +193,10 @@ export interface ApiCategory {
   id: number;
   name: string;
   slug: string;
+  sort_order?: number;
   mega_group?: string;     // Group name for mega menu columns
+  mega_menu_title_id?: number | null;
+  mega_title_sort_order?: number;
   category_id?: number;   // present on subcategories
   image?: string;
   image_url?: string;

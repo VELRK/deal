@@ -13,11 +13,11 @@ class Sk_Category extends Sk_Base_Api {
 
         $cats = $this->db->where('status', 1)->order_by('sort_order,name')->get('categories')->result_array();
 
-        $subs = $this->db->select('s.id, s.category_id, s.name, s.slug, s.image, s.sort_order, s.status, COALESCE(t.title, s.mega_group) as mega_group')
+        $subs = $this->db->select('s.id, s.category_id, s.name, s.slug, s.image, s.sort_order, s.status, s.mega_menu_title_id, COALESCE(t.sort_order, 9999) as mega_title_sort_order, COALESCE(t.title, s.mega_group) as mega_group')
                  ->from('subcategories s')
                  ->join('mega_menu_titles t', 't.id = s.mega_menu_title_id', 'left')
                  ->where('s.status', 1)
-                 ->order_by('s.mega_menu_title_id ASC, s.sort_order ASC, s.name ASC')
+                 ->order_by('COALESCE(t.sort_order, 9999) ASC, s.sort_order ASC, s.name ASC', '', false)
                  ->get()->result_array();
 
         $subMap = [];

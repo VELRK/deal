@@ -152,13 +152,28 @@ export function useNavProducts(limit = 4) {
 
 // ── useCategories ─────────────────────────────────────────────────────────────
 
+function sortByOrder<T extends { sort_order?: number; name?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return (a.name ?? "").localeCompare(b.name ?? "");
+  });
+}
+
+function sortCategories(categories: ApiCategory[]): ApiCategory[] {
+  return sortByOrder(categories).map((cat) => ({
+    ...cat,
+    children: cat.children ? sortByOrder(cat.children) : [],
+  }));
+}
+
 export function useCategories() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     dedupeGet(() => categoriesAPI.getAll(), "categories")
-      .then((res) => setCategories(res.data.data ?? []))
+      .then((res) => setCategories(sortCategories(res.data.data ?? [])))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

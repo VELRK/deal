@@ -31,6 +31,7 @@ class Categories extends Sk_Base {
         if ($img) $d['image'] = $img;
         $category_id = $this->Sk_Admin_model->save_category($d);
         $this->_save_nav_products($category_id);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -53,6 +54,7 @@ class Categories extends Sk_Base {
         if ($img) $d['image'] = $img;
         $this->Sk_Admin_model->save_category($d);
         $this->_save_nav_products($id);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -65,6 +67,7 @@ class Categories extends Sk_Base {
 
     public function delete($id) {
         $this->Sk_Admin_model->delete_category($id);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -82,6 +85,7 @@ class Categories extends Sk_Base {
         $img = $this->upload_file('image', 'subcategories');
         if ($img) $d['image'] = $img;
         $this->Sk_Admin_model->save_subcategory($d);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -102,6 +106,7 @@ class Categories extends Sk_Base {
         $img = $this->upload_file('image', 'subcategories');
         if ($img) $d['image'] = $img;
         $this->Sk_Admin_model->save_subcategory($d);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -110,6 +115,7 @@ class Categories extends Sk_Base {
         if (!$ok) {
             return $this->json(['success' => false, 'message' => 'Subcategory not found or already deleted.']);
         }
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -121,6 +127,7 @@ class Categories extends Sk_Base {
         ];
         if (!$d['title']) return $this->json(['success' => false, 'message' => 'Title is required']);
         $this->Sk_Admin_model->save_mega_menu_title($d);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
@@ -131,11 +138,20 @@ class Categories extends Sk_Base {
             'sort_order' => (int)$this->input->post('sort_order'),
         ];
         $this->Sk_Admin_model->save_mega_menu_title($d);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
     }
 
     public function title_delete($id) {
         $this->Sk_Admin_model->delete_mega_menu_title($id);
+        $this->_clear_categories_cache();
         $this->json(['success' => true]);
+    }
+
+    private function _clear_categories_cache() {
+        $file = APPPATH . 'cache/api/categories.json';
+        if (is_file($file)) {
+            @unlink($file);
+        }
     }
 }

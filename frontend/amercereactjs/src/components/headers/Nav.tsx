@@ -20,14 +20,19 @@ export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { 
       {categories.map((cat) => {
         const hasSub = (cat.children ?? []).length > 0;
 
-        // Group subcategories by mega_group column
+        // Group subcategories by mega_group column (columns follow mega menu title order)
         const groups: Record<string, ApiCategory[]> = {};
         (cat.children ?? []).forEach((sub) => {
           const g = sub.mega_group || "All";
           if (!groups[g]) groups[g] = [];
           groups[g].push(sub);
         });
-        const groupNames = Object.keys(groups);
+        const groupNames = Object.keys(groups).sort((a, b) => {
+          const aOrder = groups[a][0]?.mega_title_sort_order ?? 9999;
+          const bOrder = groups[b][0]?.mega_title_sort_order ?? 9999;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return a.localeCompare(b);
+        });
 
         return (
           <li key={cat.id} className="menu-item">
