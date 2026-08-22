@@ -14,13 +14,13 @@ $show_vendor_col = !empty($show_vendor_col);
 <!-- Filters (auto AJAX) -->
 <div class="card sk-table-card shadow-sm mb-3">
   <div class="card-body py-2">
-    <form class="row g-2 align-items-end" id="productFilterForm" onsubmit="return false;">
-      <div class="col-md-3">
+    <form class="d-flex flex-nowrap align-items-end gap-2 overflow-x-auto pb-1" id="productFilterForm" onsubmit="return false;">
+      <div style="min-width:150px;flex:1 1 150px;">
         <label class="form-label small mb-1">Search</label>
         <input type="text" name="search" id="filterSearch" class="form-control form-control-sm" placeholder="Name or SKU..."
                value="<?= htmlspecialchars($f['search'] ?? '') ?>">
       </div>
-      <div class="col-md-2">
+      <div style="min-width:130px;flex:0 0 130px;">
         <label class="form-label small mb-1">Category</label>
         <select name="category_id" id="filterCategoryId" class="form-select form-select-sm sk-product-filter">
           <option value="">All categories</option>
@@ -31,7 +31,7 @@ $show_vendor_col = !empty($show_vendor_col);
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-md-2">
+      <div style="min-width:130px;flex:0 0 130px;">
         <label class="form-label small mb-1">Subcategory</label>
         <select name="subcategory_id" id="filterSubcategoryId" class="form-select form-select-sm sk-product-filter">
           <option value="">All subcategories</option>
@@ -43,7 +43,7 @@ $show_vendor_col = !empty($show_vendor_col);
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-md-2">
+      <div style="min-width:110px;flex:0 0 110px;">
         <label class="form-label small mb-1">Status</label>
         <select name="status" class="form-select form-select-sm sk-product-filter">
           <option value="">All status</option>
@@ -52,18 +52,18 @@ $show_vendor_col = !empty($show_vendor_col);
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-md-1">
+      <div style="min-width:80px;flex:0 0 80px;">
         <label class="form-label small mb-1">Min RM</label>
         <input type="number" name="min_price" class="form-control form-control-sm sk-product-filter-delay" step="0.01" min="0"
                value="<?= htmlspecialchars((string)($f['min_price'] ?? '')) ?>" placeholder="0">
       </div>
-      <div class="col-md-1">
+      <div style="min-width:80px;flex:0 0 80px;">
         <label class="form-label small mb-1">Max RM</label>
         <input type="number" name="max_price" class="form-control form-control-sm sk-product-filter-delay" step="0.01" min="0"
                value="<?= htmlspecialchars((string)($f['max_price'] ?? '')) ?>" placeholder="Any">
       </div>
       <?php if (!empty($vendors)): ?>
-      <div class="col-md-2">
+      <div style="min-width:130px;flex:0 0 130px;">
         <label class="form-label small mb-1">Vendor</label>
         <select name="vendor_id" class="form-select form-select-sm sk-product-filter">
           <option value="">All vendors</option>
@@ -73,16 +73,14 @@ $show_vendor_col = !empty($show_vendor_col);
         </select>
       </div>
       <?php endif; ?>
-      <div class="col-md-2">
-        <div class="form-check mt-4">
+      <div class="d-flex align-items-center gap-2 flex-shrink-0 pb-1">
+        <div class="form-check mb-0">
           <input class="form-check-input sk-product-filter" type="checkbox" name="low_stock" value="1" id="lowStockCheck"
                  <?= !empty($f['low_stock']) ? 'checked' : '' ?>>
-          <label class="form-check-label small" for="lowStockCheck">Low stock only</label>
+          <label class="form-check-label small text-nowrap" for="lowStockCheck">Low stock</label>
         </div>
-      </div>
-      <div class="col-auto">
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="productFilterReset">Reset</button>
-        <span id="productFilterLoading" class="small text-muted ms-2 d-none"><span class="spinner-border spinner-border-sm"></span> Loading…</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" id="productFilterReset">Reset</button>
+        <span id="productFilterLoading" class="small text-muted d-none text-nowrap"><span class="spinner-border spinner-border-sm"></span></span>
       </div>
     </form>
   </div>
