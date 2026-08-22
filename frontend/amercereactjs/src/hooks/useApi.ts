@@ -27,7 +27,9 @@ function dedupeGet<T>(fetcher: () => Promise<T>, key: string): Promise<T> {
 
 // ── useProducts ───────────────────────────────────────────────────────────────
 
-export function useProducts(filters?: ProductFilters) {
+type UseProductsOptions = ProductFilters & { fetchAllPages?: boolean };
+
+export function useProducts(filters?: UseProductsOptions) {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -38,8 +40,39 @@ export function useProducts(filters?: ProductFilters) {
     setLoading(true);
     setError(null);
     try {
-      const key = `products:${JSON.stringify(filters ?? {})}`;
-      const res = await dedupeGet(() => productsAPI.getAll(filters), key);
+      const fetchAllPages = !!filters?.fetchAllPages;
+      const { fetchAllPages: _drop, ...apiFilters } = filters ?? {};
+
+      const limit = apiFilters.limit ?? (fetchAllPages ? 100 : 20);
+      const key = `products:${JSON.stringify({ ...apiFilters, limit, fetchAllPages })}`;
+
+      const res = await dedupeGet(async () => {
+        const first = await productsAPI.getAll({ ...apiFilters, page: 1, limit });
+        const firstData = first.data.data;
+        let merged = firstData.products ?? [];
+        const pages = firstData.total_pages ?? 1;
+
+        if (fetchAllPages && pages > 1) {
+          for (let page = 2; page <= pages; page++) {
+            const next = await productsAPI.getAll({ ...apiFilters, page, limit });
+            merged = merged.concat(next.data.data.products ?? []);
+          }
+        }
+
+        return {
+          ...first,
+          data: {
+            ...first.data,
+            data: {
+              ...firstData,
+              products: merged,
+              page: 1,
+              total_pages: fetchAllPages ? 1 : pages,
+            },
+          },
+        };
+      }, key);
+
       const d = res.data.data;
       setProducts(d.products ?? []);
       setTotal(d.total ?? 0);

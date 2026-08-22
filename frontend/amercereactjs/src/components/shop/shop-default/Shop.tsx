@@ -35,17 +35,23 @@ export default function Shop({
 
   // Read API filters from URL search params
   const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get("category_id");
+  const subcategoryId = searchParams.get("subcategory_id");
+  const categorySlug = searchParams.get("category_slug");
+  const hasCategoryFilter = !!(categoryId || subcategoryId || categorySlug);
+
   const apiFilters = {
-    category_id:    searchParams.get("category_id") ?? undefined,
-    subcategory_id: searchParams.get("subcategory_id") ?? undefined,
-    category_slug:  searchParams.get("category_slug") ?? undefined,
+    category_id:    categoryId ?? undefined,
+    subcategory_id: subcategoryId ?? undefined,
+    category_slug:  categorySlug ?? undefined,
     featured:       searchParams.get("featured") ?? undefined,
     sort:           searchParams.get("sort") ?? undefined,
     saree_type:     searchParams.get("saree_type") ?? undefined,
     fabric:         searchParams.get("fabric") ?? undefined,
     occasion:       searchParams.get("occasion") ?? undefined,
     q:              searchParams.get("q") ?? undefined,
-    limit: 20,
+    limit: hasCategoryFilter ? 100 : 20,
+    fetchAllPages: hasCategoryFilter,
   };
 
   // Fetch live products unless static ones are provided
