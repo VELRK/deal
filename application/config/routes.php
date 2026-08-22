@@ -391,6 +391,7 @@ $route['shopkart/roles/permissions/(:num)'] = 'admin/Roles/permissions/$1';
 $route['shopkart/roles/assign_admin'] = 'admin/Roles/assign_admin';
 // Products
 $route['shopkart/products'] = 'admin/Products/index';
+$route['shopkart/products/filter'] = 'admin/Products/filter';
 $route['shopkart/products/add'] = 'admin/Products/add';
 $route['shopkart/products/store'] = 'admin/Products/store';
 $route['shopkart/products/edit/(:num)'] = 'admin/Products/edit/$1';
