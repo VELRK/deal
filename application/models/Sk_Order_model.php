@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Sk_Order_model extends CI_Model {
@@ -75,6 +75,7 @@ class Sk_Order_model extends CI_Model {
 
     public function get_user_orders($user_id, $limit = 10, $offset = 0) {
         return $this->db->where('user_id', $user_id)
+                        ->where_not_in('status', ['abandoned', 'payment_attempt'])
                         ->order_by('created_at', 'DESC')
                         ->limit($limit, $offset)
                         ->get('orders')->result_array();

@@ -110,12 +110,9 @@ export default function AccountOrders() {
   }, []);
 
   const getOrderStatusGroup = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === "abandoned") {
+    const s = (status || "").toLowerCase().trim();
+    if (s === "abandoned" || s === "payment_attempt") {
       return "abandoned";
-    }
-    if (s === "payment_attempt") {
-      return "in-progress";
     }
     if (["pending", "confirmed", "processing", "shipped"].includes(s)) {
       return "in-progress";
