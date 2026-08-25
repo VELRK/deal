@@ -131,7 +131,7 @@ export default function AccountRoyalty() {
             <h4>Available Royalty Points</h4>
             <div className="royalty-points">{info.points} pts</div>
             <div className="royalty-meta">
-              ≈ {formatPrice(info.balance_rm)} · {info.conversion_label ?? "500 pts = Rs 100"}
+              ≈ {formatPrice(info.balance_rm)} · {info.conversion_label ?? "500 pts = RM 100"}
             </div>
             {info.hint && <div className="royalty-hint">{info.hint}</div>}
             {!info.can_redeem && Number(info.remaining_rm_to_unlock ?? 0) > 0 && (

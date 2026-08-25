@@ -122,7 +122,7 @@ export default function WalletHeaderIcon() {
         <span style={{ fontSize: "14px", fontWeight: 600 }}>
           {royaltyPts} pts
           <span style={{ fontWeight: 500, opacity: 0.75, marginLeft: 4 }}>
-            (Rs {royaltyRm.toFixed(1).replace(/\.0$/, "")})
+            (RM {royaltyRm.toFixed(1).replace(/\.0$/, "")})
           </span>
         </span>
       )}
