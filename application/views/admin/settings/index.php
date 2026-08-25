@@ -591,6 +591,32 @@
               <div class="form-text">Always uses test OTP above — no SMS sent for this number.</div>
             </div>
             <div class="col-12">
+              <div class="border rounded p-3 bg-light">
+                <div class="fw-semibold mb-2"><i class="bi bi-wallet2 me-1"></i>Test account wallet (for checkout wallet pay)</div>
+                <p class="small text-muted mb-2">
+                  <?php if (!empty($test_wallet_user)): ?>
+                    User #<?= (int)$test_wallet_user['id'] ?>
+                    · <?= htmlspecialchars($test_wallet_user['phone'] ?? '') ?>
+                    · balance <strong>RM <?= number_format((float)($test_wallet_balance ?? 0), 2) ?></strong>
+                  <?php else: ?>
+                    No test user yet — crediting will create the <code>0180000000</code> account.
+                  <?php endif; ?>
+                </p>
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-4">
+                    <label class="form-label small mb-1">Add amount (RM)</label>
+                    <input type="number" name="test_wallet_amount" class="form-control form-control-sm" min="1" step="0.01" value="500">
+                  </div>
+                  <div class="col-md-8">
+                    <button type="submit" formaction="<?= site_url('admin/settings/credit_test_wallet') ?>" formmethod="post" class="btn btn-success btn-sm">
+                      <i class="bi bi-plus-circle me-1"></i>Add wallet funds to test account
+                    </button>
+                    <span class="text-muted small ms-2">Then login as 0180000000 / OTP 1234 and pay with wallet.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12">
               <button type="submit" formaction="<?= site_url('admin/settings/save_isms') ?>" formmethod="post" class="btn btn-warning btn-sm">
                 <i class="bi bi-shield-lock me-1"></i>Save iSMS credentials
               </button>

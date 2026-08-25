@@ -528,9 +528,11 @@ $route['admin/settings/test_smtp'] = 'admin/Settings/test_smtp';
 $route['admin/settings/test_isms'] = 'admin/Settings/test_isms';
 $route['admin/settings/save_isms'] = 'admin/Settings/save_isms';
 $route['admin/settings/save_test_otp'] = 'admin/Settings/save_test_otp';
+$route['admin/settings/credit_test_wallet'] = 'admin/Settings/credit_test_wallet';
 $route['shopkart/settings/test_isms'] = 'admin/Settings/test_isms';
 $route['shopkart/settings/save_isms'] = 'admin/Settings/save_isms';
 $route['shopkart/settings/save_test_otp'] = 'admin/Settings/save_test_otp';
+$route['shopkart/settings/credit_test_wallet'] = 'admin/Settings/credit_test_wallet';
 // Mobile API Explorer (Postman-style customer API docs + live tester)
 $route['shopkart/api-explorer'] = 'admin/Api_explorer/index';
 // Reviews (admin)

@@ -14,6 +14,13 @@ class Settings extends Sk_Base {
         $data['title']    = 'Settings - 2DEAL Admin';
         $data['settings'] = $this->Sk_Admin_model->get_settings();
         $data['jt_config'] = sk_jt_express_config();
+        $testUser = $this->_find_test_user($data['settings']);
+        $data['test_wallet_user'] = $testUser;
+        $data['test_wallet_balance'] = 0.0;
+        if ($testUser) {
+            $this->load->model('Sk_Customer_wallet_model');
+            $data['test_wallet_balance'] = $this->Sk_Customer_wallet_model->resolve_wallet_balance((int)$testUser['id']);
+        }
         $this->render('settings/index', $data);
     }
 
@@ -283,5 +290,83 @@ class Settings extends Sk_Base {
         $this->Sk_Admin_model->save_settings($data);
         $this->session->set_flashdata('success', 'iSMS credentials saved. Click "Test iSMS connection" to verify.');
         redirect('admin/settings?tab=sms');
+    }
+
+    public function credit_test_wallet() {
+        if (strtoupper((string)$this->input->server('REQUEST_METHOD')) !== 'POST') {
+            redirect('admin/settings?tab=sms');
+            return;
+        }
+        if (!$this->is_super_admin() || $this->current_vendor_id()) {
+            show_error('Access denied.', 403);
+        }
+
+        $this->load->helper('sk_isms');
+        $this->load->model('Sk_Customer_wallet_model');
+        $settings = $this->Sk_Admin_model->get_settings();
+        $amount = (float)$this->input->post('test_wallet_amount');
+        if ($amount <= 0) {
+            $amount = 500;
+        }
+        if ($amount > 50000) {
+            $amount = 50000;
+        }
+
+        $user = $this->_find_test_user($settings);
+        if (!$user) {
+            $phone = sk_isms_canonical_test_phone($settings);
+            $this->Sk_User_model->ensure_otp_user_schema();
+            $userId = $this->Sk_User_model->create([
+                'name'     => 'Test Account',
+                'email'    => null,
+                'password' => bin2hex(random_bytes(16)),
+                'phone'    => $phone,
+                'status'   => 1,
+            ]);
+            $user = $this->Sk_User_model->get_by_id($userId);
+        }
+        if (!$user) {
+            $this->session->set_flashdata('error', 'Could not find or create the test account.');
+            redirect('admin/settings?tab=sms');
+            return;
+        }
+
+        $ok = $this->Sk_Customer_wallet_model->add_funds(
+            (int)$user['id'],
+            $amount,
+            'QA test wallet credit',
+            (int)($this->admin['id'] ?? 0) ?: null
+        );
+        if ($ok) {
+            $bal = $this->Sk_Customer_wallet_model->resolve_wallet_balance((int)$user['id']);
+            $this->session->set_flashdata(
+                'success',
+                'Added RM ' . number_format($amount, 2) . ' to test account wallet (user #' . (int)$user['id']
+                . '). New balance RM ' . number_format($bal, 2)
+                . '. Login with 0180000000 + OTP 1234 and pay with wallet at checkout.'
+            );
+        } else {
+            $this->session->set_flashdata('error', 'Failed to add wallet funds.');
+        }
+        redirect('admin/settings?tab=sms');
+    }
+
+    private function _find_test_user(array $settings): ?array {
+        $this->load->helper('sk_isms');
+        $candidates = sk_isms_test_phone_aliases($settings);
+        $found = [];
+        foreach ($candidates as $phone) {
+            $user = $this->Sk_User_model->get_by_phone($phone);
+            if ($user && empty($user['deleted_at'])) {
+                $found[(int)$user['id']] = $user;
+            }
+        }
+        if (!$found) {
+            return null;
+        }
+        uasort($found, static function ($a, $b) {
+            return ((int)$a['id']) <=> ((int)$b['id']);
+        });
+        return reset($found) ?: null;
     }
 }
