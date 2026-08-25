@@ -173,6 +173,9 @@ export default function Checkout() {
     enabled: boolean;
     balance: number;
     discount_percent: number;
+    discount_min_rm?: number;
+    discount_promo_text?: string;
+    discount_below_text?: string;
     free_shipping?: boolean;
     points?: number;
     royalty?: RoyaltyCartInfo;
@@ -334,14 +337,18 @@ export default function Checkout() {
   const baseShippingCost = subtotalAfterPromo <= 0
     ? 0
     : (subtotalAfterPromo >= freeShippingAbove ? 0 : shippingCharge);
-  // Wallet is a separate full-pay method: optional % off + always free delivery.
+  // Wallet is a separate full-pay method: optional % off (from min RM) + free delivery only if admin enabled it.
   // Works alone or together with coupon / affiliate / royalty (wallet covers the remainder).
   const walletPct = walletInfo?.discount_percent ?? 0;
-  const walletDiscountPreview = walletInfo?.enabled && walletPct > 0
+  const walletMinRm = Number(walletInfo?.discount_min_rm ?? 100);
+  const walletDiscountEligible =
+    !!walletInfo?.enabled
+    && walletPct > 0
+    && subtotalAfterPromo + 0.0001 >= walletMinRm;
+  const walletDiscountPreview = walletDiscountEligible
     ? Math.round(subtotalAfterPromo * walletPct / 100 * 100) / 100
     : 0;
-  // Wallet pay always includes free delivery (ignore admin toggle).
-  const walletFreeShipping = !!walletInfo?.enabled;
+  const walletFreeShipping = !!walletInfo?.enabled && !!walletInfo?.free_shipping;
   const walletShippingCost = walletFreeShipping ? 0 : baseShippingCost;
 
   const walletDiscount = paymentMethod === "wallet" ? walletDiscountPreview : 0;
@@ -367,8 +374,7 @@ export default function Checkout() {
     : 0;
   const amountDue = Math.max(0, billTotal - royaltyRm); // remaining → wallet / online
 
-  // Wallet charge if user selects wallet (promo + wallet % + free ship − royalty).
-  // Free delivery is fixed for wallet — shipping is never added to wallet payable (no min order).
+  // Wallet charge if user selects wallet (promo + wallet % when eligible − royalty ± shipping).
   const walletBillPreview = Math.max(0, subtotalAfterPromo - walletDiscountPreview) + walletShippingCost;
   const walletRoyaltyPreview = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royaltyInfo?.balance_rm || 0), walletBillPreview)
@@ -376,7 +382,7 @@ export default function Checkout() {
   const walletPayablePreview = Math.round(Math.max(0, walletBillPreview - walletRoyaltyPreview) * 100) / 100;
   const walletBalance = Number(walletInfo?.balance || 0);
   const walletShortfall = Math.max(0, Math.round((walletPayablePreview - walletBalance) * 100) / 100);
-  // Enable wallet when balance covers full wallet charge (after promo/royalty + free delivery).
+  // Enable wallet when balance covers full wallet charge (after promo/royalty, and shipping if free delivery is off).
   const walletBalanceOk =
     !!walletInfo?.enabled
     && walletPayablePreview > 0
@@ -1158,18 +1164,32 @@ export default function Checkout() {
                       <div className="payment-card-title">👛 Pay with Wallet</div>
                       <div className="payment-card-desc">
                         Balance: {formatPrice(walletBalance)}
-                        {walletPct > 0 && ` · Extra ${walletPct}% off`}
-                        {walletFreeShipping && ' · Free delivery'}
                       </div>
+                      {walletPct > 0 && (
+                        <div className="payment-wallet-promo">
+                          <div>
+                            {walletInfo?.discount_promo_text
+                              || `Pay via MY Wallet & Get ${Number(walletPct.toFixed(2))}% OFF on Orders RM${Number(walletMinRm.toFixed(2))}+`}
+                          </div>
+                          {(walletInfo?.discount_below_text || walletMinRm > 0) && (
+                            <div className="payment-wallet-promo-sub">
+                              {walletInfo?.discount_below_text
+                                || `Orders below RM${Number(walletMinRm.toFixed(2))}: Wallet payment available, but no ${Number(walletPct.toFixed(2))}% discount`}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="payment-card-desc fw-semibold text-dark mt-1">
                         Payable: {formatPrice(walletPayablePreview)}
                         {useRoyalty && walletRoyaltyPreview > 0
-                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% off` : ""} · free delivery)`
+                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% off` : ""}${walletFreeShipping ? " · free delivery" : ""})`
                           : walletDiscountPreview > 0
-                            ? ` (${walletPct}% off · free delivery)`
+                            ? ` (${walletPct}% off${walletFreeShipping ? " · free delivery" : ""})`
                             : promoDiscount > 0 && appliedCode
-                              ? ` (after ${appliedCode} · free delivery)`
-                              : " (free delivery)"}
+                              ? ` (after ${appliedCode}${walletFreeShipping ? " · free delivery" : ""})`
+                              : walletFreeShipping
+                                ? " (free delivery)"
+                                : ""}
                       </div>
                       {!walletBalanceOk && walletPayablePreview > 0 && (
                         <div className="payment-wallet-error">

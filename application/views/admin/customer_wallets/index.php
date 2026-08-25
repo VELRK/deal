@@ -2,7 +2,7 @@
 <div class="sk-page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
   <div>
     <h5 class="sk-page-title mb-1"><i class="bi bi-wallet2 me-2 text-primary"></i>Customer Wallets</h5>
-    <small class="text-muted">MYR · 500 pts = RM 100 · Wallet pay discount <?= $discount_percent ?>%</small>
+    <small class="text-muted">MYR · 500 pts = RM 100 · Wallet pay discount <?= $discount_percent ?>% from RM<?= htmlspecialchars(rtrim(rtrim(number_format((float)($discount_min_rm ?? 100), 2, '.', ''), '0'), '.')) ?>+</small>
   </div>
   <a href="<?= site_url('shopkart/royalty-report') ?>" class="btn btn-sm btn-outline-warning">Royalty Report</a>
   <a href="<?= site_url('shopkart/wallet-recharge') ?>" class="btn btn-sm btn-outline-success">Recharge Report</a>
@@ -24,9 +24,14 @@
         <small class="text-muted">0 = no extra discount</small>
       </div>
       <div class="col-md-2">
+        <label class="form-label small">Min order RM for discount</label>
+        <input type="number" step="0.01" min="0" name="customer_wallet_discount_min_rm" class="form-control form-control-sm" value="<?= htmlspecialchars($discount_min_rm ?? 100) ?>">
+        <small class="text-muted">Wallet pay below this: no % off</small>
+      </div>
+      <div class="col-md-2">
         <div class="form-check mt-4">
           <input class="form-check-input" type="checkbox" name="wallet_free_shipping" id="wFreeShip" value="1"
-                 <?= (($settings['wallet_free_shipping'] ?? '1') !== '0') ? 'checked' : '' ?>>
+                 <?= ((string)($settings['wallet_free_shipping'] ?? '1') === '1') ? 'checked' : '' ?>>
           <label class="form-check-label" for="wFreeShip">Free delivery on wallet pay</label>
         </div>
         <small class="text-muted">Full wallet pay only — no gateway</small>

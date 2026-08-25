@@ -101,9 +101,10 @@ class Sk_Customer_wallet_model extends CI_Model {
         return $this->db->trans_status();
     }
 
-    /** Free delivery always applies when customer pays with wallet. */
+    /** Free delivery on wallet pay — honour admin checkbox (unchecked = off). */
     public function is_wallet_free_shipping(): bool {
-        return true;
+        $row = $this->db->where('key', 'wallet_free_shipping')->get('settings')->row_array();
+        return (string)($row['value'] ?? '1') === '1';
     }
 
     public function get_wallet_discount_percent(): float {
@@ -114,6 +115,35 @@ class Sk_Customer_wallet_model extends CI_Model {
             return 0.0;
         }
         return min(100.0, round($pct, 2));
+    }
+
+    /** Minimum goods total (after promo) required for the wallet-pay %. Default RM 100. */
+    public function get_wallet_discount_min_rm(): float {
+        $row = $this->db->where('key', 'customer_wallet_discount_min_rm')->get('settings')->row_array();
+        $v = (float) ($row['value'] ?? 100);
+        if (!is_finite($v) || $v < 0) {
+            return 100.0;
+        }
+        return round($v, 2);
+    }
+
+    /** Wallet % off only when goods total (after promo) meets the admin min RM. */
+    public function calc_wallet_discount(float $amountAfterPromo): float {
+        $pct = $this->get_wallet_discount_percent();
+        if ($pct <= 0) {
+            return 0.0;
+        }
+        $base = max(0.0, $amountAfterPromo);
+        if ($base + 0.0001 < $this->get_wallet_discount_min_rm()) {
+            return 0.0;
+        }
+        return round($base * $pct / 100, 2);
+    }
+
+    private function format_wallet_setting_number(float $n): string {
+        $s = number_format($n, 2, '.', '');
+        $s = rtrim(rtrim($s, '0'), '.');
+        return $s === '' ? '0' : $s;
     }
 
     public function is_enabled(): bool {
@@ -246,19 +276,40 @@ class Sk_Customer_wallet_model extends CI_Model {
         $CI->load->helper('sk_royalty');
         sk_royalty_ensure_schema();
         $CI->load->model('Sk_Royalty_model');
+        $CI->load->model('Sk_Admin_model');
+        $settings = $CI->Sk_Admin_model->get_settings();
+        $sym = (string)($settings['currency_symbol'] ?? 'RM');
+        if ($sym === '') {
+            $sym = 'RM';
+        }
+        $pct = $this->get_wallet_discount_percent();
+        $minRm = $this->get_wallet_discount_min_rm();
+        $pctLabel = $this->format_wallet_setting_number($pct);
+        $minLabel = $sym . $this->format_wallet_setting_number($minRm);
+        $promoText = '';
+        $belowText = '';
+        if ($pct > 0) {
+            $promoText = 'Pay via MY Wallet & Get ' . $pctLabel . '% OFF on Orders ' . $minLabel . '+';
+            if ($minRm > 0) {
+                $belowText = 'Orders below ' . $minLabel . ': Wallet payment available, but no ' . $pctLabel . '% discount';
+            }
+        }
         return [
-            'enabled'           => $this->is_enabled(),
-            'balance'           => $balanceRm,
-            'balance_rm'        => $balanceRm,
-            'points'            => $points,
-            'points_per_rm'     => $this->points_per_rm(),
-            'conversion_label'  => '500 points = RM 100',
-            'currency'          => 'MYR',
-            'currency_symbol'   => 'RM',
-            'discount_percent'  => $this->get_wallet_discount_percent(),
-            'free_shipping'     => $this->is_wallet_free_shipping(),
+            'enabled'              => $this->is_enabled(),
+            'balance'              => $balanceRm,
+            'balance_rm'           => $balanceRm,
+            'points'               => $points,
+            'points_per_rm'        => $this->points_per_rm(),
+            'conversion_label'     => '500 points = RM 100',
+            'currency'             => 'MYR',
+            'currency_symbol'      => $sym,
+            'discount_percent'     => $pct,
+            'discount_min_rm'      => $minRm,
+            'discount_promo_text'  => $promoText,
+            'discount_below_text'  => $belowText,
+            'free_shipping'        => $this->is_wallet_free_shipping(),
             // Nested for checkout convenience — balance is royalty ledger, not wallet cash
-            'royalty'           => $CI->Sk_Royalty_model->get_info($userId),
+            'royalty'              => $CI->Sk_Royalty_model->get_info($userId),
         ];
     }
 

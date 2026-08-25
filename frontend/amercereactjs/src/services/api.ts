@@ -484,7 +484,11 @@ export const userAPI = {
       enabled: boolean;
       balance: number;
       discount_percent: number;
-      /** Free delivery when paying full order with wallet */
+      /** Min goods total (after promo) for wallet-pay % discount */
+      discount_min_rm?: number;
+      discount_promo_text?: string;
+      discount_below_text?: string;
+      /** Free delivery when paying full order with wallet — from admin checkbox */
       free_shipping?: boolean;
       points?: number;
       royalty?: RoyaltyCartInfo;

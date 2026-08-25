@@ -14,9 +14,12 @@ function assert_true($cond, $msg) {
 }
 
 // Mirror backend shipping + wallet payable math
-function wallet_payable($subtotal, $promo, $walletPct, $shipCharge, $freeAbove, $walletFreeShip) {
+function wallet_payable($subtotal, $promo, $walletPct, $shipCharge, $freeAbove, $walletFreeShip, $discountMinRm = 0) {
     $afterPromo = max(0, $subtotal - $promo);
-    $walletDisc = $walletPct > 0 ? round($afterPromo * $walletPct / 100, 2) : 0;
+    $walletDisc = 0;
+    if ($walletPct > 0 && $afterPromo + 0.0001 >= $discountMinRm) {
+        $walletDisc = round($afterPromo * $walletPct / 100, 2);
+    }
     $baseShip = ($subtotal <= 0) ? 0 : ($subtotal >= $freeAbove ? 0 : $shipCharge);
     $ship = $walletFreeShip ? 0 : $baseShip;
     return round($afterPromo - $walletDisc + $ship, 2);
@@ -44,6 +47,16 @@ $p3 = wallet_payable(30, 0, 10, 50, 999, true);
 assert_true($p3 === 27.0, "10% wallet discount → payable 27");
 assert_true(can_use_wallet(27, $p3), "exact balance after discount OK");
 assert_true(!can_use_wallet(26.99, $p3), "slightly under fails");
+
+// RM100 min: 2% only when goods total >= 100
+$p4 = wallet_payable(80, 0, 2, 50, 999, false, 100);
+assert_true($p4 === 130.0, "below RM100: no 2% and shipping charged");
+$p5 = wallet_payable(100, 0, 2, 50, 999, false, 100);
+assert_true($p5 === 148.0, "RM100+: 2% off then shipping");
+$p6 = wallet_payable(80, 0, 2, 50, 999, true, 100);
+assert_true($p6 === 80.0, "below RM100 with free ship: no 2%, payable 80");
+$p7 = wallet_payable(100, 0, 2, 50, 999, true, 100);
+assert_true($p7 === 98.0, "RM100+ with free ship: 2% off only");
 
 // Partial razorpay+wallet must be rejected by policy (documented)
 $partial_allowed = false;

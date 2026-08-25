@@ -20,7 +20,14 @@ interface Transaction {
 export default function AccountWallet() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [banner, setBanner] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [wallet, setWallet] = useState<{ enabled: boolean; balance: number; discount_percent: number } | null>(null);
+  const [wallet, setWallet] = useState<{
+    enabled: boolean;
+    balance: number;
+    discount_percent: number;
+    discount_min_rm?: number;
+    discount_promo_text?: string;
+    discount_below_text?: string;
+  } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -440,9 +447,15 @@ export default function AccountWallet() {
               <div className="wallet-benefit-card">
                 <h5>👛 Wallet Pay Benefit</h5>
                 <p>
-                  Pay with wallet during checkout (alone or with coupon / affiliate / royalty) and receive an extra{" "}
-                  <strong>{wallet.discount_percent}% off</strong> on your entire purchase!
+                  {wallet.discount_promo_text
+                    || `Pay via MY Wallet & Get ${Number(wallet.discount_percent.toFixed(2))}% OFF on Orders RM${Number((wallet.discount_min_rm ?? 100).toFixed(2))}+`}
                 </p>
+                {(wallet.discount_below_text || (wallet.discount_min_rm ?? 100) > 0) && (
+                  <p className="mb-0">
+                    {wallet.discount_below_text
+                      || `Orders below RM${Number((wallet.discount_min_rm ?? 100).toFixed(2))}: Wallet payment available, but no ${Number(wallet.discount_percent.toFixed(2))}% discount`}
+                  </p>
+                )}
               </div>
             )}
           </div>

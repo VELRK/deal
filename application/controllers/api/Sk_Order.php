@@ -191,23 +191,17 @@ class Sk_Order extends Sk_Base_Api {
         $code_discount = $discount;
 
         if ($uses_wallet) {
-            $walletPct = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
-            // get_wallet_discount_percent() already returns 0 when disabled / invalid
-            if ($walletPct > 0) {
-                $wallet_discount = round(max(0, $subtotal - $discount) * $walletPct / 100, 2);
-                if ($wallet_discount > 0) {
-                    $discount += $wallet_discount;
-                } else {
-                    $wallet_discount = 0;
-                }
+            $wallet_discount = $this->Sk_Customer_wallet_model->calc_wallet_discount(max(0, $subtotal - $discount));
+            if ($wallet_discount > 0) {
+                $discount += $wallet_discount;
             }
         }
 
-        // Normal shipping from admin settings; wallet pay always gets free delivery.
+        // Normal shipping from admin settings; wallet free delivery only when the admin checkbox is on.
         $shipping = ($subtotal <= 0)
             ? 0
             : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
-        if ($uses_wallet) {
+        if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
             $shipping = 0;
         }
         $taxable_amount = max(0, $subtotal - $discount);

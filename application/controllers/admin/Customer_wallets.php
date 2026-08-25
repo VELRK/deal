@@ -29,6 +29,7 @@ class Customer_wallets extends Sk_Base {
         $data['filters'] = $filters;
         $data['is_vendor_scope'] = (bool)$this->scoped_vendor_id();
         $data['discount_percent'] = $this->Sk_Customer_wallet_model->get_wallet_discount_percent();
+        $data['discount_min_rm'] = $this->Sk_Customer_wallet_model->get_wallet_discount_min_rm();
         $data['wallet_enabled'] = $this->Sk_Customer_wallet_model->is_enabled();
         $data['settings'] = $this->Sk_Admin_model->get_settings();
         $this->render('customer_wallets/index', $data);
@@ -99,9 +100,15 @@ class Customer_wallets extends Sk_Base {
             if ($pct > 100) {
                 $pct = 100.0;
             }
+            $rawMin = $this->input->post('customer_wallet_discount_min_rm');
+            $minRm = is_numeric($rawMin) ? (float) $rawMin : 100.0;
+            if ($minRm < 0) {
+                $minRm = 0.0;
+            }
             $this->Sk_Admin_model->save_settings([
                 'customer_wallet_enabled'          => $this->input->post('customer_wallet_enabled') ? '1' : '0',
                 'customer_wallet_discount_percent' => (string) round($pct, 2),
+                'customer_wallet_discount_min_rm'  => (string) round($minRm, 2),
                 'wallet_free_shipping'             => $this->input->post('wallet_free_shipping') ? '1' : '0',
                 'wallet_points_per_rm'             => $this->input->post('wallet_points_per_rm') ?: '5',
                 'royalty_enabled'                  => $this->input->post('royalty_enabled') ? '1' : '0',
@@ -116,6 +123,10 @@ class Customer_wallets extends Sk_Base {
                 'payment_gateway'                  => in_array($this->input->post('payment_gateway'), ['razorpay', 'toyyibpay'], true)
                     ? $this->input->post('payment_gateway') : 'razorpay',
             ]);
+            $cacheFile = APPPATH . 'cache/api/' . preg_replace('/[^a-z0-9_-]/', '_', strtolower('site_settings')) . '.json';
+            if (is_file($cacheFile)) {
+                @unlink($cacheFile);
+            }
             $this->session->set_flashdata('success', 'Wallet & royalty settings saved.');
             redirect('admin/customer-wallets');
         }
