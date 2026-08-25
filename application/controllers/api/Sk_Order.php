@@ -441,6 +441,11 @@ class Sk_Order extends Sk_Base_Api {
             'order' => $order,
             'confirmed' => $confirm_now,
             'cart_clear_lines' => $cartClearLines,
+            'wallet' => [
+                'amount'        => round((float)$wallet_amount, 2),
+                'discount'      => round((float)$wallet_discount, 2),
+                'free_shipping' => $uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping(),
+            ],
             'payment' => [
                 'requires_gateway' => $is_razorpay_due,
                 'gateway_amount'   => $gateway_amount,

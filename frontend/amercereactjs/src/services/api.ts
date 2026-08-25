@@ -734,6 +734,21 @@ export interface ApiSiteSettings {
   free_shipping_above?: number;
   /** When true, full wallet pay gets free delivery */
   wallet_free_shipping?: boolean;
+  wallet_enabled?: boolean;
+  wallet_discount_percent?: number;
+  wallet_discount_min_rm?: number;
+  wallet_discount_promo_text?: string;
+  wallet_discount_below_text?: string;
+  wallet?: {
+    enabled: boolean;
+    discount_percent: number;
+    discount_min_rm: number;
+    discount_promo_text?: string;
+    discount_below_text?: string;
+    free_shipping?: boolean;
+    currency?: string;
+    currency_symbol?: string;
+  };
   meta_title?: string;
   meta_desc?: string;
   meta_description?: string;

@@ -146,6 +146,39 @@ class Sk_Customer_wallet_model extends CI_Model {
         return $s === '' ? '0' : $s;
     }
 
+    /** Public wallet-pay rules for checkout / site-settings / cart (no user balance). */
+    public function get_wallet_offer_settings(): array {
+        $CI =& get_instance();
+        $CI->load->model('Sk_Admin_model');
+        $settings = $CI->Sk_Admin_model->get_settings();
+        $sym = (string)($settings['currency_symbol'] ?? 'RM');
+        if ($sym === '') {
+            $sym = 'RM';
+        }
+        $pct = $this->get_wallet_discount_percent();
+        $minRm = $this->get_wallet_discount_min_rm();
+        $pctLabel = $this->format_wallet_setting_number($pct);
+        $minLabel = $sym . $this->format_wallet_setting_number($minRm);
+        $promoText = '';
+        $belowText = '';
+        if ($pct > 0) {
+            $promoText = 'Pay via MY Wallet & Get ' . $pctLabel . '% OFF on Orders ' . $minLabel . '+';
+            if ($minRm > 0) {
+                $belowText = 'Orders below ' . $minLabel . ': Wallet payment available, but no ' . $pctLabel . '% discount';
+            }
+        }
+        return [
+            'enabled'             => $this->is_enabled(),
+            'discount_percent'    => $pct,
+            'discount_min_rm'     => $minRm,
+            'discount_promo_text' => $promoText,
+            'discount_below_text' => $belowText,
+            'free_shipping'       => $this->is_wallet_free_shipping(),
+            'currency'            => 'MYR',
+            'currency_symbol'     => $sym,
+        ];
+    }
+
     public function is_enabled(): bool {
         $row = $this->db->where('key', 'customer_wallet_enabled')->get('settings')->row_array();
         return ($row['value'] ?? '1') === '1';
@@ -276,41 +309,16 @@ class Sk_Customer_wallet_model extends CI_Model {
         $CI->load->helper('sk_royalty');
         sk_royalty_ensure_schema();
         $CI->load->model('Sk_Royalty_model');
-        $CI->load->model('Sk_Admin_model');
-        $settings = $CI->Sk_Admin_model->get_settings();
-        $sym = (string)($settings['currency_symbol'] ?? 'RM');
-        if ($sym === '') {
-            $sym = 'RM';
-        }
-        $pct = $this->get_wallet_discount_percent();
-        $minRm = $this->get_wallet_discount_min_rm();
-        $pctLabel = $this->format_wallet_setting_number($pct);
-        $minLabel = $sym . $this->format_wallet_setting_number($minRm);
-        $promoText = '';
-        $belowText = '';
-        if ($pct > 0) {
-            $promoText = 'Pay via MY Wallet & Get ' . $pctLabel . '% OFF on Orders ' . $minLabel . '+';
-            if ($minRm > 0) {
-                $belowText = 'Orders below ' . $minLabel . ': Wallet payment available, but no ' . $pctLabel . '% discount';
-            }
-        }
-        return [
-            'enabled'              => $this->is_enabled(),
-            'balance'              => $balanceRm,
-            'balance_rm'           => $balanceRm,
-            'points'               => $points,
-            'points_per_rm'        => $this->points_per_rm(),
-            'conversion_label'     => '500 points = RM 100',
-            'currency'             => 'MYR',
-            'currency_symbol'      => $sym,
-            'discount_percent'     => $pct,
-            'discount_min_rm'      => $minRm,
-            'discount_promo_text'  => $promoText,
-            'discount_below_text'  => $belowText,
-            'free_shipping'        => $this->is_wallet_free_shipping(),
+        $offer = $this->get_wallet_offer_settings();
+        return array_merge($offer, [
+            'balance'          => $balanceRm,
+            'balance_rm'       => $balanceRm,
+            'points'           => $points,
+            'points_per_rm'    => $this->points_per_rm(),
+            'conversion_label' => '500 points = RM 100',
             // Nested for checkout convenience — balance is royalty ledger, not wallet cash
-            'royalty'              => $CI->Sk_Royalty_model->get_info($userId),
-        ];
+            'royalty'          => $CI->Sk_Royalty_model->get_info($userId),
+        ]);
     }
 
     public function create_topup_intent(int $userId, float $amountRm): ?string {

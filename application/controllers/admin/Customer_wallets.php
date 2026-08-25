@@ -123,9 +123,12 @@ class Customer_wallets extends Sk_Base {
                 'payment_gateway'                  => in_array($this->input->post('payment_gateway'), ['razorpay', 'toyyibpay'], true)
                     ? $this->input->post('payment_gateway') : 'razorpay',
             ]);
-            $cacheFile = APPPATH . 'cache/api/' . preg_replace('/[^a-z0-9_-]/', '_', strtolower('site_settings')) . '.json';
-            if (is_file($cacheFile)) {
-                @unlink($cacheFile);
+            $cacheDir = APPPATH . 'cache/api/';
+            foreach (['site_settings', 'site_settings_v2'] as $cacheKey) {
+                $cacheFile = $cacheDir . preg_replace('/[^a-z0-9_-]/', '_', strtolower($cacheKey)) . '.json';
+                if (is_file($cacheFile)) {
+                    @unlink($cacheFile);
+                }
             }
             $this->session->set_flashdata('success', 'Wallet & royalty settings saved.');
             redirect('admin/customer-wallets');

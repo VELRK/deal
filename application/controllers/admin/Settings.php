@@ -117,7 +117,7 @@ class Settings extends Sk_Base {
         $this->Sk_Admin_model->save_settings($data);
         // Bust storefront settings/SEO API cache so site_name updates immediately
         $cacheDir = APPPATH . 'cache/api/';
-        foreach (['site_settings', 'seo_global'] as $cacheKey) {
+        foreach (['site_settings', 'site_settings_v2', 'seo_global'] as $cacheKey) {
             $file = $cacheDir . preg_replace('/[^a-z0-9_-]/', '_', strtolower($cacheKey)) . '.json';
             if (is_file($file)) {
                 @unlink($file);
