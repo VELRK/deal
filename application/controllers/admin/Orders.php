@@ -398,7 +398,7 @@ class Orders extends Sk_Base {
             log_message('error', 'JT addOrder failed for order ' . $order['order_number'] . ': ' . json_encode($result['raw'] ?? $result['message']));
             $msg = $result['message'] ?? 'Failed to create JT shipment.';
             if (stripos($msg, 'API account does not exist') !== false) {
-                $msg .= ' [mode=' . $identity['mode'] . ', apiAccount=' . $identity['api_account']
+                $msg .= ' [mode=' . $identity['mode']
                     . ', url=' . $identity['base_url'] . '] Check Admin → Settings → Shipping credentials (DB). Turn Sandbox OFF for live.';
             }
             return [

@@ -65,10 +65,12 @@ class Jt_express {
 
     /** Debug-friendly mode + masked account (for admin error messages). */
     public function debug_identity() {
+        $acct = $this->api_account;
+        $masked = $acct === '' ? '' : (substr($acct, 0, 4) . str_repeat('*', max(0, strlen($acct) - 8)) . substr($acct, -4));
         return [
             'mode'        => $this->sandbox ? 'sandbox' : 'production',
-            'api_account' => $this->api_account,
-            'customer'    => $this->customer_code,
+            'api_account' => $masked,
+            'customer'    => $this->customer_code !== '' ? (substr($this->customer_code, 0, 4) . '***') : '',
             'base_url'    => $this->base_url(),
         ];
     }
