@@ -274,7 +274,16 @@ export default function Checkout() {
         });
     };
     load();
-    return () => { cancelled = true; };
+    const onVis = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", load);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", load);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [isLoggedIn, totalPrice, cartProducts.length]);
 
   const royaltyInfo: RoyaltyCartInfo | null = walletInfo?.royalty ?? null;
@@ -1286,21 +1295,37 @@ export default function Checkout() {
 
               {walletInfo?.enabled && (
                 <div
-                  className={`payment-card mb-0 ${paymentMethod === 'wallet' ? 'selected' : ''} ${!walletBalanceOk ? 'opacity-50' : ''}`}
+                  className={`payment-card mb-0 ${paymentMethod === 'wallet' ? 'selected' : ''}`}
                   onClick={() => {
                     if (walletBalanceOk) {
                       setPaymentMethod("wallet");
                     }
                   }}
                 >
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="radio-circle">
+                  <div className="d-flex align-items-start gap-3">
+                    <div className="radio-circle mt-1">
                       {paymentMethod === 'wallet' && <div className="radio-inner" />}
                     </div>
                     <div className="flex-grow-1">
-                      <div className="payment-card-title">👛 Pay with Wallet</div>
-                      <div className="payment-card-desc">
-                        Balance: {formatPrice(walletBalance)}
+                      <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-1">
+                        <div>
+                          <div className="payment-card-title">👛 Pay with MY Wallet</div>
+                          <div className="payment-card-desc">
+                            Balance: {formatPrice(walletBalance)}
+                          </div>
+                        </div>
+                        <Link
+                          to="/account-wallet/topup"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-wallet-add-funds"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          title="Add funds to your wallet (opens in new tab)"
+                        >
+                          <span>➕</span> ADD FUNDS
+                        </Link>
                       </div>
                       {walletPct > 0 && (
                         <div className="payment-wallet-promo">
@@ -1319,13 +1344,13 @@ export default function Checkout() {
                       <div className="payment-card-desc fw-semibold text-dark mt-1">
                         Payable: {formatPrice(walletPayablePreview)}
                         {useRoyalty && walletRoyaltyPreview > 0
-                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% off` : ""}${walletFreeShipping ? " · free delivery" : ""})`
+                          ? ` (after royalty −${formatPrice(walletRoyaltyPreview)}${walletDiscountPreview > 0 ? ` · ${walletPct}% off` : ""}${walletFreeShipping ? " · " : ""})`
                           : walletDiscountPreview > 0
-                            ? ` (${walletPct}% off${walletFreeShipping ? " · free delivery" : ""})`
+                            ? ` (${walletPct}% off${walletFreeShipping ? " · " : ""})`
                             : promoDiscount > 0 && appliedCode
-                              ? ` (after ${appliedCode}${walletFreeShipping ? " · free delivery" : ""})`
+                              ? ` (after ${appliedCode}${walletFreeShipping ? " · " : ""})`
                               : walletFreeShipping
-                                ? " (free delivery)"
+                                ? ""
                                 : ""}
                       </div>
                       {!walletBalanceOk && walletPayablePreview > 0 && (
@@ -1362,6 +1387,11 @@ export default function Checkout() {
                               ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${paymentMethod === 'wallet' ? 'wallet' : 'online'
                               }`
                               : ' · Deducts from bill; pay remainder with wallet / online'}
+                      </div>
+                      <div className="payment-royalty-rate">
+                        <span>💡</span>
+                        <strong className="payment-royalty-title">How points are calculate?</strong>
+                        <span>Earn 1 Point / RM10 • Redeem 5 Points = RM1 Discount</span>
                       </div>
                       {!royaltyUnlocked && royaltyUnlockHint && (
                         <div

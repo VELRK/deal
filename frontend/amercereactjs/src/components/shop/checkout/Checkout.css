@@ -378,6 +378,59 @@
   line-height: 1.4;
 }
 
+.btn-wallet-add-funds {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--ck-teal);
+  color: #ffffff !important;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--ck-teal);
+  text-decoration: none !important;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(62, 193, 188, 0.2);
+  line-height: 1.3;
+}
+
+.btn-wallet-add-funds:hover {
+  background: var(--ck-teal-deeper);
+  border-color: var(--ck-teal-deeper);
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(62, 193, 188, 0.35);
+}
+
+.btn-wallet-add-funds:active {
+  transform: translateY(0);
+}
+
+.payment-royalty-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  margin-top: 6px;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+
+.payment-royalty-title {
+  font-weight: 700;
+  color: #78350f;
+}
+
 @keyframes popIn {
   0% { transform: scale(0); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
@@ -943,6 +996,18 @@
   .payment-wallet-promo {
     font-size: 11px;
     margin-top: 6px;
+  }
+
+  .btn-wallet-add-funds {
+    padding: 3px 9px;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  .payment-royalty-rate {
+    font-size: 10px;
+    padding: 2px 6px;
+    margin-top: 4px;
   }
 
   /* Order Summary Items */
