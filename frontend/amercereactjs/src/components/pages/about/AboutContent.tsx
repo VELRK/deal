@@ -340,7 +340,7 @@ function AboutContent() {
                     Our team is built on integrity, commitment, and innovation. We believe in long-term relationships and work closely with our clients and partners to ensure satisfaction at every step. At Pathi, it’s not just about selling—it’s about delivering value.
                   </p>
                 </div>
-                
+
                 <h4 className="mt-4 mb-3 fs-5 fw-bold text-dark">Our Products</h4>
                 <div className="products-overview">
                   <span className="product-badge">Incense Sticks</span>
@@ -445,7 +445,7 @@ function AboutContent() {
               <p className="text-muted mb-0 lh-lg">
                 As an e-commerce mobile application operated by Golden2Deal (M) Sdn Bhd, we are committed to protecting your personal data in compliance with Malaysia's Personal Data Protection Act 2010 (PDPA). This Privacy Policy outlines how we collect, use, disclose, and safeguard your information when you use our mobile application.
               </p>
-              
+
               <div className="policy-alert">
                 <strong>Your Trust Matters:</strong> We employ industry-standard encryption and security measures to ensure your data is always safe with us.
               </div>
@@ -467,13 +467,13 @@ function AboutContent() {
           <div className="store-contact-row">
             <div className="store-contact-box">
               📞 Phone:
-              <a href="tel:[Your Phone Number]" className="store-contact-link">
-                [Your Phone Number]
+              <a href="tel:+60126364666" className="store-contact-link">
+                +60126364666
               </a>
             </div>
             <div className="store-contact-box">
               ✉️ Email:
-              <a href="mailto:golden2deal@gmail.com" className="store-contact-link">
+              <a href="mailto:[EMAIL_ADDRESS]" className="store-contact-link">
                 golden2deal@gmail.com
               </a>
             </div>
