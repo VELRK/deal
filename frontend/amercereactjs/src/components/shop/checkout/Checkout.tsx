@@ -17,6 +17,7 @@ import { removeLineFromCart, removePaidProductsFromCart } from "@/utils/cartSync
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
 import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
+import WalletTopupModal from "@/components/modals/WalletTopupModal";
 
 /* Razorpay global type */
 declare global {
@@ -239,39 +240,54 @@ export default function Checkout() {
   const [billingState, setBillingState] = useState("");
   const [billingZip, setBillingZip] = useState("");
 
+  const [showWalletTopupModal, setShowWalletTopupModal] = useState(false);
+
+  const fetchWalletInfo = async (isCancelled?: () => boolean) => {
+    if (!isLoggedIn) { setWalletInfo(null); return; }
+    try {
+      const res = await userAPI.getWallet();
+      if (isCancelled && isCancelled()) return;
+      const d = res.data?.data;
+      if (d) {
+        setWalletInfo(d);
+        const roy = d.royalty;
+        if (roy && !royaltyIsUnlocked(roy) && useRoyalty) {
+          setUseRoyalty(false);
+          saveUseRoyalty(false);
+        }
+        return d;
+      }
+      const rres = await userAPI.getRoyalty();
+      if (isCancelled && isCancelled()) return;
+      const roy = rres.data?.data as RoyaltyCartInfo | undefined;
+      if (roy) setWalletInfo({ enabled: false, balance: 0, discount_percent: 0, royalty: roy });
+    } catch {
+      try {
+        const rres = await userAPI.getRoyalty();
+        if (isCancelled && isCancelled()) return;
+        const roy = rres.data?.data as RoyaltyCartInfo | undefined;
+        if (roy) setWalletInfo({ enabled: false, balance: 0, discount_percent: 0, royalty: roy });
+        else setWalletInfo(null);
+      } catch {
+        if (isCancelled && isCancelled()) return;
+        setWalletInfo(null);
+      }
+    }
+  };
+
+  const handleWalletTopupSuccess = (newBalance?: number) => {
+    void fetchWalletInfo();
+    if (newBalance != null) {
+      setWalletInfo((prev) => prev ? { ...prev, balance: newBalance } : prev);
+    }
+    setPaymentMethod("wallet");
+  };
+
   useEffect(() => {
     if (!isLoggedIn) { setWalletInfo(null); return; }
     let cancelled = false;
     const load = () => {
-      userAPI.getWallet()
-        .then((res) => {
-          if (cancelled) return;
-          const d = res.data?.data;
-          if (d) {
-            setWalletInfo(d);
-            const roy = d.royalty;
-            if (roy && !royaltyIsUnlocked(roy) && useRoyalty) {
-              setUseRoyalty(false);
-              saveUseRoyalty(false);
-            }
-            return;
-          }
-          return userAPI.getRoyalty().then((rres) => {
-            if (cancelled) return;
-            const roy = rres.data?.data as RoyaltyCartInfo | undefined;
-            if (roy) setWalletInfo({ enabled: false, balance: 0, discount_percent: 0, royalty: roy });
-          });
-        })
-        .catch(() => {
-          userAPI.getRoyalty()
-            .then((rres) => {
-              if (cancelled) return;
-              const roy = rres.data?.data as RoyaltyCartInfo | undefined;
-              if (roy) setWalletInfo({ enabled: false, balance: 0, discount_percent: 0, royalty: roy });
-              else setWalletInfo(null);
-            })
-            .catch(() => { if (!cancelled) setWalletInfo(null); });
-        });
+      void fetchWalletInfo(() => cancelled);
     };
     load();
     const onVis = () => {
@@ -536,9 +552,10 @@ export default function Checkout() {
     if (paymentMethod === "wallet") {
       if (!walletInfo?.enabled) { setOrderError("Wallet payments are not available."); return; }
       if (!walletBalanceOk) {
+        setShowWalletTopupModal(true);
         setOrderError(
           walletShortfall > 0
-            ? `Low balance in wallet. You need ${formatPrice(walletShortfall)} more to pay this order with wallet.`
+            ? `Low balance in wallet. You need ${formatPrice(walletShortfall)} more to pay this order with wallet. Please top up below.`
             : "Low balance in wallet. Please top up or choose another payment method.",
         );
         return;
@@ -1299,6 +1316,8 @@ export default function Checkout() {
                   onClick={() => {
                     if (walletBalanceOk) {
                       setPaymentMethod("wallet");
+                    } else {
+                      setShowWalletTopupModal(true);
                     }
                   }}
                 >
@@ -1314,18 +1333,17 @@ export default function Checkout() {
                             Balance: {formatPrice(walletBalance)}
                           </div>
                         </div>
-                        <Link
-                          to="/account-wallet/topup"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
                           className="btn-wallet-add-funds"
                           onClick={(e) => {
                             e.stopPropagation();
+                            setShowWalletTopupModal(true);
                           }}
-                          title="Add funds to your wallet (opens in new tab)"
+                          title="Add funds to your wallet"
                         >
                           <span>➕</span> ADD FUNDS
-                        </Link>
+                        </button>
                       </div>
                       {walletPct > 0 && (
                         <div className="payment-wallet-promo">
@@ -1354,10 +1372,22 @@ export default function Checkout() {
                                 : ""}
                       </div>
                       {!walletBalanceOk && walletPayablePreview > 0 && (
-                        <div className="payment-wallet-error">
-                          {walletBalance <= 0
-                            ? `Low balance in wallet. Add ${formatPrice(walletPayablePreview)} to pay this order with wallet.`
-                            : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (payable ${formatPrice(walletPayablePreview)}).`}
+                        <div className="payment-wallet-error d-flex flex-column gap-1">
+                          <div>
+                            {walletBalance <= 0
+                              ? `Low balance in wallet. Add ${formatPrice(walletPayablePreview)} to pay this order with wallet.`
+                              : `Low balance in wallet. You have ${formatPrice(walletBalance)}; need ${formatPrice(walletShortfall)} more (payable ${formatPrice(walletPayablePreview)}).`}
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-wallet-quick-topup"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowWalletTopupModal(true);
+                            }}
+                          >
+                            ➕ Top up {formatPrice(Math.max(100, Math.ceil(walletShortfall)))} now
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1547,6 +1577,15 @@ export default function Checkout() {
 
         </form>
       </div>
+
+      <WalletTopupModal
+        isOpen={showWalletTopupModal}
+        onClose={() => setShowWalletTopupModal(false)}
+        currentBalance={walletBalance}
+        orderPayable={walletPayablePreview}
+        shortfall={walletShortfall}
+        onSuccess={handleWalletTopupSuccess}
+      />
     </section>
   );
 }
