@@ -10,18 +10,15 @@
   /* ---- Design tokens ---- */
   --ck-ivory: #FAF9F6;
   --ck-paper: #FFFFFF;
-  --ck-ink: #0F172A;
-  /* Modern deep slate instead of dark teal-black */
+  --ck-ink: #0F172A; /* Modern deep slate instead of dark teal-black */
   --ck-ink-soft: #475569;
-  --ck-line: #E2E8F0;
-  /* Clean light gray border */
+  --ck-line: #E2E8F0; /* Clean light gray border */
   --ck-line-light: #F1F5F9;
 
   --ck-teal: #3EC1BC;
   --ck-teal-dark: #24928D;
   --ck-teal-deeper: #176B67;
-  --ck-teal-wash: #F0FDFA;
-  /* Softest teal wash */
+  --ck-teal-wash: #F0FDFA; /* Softest teal wash */
 
   --ck-gold: #C9A227;
   --ck-gold-soft: #E3C363;
@@ -49,8 +46,7 @@
   font-weight: 700;
   margin: 0;
   color: var(--ck-ink);
-  font-family: 'Inter', sans-serif;
-  /* Classic look */
+  font-family: 'Inter', sans-serif; /* Classic look */
   letter-spacing: -0.5px;
 }
 
@@ -248,8 +244,7 @@
 .address-card-phone {
   font-size: 12px;
   color: var(--ck-ink-soft);
-  margin-top: auto;
-  /* Push to bottom of card */
+  margin-top: auto; /* Push to bottom of card */
   padding-top: 12px;
   display: flex;
   align-items: center;
@@ -271,13 +266,8 @@
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Payment Cards styling */
@@ -372,36 +362,6 @@
   margin-top: 4px;
 }
 
-.btn-wallet-quick-topup {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 5px;
-  background: #fff;
-  border: 1.5px solid var(--ck-teal);
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 6px;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(62, 193, 188, 0.15);
-}
-
-.btn-wallet-quick-topup:hover {
-  background: #f0fdfa;
-  border-color: #0d9488;
-  color: #0f766e;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(62, 193, 188, 0.25);
-}
-
-.btn-wallet-quick-topup:active {
-  transform: translateY(0);
-}
-
 .payment-wallet-promo {
   font-size: 12px;
   color: var(--ck-ink);
@@ -472,15 +432,8 @@
 }
 
 @keyframes popIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* Order Summary section */
@@ -775,25 +728,13 @@
 
 /* ====== ANIMATIONS ====== */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in-up {
@@ -807,21 +748,12 @@
 }
 
 /* Stagger delays */
-.delay-100 {
-  animation-delay: 60ms;
-}
-
-.delay-200 {
-  animation-delay: 120ms;
-}
-
-.delay-300 {
-  animation-delay: 180ms;
-}
+.delay-100 { animation-delay: 60ms; }
+.delay-200 { animation-delay: 120ms; }
+.delay-300 { animation-delay: 180ms; }
 
 /* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-
   .animate-fade-in-up,
   .animate-fade-in,
   .checkout-header .icon,
@@ -833,7 +765,6 @@
     opacity: 1 !important;
     transform: none !important;
   }
-
   .checkout-card,
   .summary-card,
   .btn-premium,
@@ -847,7 +778,6 @@
   .summary-card {
     position: static;
   }
-
   .grid-2 {
     grid-template-columns: 1fr;
   }
@@ -949,15 +879,12 @@
   .checkout-card .mt-3 {
     margin-top: 8px !important;
   }
-
   .checkout-card .mt-4 {
     margin-top: 10px !important;
   }
-
   .checkout-card .mb-4 {
     margin-bottom: 10px !important;
   }
-
   .checkout-card .mb-3 {
     margin-bottom: 8px !important;
   }
