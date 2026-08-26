@@ -36,49 +36,18 @@ class Jt_express {
 
     public function load_from_settings(array $settings) {
         $this->CI->load->helper('sk_jt_express');
-        $jtCfg = sk_jt_express_config();
 
         $this->enabled = !empty($settings['jt_express_enabled']) && $settings['jt_express_enabled'] !== '0';
         // Do not use empty() — PHP empty('0') === true would force sandbox forever.
         $this->sandbox = sk_jt_express_is_sandbox($settings);
         $this->default_weight = trim($settings['jt_express_default_weight'] ?? '1') ?: '1';
 
-        // Safety: DB still holding demo API account while sandbox is OFF → force production.
-        $dbApi = trim($settings['jt_express_api_account'] ?? '');
-        if (!$this->sandbox && ($dbApi === '' || $dbApi === '640826271705595946')) {
-            // keep sandbox=false; credentials applied below from config
-        }
-
-        // Production credentials always come from config (never from editable DB fields).
-        if (!$this->sandbox) {
-            $prod = is_array($jtCfg['production'] ?? null) ? $jtCfg['production'] : [];
-            $this->api_account       = trim($prod['api_account'] ?? '838338320232973056');
-            $this->private_key       = trim($prod['private_key'] ?? 'c1fe13bc3f7642fd96297248a80533d5');
-            $this->customer_code     = trim($prod['customer_code'] ?? 'JTMY024627');
-            $this->customer_password = trim($prod['customer_password'] ?? '06F4B84632C34F6476EAB9F872587660');
-            $this->demo_uuid         = trim($prod['demo_uuid'] ?? '');
-            $address = trim($prod['sender_address'] ?? '');
-            $this->sender = [
-                'name'        => trim($prod['sender_name'] ?? ($settings['site_name'] ?? 'Shop')),
-                'mobile'      => $this->normalize_phone($prod['sender_phone'] ?? ''),
-                'phone'       => $this->normalize_phone($prod['sender_phone'] ?? ''),
-                'postCode'    => trim($prod['sender_postcode'] ?? ''),
-                'prov'        => trim($prod['sender_state'] ?? ''),
-                'city'        => trim($prod['sender_city'] ?? ''),
-                'area'        => $this->limit_chars($address, 60),
-                'address'     => $address,
-                'countryCode' => 'MYS',
-            ];
-            return;
-        }
-
-        // Sandbox: Settings DB (with config sandbox defaults as fallback).
-        $sb = is_array($jtCfg['sandbox'] ?? null) ? $jtCfg['sandbox'] : [];
-        $this->api_account       = trim($settings['jt_express_api_account'] ?? ($sb['api_account'] ?? ''));
-        $this->private_key       = trim($settings['jt_express_private_key'] ?? ($sb['private_key'] ?? ''));
-        $this->customer_code     = trim($settings['jt_express_customer_code'] ?? ($sb['customer_code'] ?? ''));
-        $this->customer_password = trim($settings['jt_express_customer_password'] ?? ($sb['customer_password'] ?? ''));
-        $this->demo_uuid         = trim($settings['jt_express_demo_uuid'] ?? ($sb['demo_uuid'] ?? '5ba402abcfdc4dff9cb1c589afcf9682'));
+        // Credentials always from DB settings (Admin → Settings → Shipping). No hardcoded secrets.
+        $this->api_account       = trim($settings['jt_express_api_account'] ?? '');
+        $this->private_key       = trim($settings['jt_express_private_key'] ?? '');
+        $this->customer_code     = trim($settings['jt_express_customer_code'] ?? '');
+        $this->customer_password = trim($settings['jt_express_customer_password'] ?? '');
+        $this->demo_uuid         = trim($settings['jt_express_demo_uuid'] ?? '');
 
         $address = trim($settings['jt_express_sender_address'] ?? '');
         $this->sender = [

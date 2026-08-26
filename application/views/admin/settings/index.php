@@ -314,15 +314,14 @@
         <div class="card-body">
           <?php
             $jtCfg = isset($jt_config) && is_array($jt_config) ? $jt_config : [];
-            $jtProd = is_array($jtCfg['production'] ?? null) ? $jtCfg['production'] : [];
-            $jtSb = is_array($jtCfg['sandbox'] ?? null) ? $jtCfg['sandbox'] : [];
             $jtUrls = is_array($jtCfg['api_urls'] ?? null) ? $jtCfg['api_urls'] : [];
             $isSandbox = sk_jt_express_is_sandbox($settings);
           ?>
           <div class="alert alert-info small">
             <i class="bi bi-truck me-1"></i>
             JT Express Malaysia Open Platform — create AWB, print label, track &amp; cancel from Admin → JT Express.
-            Turn <strong>Sandbox</strong> OFF to use production credentials from config (<code>application/config/jt_express.php</code>).
+            All API credentials and sender details are stored in the <strong>database</strong> (saved below). No secrets in code.
+            Turn <strong>Sandbox</strong> OFF for live orders (uses the same fields with your production account).
             <br><span class="text-muted">Database setup runs automatically when you open this page (no PHP CLI needed). Or import <code>database/jt_express.sql</code> in phpMyAdmin.</span>
             <hr class="my-2">
             <strong>Status sync webhook</strong> (register in JT Open Platform → Tracking Callback / Joint-Debugging):
@@ -331,7 +330,7 @@
               Expected ACK: <code>{"code":"1","msg":"success","data":"SUCCESS"}</code>
               · Encoding UTF-8 · Method POST (form <code>bizContent</code>)
             </div>
-            <br><span class="text-muted">JT pushes <code>bizContent</code> (AWB + scan details) to this URL after each tracking change. Also auto-syncs when you open an order or click Track. For sandbox, fill sender phone/address/city/state/postcode below.</span>
+            <br><span class="text-muted">JT pushes <code>bizContent</code> (AWB + scan details) to this URL after each tracking change. Also auto-syncs when you open an order or click Track. Fill sender phone/address/city/state/postcode below.</span>
           </div>
           <div class="row g-3">
             <div class="col-md-4">
@@ -347,7 +346,7 @@
                   <?= $isSandbox ? 'checked' : '' ?>>
                 <label class="form-check-label" for="jtSandbox">Sandbox (demo API)</label>
               </div>
-              <div class="form-text">Uncheck for live production orders.</div>
+              <div class="form-text">Uncheck for live production orders. Switch credentials below when changing mode.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">Default parcel weight (kg)</label>
@@ -355,115 +354,61 @@
                      value="<?= htmlspecialchars($settings['jt_express_default_weight'] ?? '1') ?>">
             </div>
 
-            <div class="col-12">
-              <div class="border rounded p-3 bg-light">
-                <h6 class="mb-2">
-                  <i class="bi bi-lock-fill text-success me-1"></i>
-                  Production credentials
-                  <span class="badge bg-success ms-1">Read-only</span>
-                </h6>
-                <p class="small text-muted mb-3">
-                  Used automatically when Sandbox is <strong>OFF</strong>.
-                  Edit in <code>application/config/jt_express.php</code> only.
-                  API: <code><?= htmlspecialchars($jtUrls['production'] ?? 'https://ylopenapi.jtexpress.my/webopenplatformapi') ?></code>
-                </p>
-                <div class="row g-2 small">
-                  <div class="col-md-6">
-                    <label class="form-label mb-0 text-muted">API Account</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['api_account'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label mb-0 text-muted">Private Key</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['private_key'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">Customer / Source Code</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['customer_code'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">Source Name</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['customer_name'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">Customer Password (hash)</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['customer_password'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label mb-0 text-muted">Sender Name</label>
-                    <input type="text" class="form-control form-control-sm" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_name'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label mb-0 text-muted">Sender Phone</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_phone'] ?? '') ?>">
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label mb-0 text-muted">Sender Address</label>
-                    <input type="text" class="form-control form-control-sm" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_address'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">City</label>
-                    <input type="text" class="form-control form-control-sm" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_city'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">State</label>
-                    <input type="text" class="form-control form-control-sm" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_state'] ?? '') ?>">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label mb-0 text-muted">Postcode</label>
-                    <input type="text" class="form-control form-control-sm font-monospace" readonly
-                           value="<?= htmlspecialchars($jtProd['sender_postcode'] ?? '') ?>">
-                  </div>
-                </div>
+            <div class="col-12"><hr class="my-1">
+              <h6 class="text-muted mb-0">
+                API credentials
+                <span class="badge bg-primary">From database</span>
+                <?php if ($isSandbox): ?>
+                  <span class="badge bg-secondary">Sandbox mode</span>
+                <?php else: ?>
+                  <span class="badge bg-success">Production mode</span>
+                <?php endif; ?>
+              </h6>
+              <div class="form-text mb-2">
+                Saved in the <code>settings</code> table. Use sandbox account when Sandbox is ON; production account when OFF.
+                <?php if (!empty($jtUrls['sandbox']) || !empty($jtUrls['production'])): ?>
+                  API:
+                  <?= $isSandbox
+                    ? '<code>' . htmlspecialchars($jtUrls['sandbox'] ?? 'https://demoopenapi.jtexpress.my/webopenplatformapi') . '</code>'
+                    : '<code>' . htmlspecialchars($jtUrls['production'] ?? 'https://ylopenapi.jtexpress.my/webopenplatformapi') . '</code>' ?>
+                <?php endif; ?>
               </div>
-            </div>
-
-            <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Sandbox credentials <span class="badge bg-secondary">Editable</span></h6>
-              <div class="form-text mb-2">Used only when Sandbox is ON. Defaults from config if empty.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">API Account <span class="text-danger">*</span></label>
               <input type="text" name="jt_express_api_account" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['jt_express_api_account'] ?? ($jtSb['api_account'] ?? '')) ?>">
-              <div class="form-text">Sandbox sample: <code><?= htmlspecialchars($jtSb['api_account'] ?? '640826271705595946') ?></code></div>
+                     value="<?= htmlspecialchars($settings['jt_express_api_account'] ?? '') ?>">
             </div>
             <div class="col-md-6">
               <label class="form-label">Private Key <span class="text-danger">*</span></label>
               <input type="password" name="jt_express_private_key" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['jt_express_private_key'] ?? ($jtSb['private_key'] ?? '')) ?>">
+                     value="<?= htmlspecialchars($settings['jt_express_private_key'] ?? '') ?>"
+                     autocomplete="new-password">
+              <div class="form-text">Leave blank when saving to keep the current key.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Customer / Source Code <span class="text-danger">*</span></label>
               <input type="text" name="jt_express_customer_code" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['jt_express_customer_code'] ?? ($jtSb['customer_code'] ?? '')) ?>" placeholder="ITTEST0001">
-              <div class="form-text">Sandbox sample: <code>ITTEST0001</code></div>
+                     value="<?= htmlspecialchars($settings['jt_express_customer_code'] ?? '') ?>">
             </div>
             <div class="col-md-6">
               <label class="form-label">Source Name</label>
               <input type="text" name="jt_express_customer_name" class="form-control"
-                     value="<?= htmlspecialchars($settings['jt_express_customer_name'] ?? ($jtSb['customer_name'] ?? '')) ?>">
+                     value="<?= htmlspecialchars($settings['jt_express_customer_name'] ?? '') ?>">
             </div>
             <div class="col-md-6">
               <label class="form-label">Customer Password <span class="text-danger">*</span></label>
               <input type="password" name="jt_express_customer_password" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['jt_express_customer_password'] ?? ($jtSb['customer_password'] ?? '')) ?>">
-              <div class="form-text">Sandbox plaintext sample: <code>Sfx6H8d4</code> (hashed as MD5(password + jadada369t3)).</div>
+                     value="<?= htmlspecialchars($settings['jt_express_customer_password'] ?? '') ?>"
+                     autocomplete="new-password">
+              <div class="form-text">Sandbox: plaintext (hashed as MD5(password + jadada369t3)). Production: use the Open Platform password hash if JT provided one. Leave blank to keep current.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Demo UUID <span class="text-muted">(sandbox only)</span></label>
               <input type="text" name="jt_express_demo_uuid" class="form-control font-monospace"
-                     value="<?= htmlspecialchars($settings['jt_express_demo_uuid'] ?? ($jtSb['demo_uuid'] ?? '5ba402abcfdc4dff9cb1c589afcf9682')) ?>">
+                     value="<?= htmlspecialchars($settings['jt_express_demo_uuid'] ?? '') ?>">
             </div>
-            <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Sandbox sender (pickup) address</h6></div>
+            <div class="col-12"><hr class="my-1"><h6 class="text-muted mb-0">Sender (pickup) address</h6></div>
             <div class="col-md-6">
               <label class="form-label">Sender Name</label>
               <input type="text" name="jt_express_sender_name" class="form-control"
