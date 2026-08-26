@@ -98,6 +98,53 @@ export default function Checkout() {
   const needsAddress = !addressLoading && addresses.length === 0;
   const userId = user?.id ?? null;
 
+  /* ── Order tracking email & profile sync ── */
+  const hasExistingEmail = Boolean(user?.email && !isPlaceholderEmail(user.email));
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailSaveMsg, setEmailSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Sync isEditingEmail & addrEmail when user account/profile loads or changes
+  useEffect(() => {
+    if (user?.email && !isPlaceholderEmail(user.email)) {
+      setAddrEmail(user.email);
+      setIsEditingEmail(false);
+    } else {
+      setAddrEmail("");
+      setIsEditingEmail(true);
+    }
+  }, [user?.email, user?.id]);
+
+  async function handleSaveEmail(e?: React.MouseEvent | React.FormEvent) {
+    if (e) e.preventDefault();
+    const trimmed = addrEmail.trim();
+    if (!trimmed) {
+      setEmailSaveMsg({ type: "error", text: "Please enter an email address." });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailSaveMsg({ type: "error", text: "Please enter a valid email address." });
+      return;
+    }
+
+    setEmailSaving(true);
+    setEmailSaveMsg(null);
+    try {
+      const res = await userAPI.updateProfile({ email: trimmed });
+      const updated = (res.data as { data?: typeof user })?.data;
+      if (updated) {
+        useAuthStore.getState().setUser(updated);
+      }
+      setIsEditingEmail(false);
+      setEmailSaveMsg({ type: "success", text: "Tracking email updated and saved to your profile." });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setEmailSaveMsg({ type: "error", text: msg || "Failed to update email. Please try again." });
+    } finally {
+      setEmailSaving(false);
+    }
+  }
+
   function applyAddress(addr: ApiAddress) {
     const parts = addr.full_name.split(" ");
     setFirstName(parts[0] ?? "");
@@ -1111,6 +1158,96 @@ export default function Checkout() {
               )}
             </div>
 
+            {/* ── Order Tracking Email Card (Under Billing Address) ── */}
+            <div className="checkout-card checkout-email-card animate-fade-in">
+              <div className="checkout-header">
+                <div className="icon">📧</div>
+                Order Tracking & Receipt Email
+              </div>
+              <p className="checkout-email-desc mb-3">
+                Order confirmation, live tracking updates, and invoices will be sent to this email address.
+              </p>
+
+              {!isEditingEmail && hasExistingEmail ? (
+                <div className="checkout-email-display-box">
+                  <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="checkout-email-icon-badge">✉️</div>
+                      <div>
+                        <div className="checkout-email-address">{user?.email}</div>
+                        <div className="checkout-email-sub">
+                          Saved in your profile • Instant updates enabled
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-edit-email"
+                      onClick={() => {
+                        setIsEditingEmail(true);
+                        setEmailSaveMsg(null);
+                      }}
+                    >
+                      <span>✏️</span> Edit Email
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="checkout-email-edit-box animate-fade-in">
+                  <label className="form-label small fw-semibold text-dark mb-1 d-block">
+                    {hasExistingEmail ? "Update Tracking Email" : "Enter Tracking Email"}
+                  </label>
+                  <div className="d-flex gap-2 flex-wrap sm-flex-nowrap align-items-center">
+                    <input
+                      type="email"
+                      className="premium-input flex-grow-1"
+                      placeholder="you@example.com"
+                      value={addrEmail}
+                      onChange={(e) => {
+                        setAddrEmail(e.target.value);
+                        if (emailSaveMsg) setEmailSaveMsg(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-save-email"
+                      disabled={emailSaving || !addrEmail.trim()}
+                      onClick={handleSaveEmail}
+                    >
+                      {emailSaving ? "Saving..." : hasExistingEmail ? "Update Profile" : "Save to Profile"}
+                    </button>
+                    {hasExistingEmail && (
+                      <button
+                        type="button"
+                        className="btn-cancel-email"
+                        disabled={emailSaving}
+                        onClick={() => {
+                          setAddrEmail(realEmail(user?.email));
+                          setIsEditingEmail(false);
+                          setEmailSaveMsg(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                  <div className="checkout-email-hint">
+                    💡 This email is saved in your profile and used to send order tracking updates.
+                  </div>
+                </div>
+              )}
+
+              {emailSaveMsg && (
+                <div
+                  className={`checkout-email-alert mt-3 ${emailSaveMsg.type === "success" ? "alert-success-custom" : "alert-error-custom"
+                    }`}
+                >
+                  {emailSaveMsg.type === "success" ? "✓ " : "⚠️ "}
+                  {emailSaveMsg.text}
+                </div>
+              )}
+            </div>
+
             <div className="checkout-card">
               <div className="checkout-header">
                 <div className="icon">💳</div>
@@ -1222,9 +1359,8 @@ export default function Checkout() {
                           : !royaltyUnlocked
                             ? ` · Unlocks at ${formatPrice(royaltyUnlockMinRm(royaltyInfo))} and above`
                             : useRoyalty && royaltyRm > 0
-                              ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${
-                                  paymentMethod === 'wallet' ? 'wallet' : 'online'
-                                }`
+                              ? ` · Paying ${formatPrice(royaltyRm)}; remaining ${formatPrice(amountDue)} via ${paymentMethod === 'wallet' ? 'wallet' : 'online'
+                              }`
                               : ' · Deducts from bill; pay remainder with wallet / online'}
                       </div>
                       {!royaltyUnlocked && royaltyUnlockHint && (
@@ -1414,9 +1550,9 @@ const CheckoutOrderItemPremium = memo(function CheckoutOrderItemPremium({ item, 
             <div className="qty-control">
               <button type="button" className="qty-btn" onClick={() => onQtyChange(item.quantity - 1)}>−</button>
               <input className="qty-input" readOnly value={item.quantity} />
-              <button 
-                type="button" 
-                className="qty-btn" 
+              <button
+                type="button"
+                className="qty-btn"
                 onClick={() => {
                   if (item.stock !== undefined && item.quantity >= item.stock) return;
                   onQtyChange(item.quantity + 1);
