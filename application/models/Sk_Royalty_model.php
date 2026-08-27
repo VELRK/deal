@@ -69,8 +69,7 @@ class Sk_Royalty_model extends CI_Model {
                 $points > 0
                     ? ('You need RM ' . number_format($remainingRm, 2)
                         . ' more to unlock royalty points (min RM '
-                        . number_format($minRedeemRm, 0) . '). You currently have '
-                        . $points . ' pts (RM ' . number_format($balanceRm, 2) . ').')
+                        . number_format($minRedeemRm, 0) . ').')
                     : ('Earn royalty on every paid order (RM 5000 → 500 pts). Reach RM '
                         . number_format($minRedeemRm, 0) . ' in royalty balance to unlock Apply.')
             );
