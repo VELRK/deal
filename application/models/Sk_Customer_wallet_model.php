@@ -127,17 +127,47 @@ class Sk_Customer_wallet_model extends CI_Model {
         return round($v, 2);
     }
 
-    /** Wallet % off only when goods total (after promo) meets the admin min RM. */
-    public function calc_wallet_discount(float $amountAfterPromo): float {
+    /** True when goods total (after promo) meets admin min RM and % is configured. */
+    public function is_wallet_discount_eligible(float $amountAfterPromo): bool {
         $pct = $this->get_wallet_discount_percent();
         if ($pct <= 0) {
-            return 0.0;
+            return false;
         }
         $base = max(0.0, $amountAfterPromo);
-        if ($base + 0.0001 < $this->get_wallet_discount_min_rm()) {
+        return ($base + 0.0001) >= $this->get_wallet_discount_min_rm();
+    }
+
+    /** Wallet % off only when goods total (after promo) meets the admin min RM. */
+    public function calc_wallet_discount(float $amountAfterPromo): float {
+        if (!$this->is_wallet_discount_eligible($amountAfterPromo)) {
             return 0.0;
         }
+        $pct = $this->get_wallet_discount_percent();
+        $base = max(0.0, $amountAfterPromo);
         return round($base * $pct / 100, 2);
+    }
+
+    /**
+     * Wallet-pay discount preview for a goods total (after promo).
+     * Use this from GET user/wallet and cart so apps match web checkout rules.
+     */
+    public function get_discount_preview(float $goodsTotalAfterPromo): array {
+        $pct = $this->get_wallet_discount_percent();
+        $minRm = $this->get_wallet_discount_min_rm();
+        $base = round(max(0.0, $goodsTotalAfterPromo), 2);
+        $eligible = $this->is_wallet_discount_eligible($base);
+        $amount = $eligible ? $this->calc_wallet_discount($base) : 0.0;
+        $remaining = ($pct > 0 && $minRm > 0 && $base + 0.0001 < $minRm)
+            ? round(max(0.0, $minRm - $base), 2)
+            : 0.0;
+        return [
+            'goods_total'                    => $base,
+            'discount_eligible'              => $eligible,
+            'discount_amount'                => $amount,
+            // Use this for payable math — 0 when below min RM (same as web).
+            'effective_discount_percent'     => $eligible ? $pct : 0.0,
+            'amount_remaining_for_discount'  => $remaining,
+        ];
     }
 
     private function format_wallet_setting_number(float $n): string {
@@ -302,7 +332,11 @@ class Sk_Customer_wallet_model extends CI_Model {
         return $stored;
     }
 
-    public function get_checkout_info(int $userId): array {
+    /**
+     * Checkout / wallet screen payload.
+     * @param float|null $goodsTotalAfterPromo Optional goods total (after promo). When null, uses DB cart subtotal.
+     */
+    public function get_checkout_info(int $userId, ?float $goodsTotalAfterPromo = null): array {
         $balanceRm = $this->resolve_wallet_balance($userId);
         $points = $this->rm_to_points($balanceRm);
         $CI =& get_instance();
@@ -310,7 +344,13 @@ class Sk_Customer_wallet_model extends CI_Model {
         sk_royalty_ensure_schema();
         $CI->load->model('Sk_Royalty_model');
         $offer = $this->get_wallet_offer_settings();
-        return array_merge($offer, [
+
+        if ($goodsTotalAfterPromo === null) {
+            $goodsTotalAfterPromo = $this->get_user_cart_goods_total($userId);
+        }
+        $preview = $this->get_discount_preview((float)$goodsTotalAfterPromo);
+
+        return array_merge($offer, $preview, [
             'balance'          => $balanceRm,
             'balance_rm'       => $balanceRm,
             'points'           => $points,
@@ -319,6 +359,43 @@ class Sk_Customer_wallet_model extends CI_Model {
             // Nested for checkout convenience — balance is royalty ledger, not wallet cash
             'royalty'          => $CI->Sk_Royalty_model->get_info($userId),
         ]);
+    }
+
+    /** Sum of cart line subtotals for the user (goods only, before promo). */
+    public function get_user_cart_goods_total(int $userId): float {
+        if ($userId < 1 || !$this->db->table_exists('cart')) {
+            return 0.0;
+        }
+        $CI =& get_instance();
+        $CI->load->model('Sk_Product_model');
+        $rows = $this->db->where('user_id', $userId)->get('cart')->result_array();
+        if (empty($rows)) {
+            return 0.0;
+        }
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $p = $CI->Sk_Product_model->get_by_id((int)$row['product_id']);
+            if (!$p) {
+                continue;
+            }
+            $variant = null;
+            $variantId = !empty($row['variant_id']) ? (int)$row['variant_id'] : 0;
+            if ($variantId > 0 && !empty($p['variants']) && is_array($p['variants'])) {
+                foreach ($p['variants'] as $v) {
+                    if ((int)($v['id'] ?? 0) === $variantId) {
+                        $variant = $v;
+                        break;
+                    }
+                }
+            } elseif (!empty($p['variants']) && is_array($p['variants'])) {
+                $variant = $p['variants'][0] ?? null;
+            }
+            $price = $variant ? (float)($variant['price'] ?? 0) : (float)($p['price'] ?? 0);
+            $sale  = $variant ? ($variant['sale_price'] ?? null) : ($p['sale_price'] ?? null);
+            $effective = ($sale && (float)$sale > 0 && (float)$sale < $price) ? (float)$sale : $price;
+            $total += $effective * max(0, (int)($row['quantity'] ?? 0));
+        }
+        return round(max(0.0, $total), 2);
     }
 
     public function create_topup_intent(int $userId, float $amountRm): ?string {

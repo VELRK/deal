@@ -205,7 +205,34 @@ class Sk_User extends Sk_Base_Api {
         $this->load->model('Sk_Customer_wallet_model');
         $this->load->helper('sk_royalty');
         sk_royalty_ensure_schema();
-        $this->success($this->Sk_Customer_wallet_model->get_checkout_info($this->user['user_id']));
+
+        // Optional goods total (after promo) so mobile can match web wallet-% rules.
+        // Query: ?goods_total=120  Body/JSON: goods_total | amount | cart_total
+        $goodsTotal = null;
+        $rawGoods = $this->input->get('goods_total');
+        if ($rawGoods === null || $rawGoods === '') {
+            $rawGoods = $this->input->get('cart_total');
+        }
+        if ($rawGoods === null || $rawGoods === '') {
+            $body = $this->body();
+            if (is_array($body)) {
+                foreach (['goods_total', 'cart_total', 'amount', 'subtotal'] as $k) {
+                    if (isset($body[$k]) && $body[$k] !== '' && $body[$k] !== null) {
+                        $rawGoods = $body[$k];
+                        break;
+                    }
+                }
+            }
+        }
+        if ($rawGoods !== null && $rawGoods !== '') {
+            $goodsTotal = max(0.0, (float)$rawGoods);
+        }
+
+        $info = $this->Sk_Customer_wallet_model->get_checkout_info(
+            (int)$this->user['user_id'],
+            $goodsTotal
+        );
+        $this->success($info);
     }
 
     public function royalty() {

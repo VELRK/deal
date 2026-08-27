@@ -197,10 +197,12 @@ class Sk_Order extends Sk_Base_Api {
             }
         }
 
-        // Normal shipping from admin settings; wallet free delivery only when the admin checkbox is on.
-        $shipping = ($subtotal <= 0)
+        // Normal shipping from admin settings (threshold uses goods after promo — same as web).
+        // Wallet free delivery only when the admin checkbox is on.
+        $goodsAfterPromo = max(0, $subtotal - $code_discount);
+        $shipping = ($goodsAfterPromo <= 0)
             ? 0
-            : ($subtotal >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
+            : ($goodsAfterPromo >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
         if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
             $shipping = 0;
         }
@@ -442,9 +444,17 @@ class Sk_Order extends Sk_Base_Api {
             'confirmed' => $confirm_now,
             'cart_clear_lines' => $cartClearLines,
             'wallet' => [
-                'amount'        => round((float)$wallet_amount, 2),
-                'discount'      => round((float)$wallet_discount, 2),
-                'free_shipping' => $uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping(),
+                'amount'                     => round((float)$wallet_amount, 2),
+                'discount'                   => round((float)$wallet_discount, 2),
+                'discount_percent'           => $uses_wallet
+                    ? (float)$this->Sk_Customer_wallet_model->get_wallet_discount_percent()
+                    : 0,
+                'discount_min_rm'            => (float)$this->Sk_Customer_wallet_model->get_wallet_discount_min_rm(),
+                'discount_eligible'          => $uses_wallet && $wallet_discount > 0,
+                'effective_discount_percent' => ($uses_wallet && $wallet_discount > 0)
+                    ? (float)$this->Sk_Customer_wallet_model->get_wallet_discount_percent()
+                    : 0,
+                'free_shipping'              => $uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping(),
             ],
             'payment' => [
                 'requires_gateway' => $is_razorpay_due,

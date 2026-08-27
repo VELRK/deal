@@ -461,11 +461,8 @@ class Sk_Cart extends Sk_Base_Api {
             $summary['royalty'] = $this->Sk_Royalty_model->get_info($userId);
             $this->load->model('Sk_Customer_wallet_model');
             $walletOffer = $this->Sk_Customer_wallet_model->get_wallet_offer_settings();
-            $walletDisc = $this->Sk_Customer_wallet_model->calc_wallet_discount((float)$summary['subtotal']);
-            $summary['wallet'] = array_merge($walletOffer, [
-                'discount_eligible' => $walletDisc > 0,
-                'discount_amount'   => $walletDisc,
-            ]);
+            $preview = $this->Sk_Customer_wallet_model->get_discount_preview((float)$summary['subtotal']);
+            $summary['wallet'] = array_merge($walletOffer, $preview);
         } else {
             $summary['royalty'] = [
                 'enabled'      => sk_royalty_enabled($settings),
@@ -475,7 +472,9 @@ class Sk_Cart extends Sk_Base_Api {
                 'hint'         => 'Login to see and redeem royalty points.',
             ];
             $this->load->model('Sk_Customer_wallet_model');
-            $summary['wallet'] = $this->Sk_Customer_wallet_model->get_wallet_offer_settings();
+            $walletOffer = $this->Sk_Customer_wallet_model->get_wallet_offer_settings();
+            $preview = $this->Sk_Customer_wallet_model->get_discount_preview((float)$summary['subtotal']);
+            $summary['wallet'] = array_merge($walletOffer, $preview);
         }
 
         return $summary;
