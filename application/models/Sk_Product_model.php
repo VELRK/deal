@@ -45,6 +45,9 @@ class Sk_Product_model extends CI_Model {
         if (!empty($filters['special_product'])) {
             $this->db->where('p.special_product', 1);
         }
+        if (!empty($filters['hot_sale'])) {
+            $this->db->where('p.hot_sale', 1);
+        }
         if (!empty($filters['search'])) {
             $this->db->group_start()
                      ->like('p.name', $filters['search'])

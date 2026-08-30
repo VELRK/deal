@@ -25,6 +25,7 @@ class Sk_Product extends Sk_Base_Api {
             'featured'       => $this->input->get('featured'),
             'nav_featured'   => $this->input->get('nav_featured'),
             'special_product'=> $this->input->get('special_product'),
+            'hot_sale'       => $this->input->get('hot_sale'),
             'min_price'      => $this->input->get('min_price'),
             'max_price'      => $this->input->get('max_price'),
             'sort'           => $this->input->get('sort'),
@@ -77,14 +78,14 @@ class Sk_Product extends Sk_Base_Api {
         $this->success($result['data']);
     }
 
-    /** GET /shopkart-api/products/recommended — special_product (fallback: featured). */
+    /** GET /shopkart-api/products/recommended — Curated for you (special_product). */
     public function recommended() {
         $this->_list_preset(['special_product' => 1], 'newest');
     }
 
-    /** GET /shopkart-api/products/new-arrivals */
+    /** GET /shopkart-api/products/new-arrivals — New Arrival (featured). */
     public function new_arrivals() {
-        $this->_list_preset([], 'newest');
+        $this->_list_preset(['featured' => 1], 'newest');
     }
 
     /** GET /shopkart-api/products/top-selling */
@@ -110,13 +111,6 @@ class Sk_Product extends Sk_Base_Api {
         }
 
         $result = $this->Sk_Product_model->get_all($filters, $limit, $offset);
-
-        // Recommended: if no special products, fall back to featured
-        if (!empty($extraFilters['special_product']) && (int)$result['total'] === 0) {
-            unset($filters['special_product']);
-            $filters['featured'] = 1;
-            $result = $this->Sk_Product_model->get_all($filters, $limit, $offset);
-        }
 
         $data = [
             'products'    => $result['data'],
