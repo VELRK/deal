@@ -307,10 +307,6 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
       <input type="hidden" name="weight" value="<?= htmlspecialchars((string)($p['weight'] ?? '')) ?>">
       <input type="hidden" name="sale_start_at" value="<?= htmlspecialchars($saleStartLocal) ?>">
       <input type="hidden" name="sale_end_at" value="<?= htmlspecialchars($saleEndLocal) ?>">
-      <?php if (!empty($p['hot_sale'])): ?>
-        <input type="hidden" name="hot_sale" value="1">
-      <?php endif; ?>
-
     </div>
 
     <!-- ── RIGHT COLUMN ────────────────────────────────────── -->
@@ -330,21 +326,17 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" name="featured" value="1" id="featuredCheck"
                    <?= $p['featured'] ? 'checked' : '' ?>>
-            <label class="form-check-label" for="featuredCheck">Featured / Homepage</label>
-          </div>
-          <div class="form-check form-switch mt-2">
-            <input class="form-check-input" type="checkbox" name="nav_featured" value="1" id="navFeaturedCheck"
-                   <?= !empty($p['nav_featured']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="navFeaturedCheck">
-              Show in Navbar Menu <small class="text-muted">(appears as product card inside nav dropdown)</small>
-            </label>
+            <label class="form-check-label" for="featuredCheck">New Arrival</label>
           </div>
           <div class="form-check form-switch mt-2">
             <input class="form-check-input" type="checkbox" name="special_product" value="1" id="specialProductCheck"
                    <?= !empty($p['special_product']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="specialProductCheck">
-              Our Special Product <small class="text-muted">(shows in "Our Special Products" section on homepage)</small>
-            </label>
+            <label class="form-check-label" for="specialProductCheck">Curated for you</label>
+          </div>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck"
+                   <?= !empty($p['hot_sale']) ? 'checked' : '' ?>>
+            <label class="form-check-label" for="hotSaleCheck">Offer Collections</label>
           </div>
         </div>
       </div>

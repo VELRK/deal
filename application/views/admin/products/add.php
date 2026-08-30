@@ -305,19 +305,15 @@ function opt($list, $val) {
           </div>
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" name="featured" value="1" id="featuredCheck">
-            <label class="form-check-label" for="featuredCheck">Featured / Homepage</label>
-          </div>
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" name="nav_featured" value="1" id="navFeaturedCheck">
-            <label class="form-check-label" for="navFeaturedCheck">
-              Show in Navbar Menu <small class="text-muted">(appears as product card inside nav dropdown)</small>
-            </label>
+            <label class="form-check-label" for="featuredCheck">New Arrival</label>
           </div>
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" name="special_product" value="1" id="specialProductCheck">
-            <label class="form-check-label" for="specialProductCheck">
-              Our Special Product <small class="text-muted">(shows in "Our Special Products" section on homepage)</small>
-            </label>
+            <label class="form-check-label" for="specialProductCheck">Curated for you</label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck">
+            <label class="form-check-label" for="hotSaleCheck">Offer Collections</label>
           </div>
         </div>
       </div>
