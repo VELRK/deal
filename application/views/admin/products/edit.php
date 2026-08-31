@@ -334,6 +334,7 @@ $saleEndLocal = !empty($p['sale_end_at']) ? date('Y-m-d\TH:i', strtotime($p['sal
             <label class="form-check-label" for="specialProductCheck">Curated for you</label>
           </div>
           <div class="form-check form-switch mt-2">
+            <input type="hidden" name="hot_sale" value="0">
             <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck"
                    <?= !empty($p['hot_sale']) ? 'checked' : '' ?>>
             <label class="form-check-label" for="hotSaleCheck">Offer Collections</label>

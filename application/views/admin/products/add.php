@@ -312,6 +312,7 @@ function opt($list, $val) {
             <label class="form-check-label" for="specialProductCheck">Curated for you</label>
           </div>
           <div class="form-check form-switch mb-2">
+            <input type="hidden" name="hot_sale" value="0">
             <input class="form-check-input" type="checkbox" name="hot_sale" value="1" id="hotSaleCheck">
             <label class="form-check-label" for="hotSaleCheck">Offer Collections</label>
           </div>

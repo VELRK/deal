@@ -285,9 +285,7 @@ class Products extends Sk_Base {
             'sale_price'       => (array_key_exists('sale_price', $_POST) && $this->input->post('sale_price') !== '')
                 ? $this->input->post('sale_price')
                 : ($product['sale_price'] ?? null),
-            'hot_sale'         => array_key_exists('hot_sale', $_POST)
-                ? ($this->input->post('hot_sale') ? 1 : 0)
-                : (int)($product['hot_sale'] ?? 0),
+            'hot_sale'         => $this->input->post('hot_sale') ? 1 : 0,
             'sale_start_at'    => array_key_exists('sale_start_at', $_POST)
                 ? $this->_normalize_datetime_input($this->input->post('sale_start_at'))
                 : ($product['sale_start_at'] ?? null),
