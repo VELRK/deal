@@ -23,7 +23,12 @@ function ProductThumbs() {
   const [linked, setLinked] = useState(false);
 
   const { products, loading } = useProducts({ sort: "newest", limit: 6 });
-  const cards = products.map(toProductCard);
+  const cards = products.map(toProductCard).sort((a, b) => {
+    const aOut = a.isStockOut || a.inStock === false;
+    const bOut = b.isStockOut || b.inStock === false;
+    if (aOut !== bOut) return aOut ? 1 : -1;
+    return 0;
+  });
 
   useEffect(() => {
     if (!linked || !mainRef.current || !thumbRef.current) return;

@@ -146,22 +146,29 @@ export function filterReducer(
 
     case "SORT_PRODUCTS": {
       const sorted = [...state.filtered];
-      switch (state.sortingOption) {
-        case "Price Ascending":
-          sorted.sort((a, b) => a.price - b.price);
-          break;
-        case "Price Descending":
-          sorted.sort((a, b) => b.price - a.price);
-          break;
-        case "Title Ascending":
-          sorted.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        case "Title Descending":
-          sorted.sort((a, b) => b.name.localeCompare(a.name));
-          break;
-        default:
-          break;
-      }
+      sorted.sort((a, b) => {
+        const aOut = productOutOfStock(a);
+        const bOut = productOutOfStock(b);
+        
+        // Out of stock items always go last
+        if (aOut !== bOut) {
+          return aOut ? 1 : -1;
+        }
+
+        // Apply secondary sorting based on the selected option
+        switch (state.sortingOption) {
+          case "Price Ascending":
+            return a.price - b.price;
+          case "Price Descending":
+            return b.price - a.price;
+          case "Title Ascending":
+            return a.name.localeCompare(b.name);
+          case "Title Descending":
+            return b.name.localeCompare(a.name);
+          default:
+            return 0;
+        }
+      });
       return { ...state, sorted, currentPage: 1 };
     }
 

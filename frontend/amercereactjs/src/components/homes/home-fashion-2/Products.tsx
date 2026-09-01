@@ -5,7 +5,12 @@ import { useProducts, toProductCard } from "@/hooks/useApi";
 function Products() {
   const { products, loading } = useProducts({ sort: "newest", limit: 16 });
 
-  const cards = products.map(toProductCard);
+  const cards = products.map(toProductCard).sort((a, b) => {
+    const aOut = a.isStockOut || a.inStock === false;
+    const bOut = b.isStockOut || b.inStock === false;
+    if (aOut !== bOut) return aOut ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="flat-spacing pt-4 pb-5 flat-animate-tab">

@@ -32,11 +32,7 @@ export default function Page() {
 
   const title = category?.name ?? "Incense Cone Collection";
 
-  const bgImage = category?.image_url
-    ? category.image_url
-    : category?.image
-      ? apiImageUrl(category.image)
-      : "https://plain-apac-prod-public.komododecks.com/202607/04/kRRb75cQ5wV0IBnHrw04/image.png";
+  const bgImage = "https://askeva.blr1.cdn.digitaloceanspaces.com/wa.syncr.in/chatbot/6965dd5b1e0e7e164362e98d-2026-09-01T11:25:33.764Z-whole%20product%20banner%20lite.jpg%20(1).jpeg";
 
   return (
     <>
@@ -180,7 +176,7 @@ export default function Page() {
             }}
           ></div>
           <div className="shop-banner-content">
-            <h1>Discover<br />golden2deal's<br />{category?.name ? `${category.name} Collection` : "Incense Cone Collection"}</h1>
+            <h1>Discover<br />2Deal's<br />{category?.name ? `${category.name} Collection` : "Incense Cone Collection"}</h1>
             <h4>Made From Sacred Temple Flowers</h4>
 
             <div className="shop-banner-icons">

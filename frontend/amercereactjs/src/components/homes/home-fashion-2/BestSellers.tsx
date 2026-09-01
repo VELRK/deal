@@ -126,7 +126,12 @@ function BestSellers() {
   const activeTab = "popular";
   const { products, loading } = useProducts({ sort: activeTab, limit: 16 });
 
-  const cards = products.map(toProductCard);
+  const cards = products.map(toProductCard).sort((a, b) => {
+    const aOut = a.isStockOut || a.inStock === false;
+    const bOut = b.isStockOut || b.inStock === false;
+    if (aOut !== bOut) return aOut ? 1 : -1;
+    return 0;
+  });
 
   // Fallback seamless pattern or similar if desired.
   const bgPattern = `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,10 C20,20 10,20 10,30 C10,40 20,40 30,50 C40,40 50,40 50,30 C50,20 40,20 30,10 Z' fill='rgba(255, 255, 255, 0.08)' /%3E%3C/svg%3E")`;

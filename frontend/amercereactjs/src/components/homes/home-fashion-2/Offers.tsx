@@ -7,7 +7,12 @@ function Offers() {
   // We can fetch "newest" for now, or maybe a specific filter if the backend supports it.
   const { products, loading } = useProducts({ sort: "newest", limit: 10 });
 
-  const cards = products.map(toProductCard);
+  const cards = products.map(toProductCard).sort((a, b) => {
+    const aOut = a.isStockOut || a.inStock === false;
+    const bOut = b.isStockOut || b.inStock === false;
+    if (aOut !== bOut) return aOut ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="flat-spacing">
