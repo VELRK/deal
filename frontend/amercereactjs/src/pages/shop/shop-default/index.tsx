@@ -31,7 +31,7 @@ export default function Page() {
   }, [categorySlug]);
 
   const title = category?.name ?? "Incense Cone Collection";
-
+  //image added banner
   const bgImage = "https://askeva.blr1.cdn.digitaloceanspaces.com/wa.syncr.in/chatbot/6965dd5b1e0e7e164362e98d-2026-09-01T11:25:33.764Z-whole%20product%20banner%20lite.jpg%20(1).jpeg";
 
   return (
