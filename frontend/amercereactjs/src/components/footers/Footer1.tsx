@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import FooterAccordionWrapper, {
@@ -49,28 +49,18 @@ export default function Footer1({ hideTopRule = false }: Footer1Props) {
                   </a>
                   <ul className="tf-social-icon-2">
                     <li>
-                      <a href="https://www.facebook.com/" target="_blank">
+                      <a href="https://www.facebook.com/people/2-Deal/61561777914233/" target="_blank" rel="noopener noreferrer">
                         <i className="icon icon-FacebookLogo" />
                       </a>
                     </li>
                     <li>
-                      <a href="https://x.com/" target="_blank">
-                        <i className="icon icon-XLogo" />
-                      </a>
-                    </li>
-                    <li>
-                      <a href="https://www.instagram.com/" target="_blank">
+                      <a href="https://www.instagram.com/2deal.my/" target="_blank" rel="noopener noreferrer">
                         <i className="icon icon-InstagramLogo" />
                       </a>
                     </li>
                     <li>
-                      <a href="https://www.tiktok.com/" target="_blank">
+                      <a href="https://www.tiktok.com/@dileep.krish?_r=1&_t=ZS-99bwWWlkBcn" target="_blank" rel="noopener noreferrer">
                         <i className="icon icon-TiktokLogo" />
-                      </a>
-                    </li>
-                    <li>
-                      <a href="https://www.snapchat.com/" target="_blank">
-                        <i className="icon icon-SnapchatLogo" />
                       </a>
                     </li>
                   </ul>

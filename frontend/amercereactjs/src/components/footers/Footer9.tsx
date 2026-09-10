@@ -104,31 +104,73 @@ export default function Footer9({
         .luxury-social-list {
           display: flex !important;
           align-items: center !important;
-          gap: 10px !important;
+          gap: 12px !important;
           list-style: none !important;
           padding: 0 !important;
           margin: 0 !important;
         }
 
         .luxury-social-link {
-          display: flex !important;
+          display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
-          width: 34px !important;
-          height: 34px !important;
-          background-color: #3ec1bc !important;
-          color: #ffffff !important;
+          width: 38px !important;
+          height: 38px !important;
           border-radius: 50% !important;
-          font-size: 14px !important;
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
           text-decoration: none !important;
+          position: relative !important;
+          overflow: hidden !important;
+          flex-shrink: 0 !important;
         }
 
-        .luxury-social-link:hover {
-          background-color: #3ec1bc !important;
-          transform: translateY(-3px) !important;
+        .luxury-social-link svg {
+          display: block;
+          transition: transform 0.25s ease;
+        }
+
+        /* Real Instagram Brand Color & Glow */
+        .luxury-social-link-instagram {
+          background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%) !important;
           color: #ffffff !important;
-          box-shadow: 0 4px 8px rgba(62, 193, 188, 0.25) !important;
+          box-shadow: 0 4px 10px rgba(214, 36, 159, 0.3) !important;
+        }
+        .luxury-social-link-instagram:hover {
+          transform: translateY(-3px) scale(1.08) !important;
+          box-shadow: 0 7px 18px rgba(214, 36, 159, 0.55) !important;
+        }
+        .luxury-social-link-instagram:hover svg {
+          transform: scale(1.1);
+        }
+
+        /* Real Facebook Brand Color & Glow */
+        .luxury-social-link-facebook {
+          background-color: #1877F2 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3) !important;
+        }
+        .luxury-social-link-facebook:hover {
+          background-color: #166fe5 !important;
+          transform: translateY(-3px) scale(1.08) !important;
+          box-shadow: 0 7px 18px rgba(24, 119, 242, 0.55) !important;
+        }
+        .luxury-social-link-facebook:hover svg {
+          transform: scale(1.1);
+        }
+
+        /* Real TikTok Brand Color & Glow */
+        .luxury-social-link-tiktok {
+          background-color: #010101 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35) !important;
+        }
+        .luxury-social-link-tiktok:hover {
+          background-color: #000000 !important;
+          transform: translateY(-3px) scale(1.08) !important;
+          box-shadow: -2px -2px 12px rgba(37, 244, 238, 0.65), 2px 2px 12px rgba(254, 44, 85, 0.65) !important;
+        }
+        .luxury-social-link-tiktok:hover svg {
+          transform: scale(1.1);
         }
 
         .luxury-footer-heading {
@@ -314,18 +356,82 @@ export default function Footer9({
 
                   <ul className="luxury-social-list">
                     <li>
-                      <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="luxury-social-link">
-                        <i className="icon icon-InstagramLogo" />
+                      <a
+                        href="https://www.instagram.com/2deal.my/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="luxury-social-link luxury-social-link-instagram"
+                        aria-label="Instagram - @2deal.my"
+                        title="Instagram: @2deal.my"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                        </svg>
                       </a>
                     </li>
                     <li>
-                      <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="luxury-social-link">
-                        <i className="icon icon-FacebookLogo" />
+                      <a
+                        href="https://www.facebook.com/people/2-Deal/61561777914233/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="luxury-social-link luxury-social-link-facebook"
+                        aria-label="Facebook - 2-Deal"
+                        title="Facebook: 2-Deal"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="#ffffff"
+                        >
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                        </svg>
                       </a>
                     </li>
                     <li>
-                      <a href="https://x.com/" target="_blank" rel="noopener noreferrer" className="luxury-social-link">
-                        <i className="icon icon-XLogo" />
+                      <a
+                        href="https://www.tiktok.com/@dileep.krish?_r=1&_t=ZS-99bwWWlkBcn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="luxury-social-link luxury-social-link-tiktok"
+                        aria-label="TikTok - @dileep.krish"
+                        title="TikTok: @dileep.krish"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          {/* Authentic TikTok Cyan offset layer */}
+                          <path
+                            d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.89 2.89 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.3 0 .59.04.88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68 6.34 6.34 0 0 0 9.34 22a6.33 6.33 0 0 0 6.34-6.32V8.2a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.86.37z"
+                            fill="#25F4EE"
+                            transform="translate(-0.8, -0.4)"
+                          />
+                          {/* Authentic TikTok Magenta/Red offset layer */}
+                          <path
+                            d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.89 2.89 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.3 0 .59.04.88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68 6.34 6.34 0 0 0 9.34 22a6.33 6.33 0 0 0 6.34-6.32V8.2a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.86.37z"
+                            fill="#FE2C55"
+                            transform="translate(0.8, 0.4)"
+                          />
+                          {/* TikTok crisp white front layer */}
+                          <path
+                            d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.89 2.89 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.3 0 .59.04.88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68 6.34 6.34 0 0 0 9.34 22a6.33 6.33 0 0 0 6.34-6.32V8.2a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.86.37z"
+                            fill="#FFFFFF"
+                          />
+                        </svg>
                       </a>
                     </li>
                   </ul>

@@ -12,7 +12,7 @@ export function stripPhoneDigits(value: string): string {
 /**
  * National mobile digits after removing +60 / leading 0.
  * 9 digits → local 01XXXXXXXX (10-digit)
- * 10 digits → local 01XXXXXXXXX (11-digit, e.g. 011-1086 1982)
+ * 10 digits → local 01XXXXXXXXX (11-digit, e.g. 011-1111 1111)
  */
 export function malaysiaNationalMobile(input: string): string {
   const d = stripPhoneDigits(input);
@@ -24,7 +24,7 @@ export function malaysiaNationalMobile(input: string): string {
   return d;
 }
 
-/** Normalize to E.164 digits without + (e.g. 60123456789 or 601110861982). */
+/** Normalize to E.164 digits without + (e.g. 60123456789 or 601111111111). */
 export function toMalaysiaE164(input: string): string {
   const mobile = malaysiaNationalMobile(input);
   if (!mobile) return "";
@@ -36,7 +36,7 @@ export function toMalaysiaE164(input: string): string {
  * Accepts (hyphens/spaces ignored):
  * - 01XXXXXXXX (10 digits) / 01XXXXXXXXX (11 digits)
  * - 601XXXXXXXX / +601XXXXXXXX / 601XXXXXXXXX
- * - 1XXXXXXXX or 1XXXXXXXXX beside the +60 prefix (e.g. 111-086 1982)
+ * - 1XXXXXXXX or 1XXXXXXXXX beside the +60 prefix (e.g. 111-111 1111)
  */
 export function isValidMalaysiaMobile(input: string): boolean {
   const mobile = malaysiaNationalMobile(input);
@@ -47,7 +47,7 @@ export function isValidMalaysiaMobile(input: string): boolean {
   );
 }
 
-/** Local display beside +60: 12-345 6789 or 111-086 1982 (max 10 national digits). */
+/** Local display beside +60: 12-345 6789 or 111-111 1111 (max 10 national digits). */
 export function formatMalaysiaDisplay(digits: string): string {
   const d = stripPhoneDigits(digits).replace(/^0+/, "").slice(0, 10);
   if (d.length <= 3) return d;

@@ -4,7 +4,6 @@ import Shop from "@/components/shop/shop-default/Shop";
 import PageMeta from "@/components/common/PageMeta";
 import { categoriesAPI } from "@/services/api";
 import type { ApiCategory } from "@/services/api";
-import { apiImageUrl } from "@/hooks/useApi";
 
 export default function Page() {
   const [searchParams] = useSearchParams();
