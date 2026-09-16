@@ -48,6 +48,7 @@ class Settings extends Sk_Base {
             'jt_express_sender_postcode',
             'isms_username', 'isms_password', 'isms_api_key', 'isms_sender_id', 'isms_message',
             'isms_country_code', 'isms_otp_interval', 'isms_test_otp', 'isms_test_phone',
+            'non_delivery_pincode_ranges',
         ];
         $raw_fields = [
             'isms_password', 'isms_api_key', 'smtp_pass', 'razorpay_key_secret',
@@ -120,6 +121,39 @@ class Settings extends Sk_Base {
 
         $og = $this->upload_file('seo_og_image_file', 'seo');
         if ($og) $data['seo_og_image'] = $og;
+
+        // Rebuild non-delivery pincode ranges authoritatively from per-row From/To
+        // number inputs (hidden textarea is kept only as legacy fallback).
+        $fromRaw = $this->input->post('pincode_from', TRUE);
+        $toRaw   = $this->input->post('pincode_to',   TRUE);
+        $ranges  = [];
+        if (is_array($fromRaw) && is_array($toRaw)) {
+            $count = max(count($fromRaw), count($toRaw));
+            for ($i = 0; $i < $count; $i++) {
+                $f = isset($fromRaw[$i]) ? trim((string)$fromRaw[$i]) : '';
+                $t = isset($toRaw[$i])   ? trim((string)$toRaw[$i])   : '';
+                if ($f === '' && $t === '') continue;
+                if ($f !== '' && $t !== '') {
+                    $fs = (int)$f;
+                    $ts = (int)$t;
+                    if ($ts < $fs) { [$fs, $ts] = [$ts, $fs]; }
+                    $ranges[] = $fs . ' to ' . $ts;
+                    continue;
+                }
+                if ($f !== '') {
+                    $fn = (int)$f;
+                    $ranges[] = $fn . ' to ' . $fn;
+                    continue;
+                }
+                if ($t !== '') {
+                    $tn = (int)$t;
+                    $ranges[] = $tn . ' to ' . $tn;
+                }
+            }
+            $data['non_delivery_pincode_ranges'] = implode("\n", $ranges);
+        } elseif (isset($data['non_delivery_pincode_ranges'])) {
+            $data['non_delivery_pincode_ranges'] = trim((string)$data['non_delivery_pincode_ranges']);
+        }
 
         $this->Sk_Admin_model->save_settings($data);
         // Bust storefront settings/SEO API cache so site_name updates immediately

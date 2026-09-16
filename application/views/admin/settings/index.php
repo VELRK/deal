@@ -724,13 +724,13 @@
     row.className = 'pincode-range-row row g-2 mb-2 align-items-center';
     row.innerHTML =
       '<div class="col-md-4">' +
-        '<input type="number" class="form-control pincode-from" placeholder="From" min="0" value="' + (fromVal != null ? fromVal : '') + '">' +
+        '<input type="number" name="pincode_from[]" class="form-control pincode-from" placeholder="From" min="0" value="' + (fromVal != null ? fromVal : '') + '">' +
       '</div>' +
       '<div class="col-auto d-flex align-items-center justify-content-center" style="padding-top:2px;">' +
         '<span class="text-muted fw-semibold">to</span>' +
       '</div>' +
       '<div class="col-md-4">' +
-        '<input type="number" class="form-control pincode-to" placeholder="To" min="0" value="' + (toVal != null ? toVal : '') + '">' +
+        '<input type="number" name="pincode_to[]" class="form-control pincode-to" placeholder="To" min="0" value="' + (toVal != null ? toVal : '') + '">' +
       '</div>' +
       '<div class="col-auto">' +
         '<button type="button" class="btn btn-outline-danger btn-sm remove-pincode-range" title="Remove this range">' +
