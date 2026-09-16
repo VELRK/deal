@@ -16,6 +16,7 @@ import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, roya
 import { removeLineFromCart, removePaidProductsFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
+import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
 import { quotePincodeShipping, pincodeServiceMessage, type PincodeShipSettings } from "@/utils/pincodeShipping";
 
 /* Razorpay global type */
