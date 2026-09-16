@@ -69,6 +69,16 @@
               <input type="number" name="free_shipping_above" class="form-control" value="<?= $settings['free_shipping_above'] ?? '999' ?>">
             </div>
             <div class="col-12">
+              <label class="form-label">Non-delivery pincode ranges</label>
+              <textarea name="non_delivery_pincode_ranges" id="nonDeliveryPincodeRanges" class="form-control d-none" rows="4"><?= htmlspecialchars($settings['non_delivery_pincode_ranges'] ?? '') ?></textarea>
+              <div id="pincodeRangesContainer">
+              </div>
+              <button type="button" id="addPincodeRangeBtn" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-plus-circle me-1"></i>Add Pincode Range
+              </button>
+              <div class="form-text mt-2">Any pincode in these ranges will be blocked from delivery. e.g. From 1 To 30 means pincodes 1 through 30 are not delivered.</div>
+            </div>
+            <div class="col-12">
               <div class="alert alert-secondary small mb-0 py-2">
                 Phone, email and address are edited in the yellow box above this form (always visible).
               </div>
@@ -651,5 +661,109 @@
       tabInput.value = target.replace('#tab-', '');
     });
   });
+})();
+
+(function () {
+  var hiddenField = document.getElementById('nonDeliveryPincodeRanges');
+  var container = document.getElementById('pincodeRangesContainer');
+  var addBtn = document.getElementById('addPincodeRangeBtn');
+  if (!hiddenField || !container || !addBtn) return;
+
+  function parseRanges(raw) {
+    var ranges = [];
+    var text = (raw || '').trim();
+    if (text === '') return ranges;
+    var parts = text.split(/[\r\n,;]+/);
+    for (var i = 0; i < parts.length; i++) {
+      var token = (parts[i] || '').trim();
+      if (token === '') continue;
+      var m = token.match(/^\s*(\d+)\s*(?:to|-)\s*(\d+)\s*$/i);
+      if (m) {
+        var s = parseInt(m[1], 10);
+        var e = parseInt(m[2], 10);
+        if (e < s) { var t = s; s = e; e = t; }
+        ranges.push([s, e]);
+        continue;
+      }
+      var m2 = token.match(/^\s*(\d+)\s*$/);
+      if (m2) {
+        var n = parseInt(m2[1], 10);
+        ranges.push([n, n]);
+      }
+    }
+    return ranges;
+  }
+
+  function serializeRanges() {
+    var rows = container.querySelectorAll('.pincode-range-row');
+    var lines = [];
+    for (var i = 0; i < rows.length; i++) {
+      var from = rows[i].querySelector('.pincode-from').value.trim();
+      var to = rows[i].querySelector('.pincode-to').value.trim();
+      if (from === '' && to === '') continue;
+      if (from !== '' && to !== '') {
+        var s = parseInt(from, 10);
+        var e = parseInt(to, 10);
+        if (!isNaN(s) && !isNaN(e)) {
+          if (e < s) { var t = s; s = e; e = t; }
+          lines.push(s + ' to ' + e);
+        }
+      } else if (from !== '') {
+        var n = parseInt(from, 10);
+        if (!isNaN(n)) lines.push(n + ' to ' + n);
+      } else if (to !== '') {
+        var n2 = parseInt(to, 10);
+        if (!isNaN(n2)) lines.push(n2 + ' to ' + n2);
+      }
+    }
+    hiddenField.value = lines.join('\n');
+  }
+
+  function addRow(fromVal, toVal) {
+    var row = document.createElement('div');
+    row.className = 'pincode-range-row row g-2 mb-2 align-items-center';
+    row.innerHTML =
+      '<div class="col-md-4">' +
+        '<input type="number" class="form-control pincode-from" placeholder="From" min="0" value="' + (fromVal != null ? fromVal : '') + '">' +
+      '</div>' +
+      '<div class="col-auto d-flex align-items-center justify-content-center" style="padding-top:2px;">' +
+        '<span class="text-muted fw-semibold">to</span>' +
+      '</div>' +
+      '<div class="col-md-4">' +
+        '<input type="number" class="form-control pincode-to" placeholder="To" min="0" value="' + (toVal != null ? toVal : '') + '">' +
+      '</div>' +
+      '<div class="col-auto">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm remove-pincode-range" title="Remove this range">' +
+          '<i class="bi bi-trash"></i>' +
+        '</button>' +
+      '</div>';
+    container.appendChild(row);
+    row.querySelector('.remove-pincode-range').addEventListener('click', function () {
+      row.remove();
+      serializeRanges();
+    });
+    row.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('input', serializeRanges);
+      inp.addEventListener('change', serializeRanges);
+    });
+  }
+
+  var initialRanges = parseRanges(hiddenField.value);
+  if (initialRanges.length === 0) {
+    addRow('', '');
+  } else {
+    for (var i = 0; i < initialRanges.length; i++) {
+      addRow(initialRanges[i][0], initialRanges[i][1]);
+    }
+  }
+
+  addBtn.addEventListener('click', function () {
+    addRow('', '');
+  });
+
+  var form = hiddenField.closest('form');
+  if (form) {
+    form.addEventListener('submit', serializeRanges);
+  }
 })();
 </script>

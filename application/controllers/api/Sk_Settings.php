@@ -16,6 +16,7 @@ class Sk_Settings extends Sk_Base_Api {
             'customer_wallet_enabled', 'customer_wallet_discount_percent', 'customer_wallet_discount_min_rm',
             'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics',
+            'non_delivery_pincode_ranges',
         ])->get('settings')->result_array();
 
         $map = [];
@@ -51,6 +52,29 @@ class Sk_Settings extends Sk_Base_Api {
         if (!empty($map['seo_og_image']) && !preg_match('#^https?://#i', $map['seo_og_image'])) {
             $map['seo_og_image'] = rtrim(base_url(), '/') . '/' . ltrim($map['seo_og_image'], '/');
         }
+
+        $nonDeliveryRaw = trim((string)($map['non_delivery_pincode_ranges'] ?? ''));
+        $nonDeliveryList = [];
+        if ($nonDeliveryRaw !== '') {
+            $parts = preg_split('/[\r\n,;]+/', $nonDeliveryRaw);
+            foreach ($parts as $part) {
+                $token = trim((string)$part);
+                if ($token === '') continue;
+                if (preg_match('/^\s*(\d+)\s*(?:to|-)\s*(\d+)\s*$/i', $token, $m)) {
+                    $start = (int)$m[1];
+                    $end = (int)$m[2];
+                    if ($end < $start) { [$start, $end] = [$end, $start]; }
+                    $nonDeliveryList[] = ['from' => $start, 'to' => $end];
+                    continue;
+                }
+                if (preg_match('/^\s*(\d+)\s*$/', $token, $m)) {
+                    $n = (int)$m[1];
+                    $nonDeliveryList[] = ['from' => $n, 'to' => $n];
+                }
+            }
+        }
+        $map['non_delivery_pincode_ranges_raw'] = $nonDeliveryRaw;
+        $map['non_delivery_pincodes'] = $nonDeliveryList;
 
         $this->set_cache('site_settings_v2', $map);
         $this->success($map);
