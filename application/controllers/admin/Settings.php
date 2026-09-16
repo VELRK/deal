@@ -123,51 +123,19 @@ class Settings extends Sk_Base {
         $og = $this->upload_file('seo_og_image_file', 'seo');
         if ($og) $data['seo_og_image'] = $og;
 
-        // Rebuild non-delivery pincode ranges authoritatively from per-row From/To
-        // number inputs (hidden textarea is kept only as legacy fallback).
+        // One From–To list: empty extra/free = non-delivery; extra or free-above = extra-charge area.
+        $this->load->helper('sk_pincode_shipping');
         $fromRaw = $this->input->post('pincode_from', TRUE);
         $toRaw   = $this->input->post('pincode_to',   TRUE);
-        $ranges  = [];
+        $feeRaw  = $this->input->post('pincode_extra_charge', TRUE);
+        $freeRaw = $this->input->post('pincode_free_above', TRUE);
         if (is_array($fromRaw) && is_array($toRaw)) {
+            $blocked = [];
+            $extraRows = [];
             $count = max(count($fromRaw), count($toRaw));
             for ($i = 0; $i < $count; $i++) {
                 $f = isset($fromRaw[$i]) ? trim((string)$fromRaw[$i]) : '';
                 $t = isset($toRaw[$i])   ? trim((string)$toRaw[$i])   : '';
-                if ($f === '' && $t === '') continue;
-                if ($f !== '' && $t !== '') {
-                    $fs = (int)$f;
-                    $ts = (int)$t;
-                    if ($ts < $fs) { [$fs, $ts] = [$ts, $fs]; }
-                    $ranges[] = $fs . ' to ' . $ts;
-                    continue;
-                }
-                if ($f !== '') {
-                    $fn = (int)$f;
-                    $ranges[] = $fn . ' to ' . $fn;
-                    continue;
-                }
-                if ($t !== '') {
-                    $tn = (int)$t;
-                    $ranges[] = $tn . ' to ' . $tn;
-                }
-            }
-            $data['non_delivery_pincode_ranges'] = implode("\n", $ranges);
-        } elseif (isset($data['non_delivery_pincode_ranges'])) {
-            $data['non_delivery_pincode_ranges'] = trim((string)$data['non_delivery_pincode_ranges']);
-        }
-
-        // Extra-charge pincode areas: each From–To has its own extra fee + free-above.
-        $this->load->helper('sk_pincode_shipping');
-        $exFrom = $this->input->post('extra_pincode_from', TRUE);
-        $exTo   = $this->input->post('extra_pincode_to', TRUE);
-        $exFee  = $this->input->post('extra_pincode_charge', TRUE);
-        $exFree = $this->input->post('extra_pincode_free_above', TRUE);
-        if (is_array($exFrom) && is_array($exTo)) {
-            $extraRows = [];
-            $count = max(count($exFrom), count($exTo));
-            for ($i = 0; $i < $count; $i++) {
-                $f = isset($exFrom[$i]) ? trim((string)$exFrom[$i]) : '';
-                $t = isset($exTo[$i])   ? trim((string)$exTo[$i])   : '';
                 if ($f === '' && $t === '') {
                     continue;
                 }
@@ -176,18 +144,30 @@ class Settings extends Sk_Base {
                 if ($ts < $fs) {
                     [$fs, $ts] = [$ts, $fs];
                 }
-                $extraRows[] = [
-                    'from'         => $fs,
-                    'to'           => $ts,
-                    'extra_charge' => isset($exFee[$i]) ? (float)$exFee[$i] : 0,
-                    'free_above'   => isset($exFree[$i]) ? (float)$exFree[$i] : 0,
-                ];
+                $extraFee = (isset($feeRaw[$i]) && is_numeric($feeRaw[$i])) ? (float)$feeRaw[$i] : 0.0;
+                $freeAbove = (isset($freeRaw[$i]) && is_numeric($freeRaw[$i])) ? (float)$freeRaw[$i] : 0.0;
+                if ($extraFee > 0 || $freeAbove > 0) {
+                    $extraRows[] = [
+                        'from'         => $fs,
+                        'to'           => $ts,
+                        'extra_charge' => $extraFee,
+                        'free_above'   => $freeAbove,
+                    ];
+                    continue;
+                }
+                $blocked[] = $fs . ' to ' . $ts;
             }
+            $data['non_delivery_pincode_ranges'] = implode("\n", $blocked);
             $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges($extraRows);
-        } elseif (isset($data['pincode_extra_charge_ranges'])) {
-            $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges(
-                sk_pincode_parse_extra_ranges($data['pincode_extra_charge_ranges'])
-            );
+        } else {
+            if (isset($data['non_delivery_pincode_ranges'])) {
+                $data['non_delivery_pincode_ranges'] = trim((string)$data['non_delivery_pincode_ranges']);
+            }
+            if (isset($data['pincode_extra_charge_ranges'])) {
+                $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges(
+                    sk_pincode_parse_extra_ranges($data['pincode_extra_charge_ranges'])
+                );
+            }
         }
 
         $this->Sk_Admin_model->save_settings($data);
