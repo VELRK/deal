@@ -198,11 +198,17 @@ class Sk_Order extends Sk_Base_Api {
         }
 
         // Normal shipping from admin settings (threshold uses goods after promo — same as web).
+        // Extra-charge pincode areas use their own extra fee + free-above; other postcodes keep old rules.
         // Wallet free delivery only when the admin checkbox is on.
+        $this->load->helper('sk_pincode_shipping');
         $goodsAfterPromo = max(0, $subtotal - $code_discount);
-        $shipping = ($goodsAfterPromo <= 0)
-            ? 0
-            : ($goodsAfterPromo >= ($settings['free_shipping_above'] ?? 999) ? 0 : ($settings['shipping_charge'] ?? 50));
+        $shipQuote = sk_pincode_shipping_quote($addr['pincode'] ?? '', $goodsAfterPromo, $settings);
+        if (empty($shipQuote['deliverable'])) {
+            return $this->error($shipQuote['message'] ?: 'Sorry, we do not deliver to this postcode.', 400, [
+                'pincode' => $shipQuote,
+            ]);
+        }
+        $shipping = (float)$shipQuote['shipping'];
         if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
             $shipping = 0;
         }

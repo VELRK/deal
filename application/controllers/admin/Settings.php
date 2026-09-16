@@ -49,6 +49,7 @@ class Settings extends Sk_Base {
             'isms_username', 'isms_password', 'isms_api_key', 'isms_sender_id', 'isms_message',
             'isms_country_code', 'isms_otp_interval', 'isms_test_otp', 'isms_test_phone',
             'non_delivery_pincode_ranges',
+            'pincode_extra_charge_ranges',
         ];
         $raw_fields = [
             'isms_password', 'isms_api_key', 'smtp_pass', 'razorpay_key_secret',
@@ -153,6 +154,40 @@ class Settings extends Sk_Base {
             $data['non_delivery_pincode_ranges'] = implode("\n", $ranges);
         } elseif (isset($data['non_delivery_pincode_ranges'])) {
             $data['non_delivery_pincode_ranges'] = trim((string)$data['non_delivery_pincode_ranges']);
+        }
+
+        // Extra-charge pincode areas: each From–To has its own extra fee + free-above.
+        $this->load->helper('sk_pincode_shipping');
+        $exFrom = $this->input->post('extra_pincode_from', TRUE);
+        $exTo   = $this->input->post('extra_pincode_to', TRUE);
+        $exFee  = $this->input->post('extra_pincode_charge', TRUE);
+        $exFree = $this->input->post('extra_pincode_free_above', TRUE);
+        if (is_array($exFrom) && is_array($exTo)) {
+            $extraRows = [];
+            $count = max(count($exFrom), count($exTo));
+            for ($i = 0; $i < $count; $i++) {
+                $f = isset($exFrom[$i]) ? trim((string)$exFrom[$i]) : '';
+                $t = isset($exTo[$i])   ? trim((string)$exTo[$i])   : '';
+                if ($f === '' && $t === '') {
+                    continue;
+                }
+                $fs = $f !== '' ? (int)$f : (int)$t;
+                $ts = $t !== '' ? (int)$t : $fs;
+                if ($ts < $fs) {
+                    [$fs, $ts] = [$ts, $fs];
+                }
+                $extraRows[] = [
+                    'from'         => $fs,
+                    'to'           => $ts,
+                    'extra_charge' => isset($exFee[$i]) ? (float)$exFee[$i] : 0,
+                    'free_above'   => isset($exFree[$i]) ? (float)$exFree[$i] : 0,
+                ];
+            }
+            $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges($extraRows);
+        } elseif (isset($data['pincode_extra_charge_ranges'])) {
+            $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges(
+                sk_pincode_parse_extra_ranges($data['pincode_extra_charge_ranges'])
+            );
         }
 
         $this->Sk_Admin_model->save_settings($data);

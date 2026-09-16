@@ -9,6 +9,7 @@ class Sk_Settings extends Sk_Base_Api {
         $cached = $this->get_cache('site_settings_v2', 300);
         if ($cached !== null) return $this->success($cached);
 
+        $this->load->helper('sk_pincode_shipping');
         $rows = $this->db->where_in('key', [
             'newsletter_popup_enabled', 'site_name', 'currency_symbol', 'currency_code',
             'top_bar_enabled', 'top_bar_text', 'whatsapp_enabled', 'whatsapp_number',
@@ -17,6 +18,7 @@ class Sk_Settings extends Sk_Base_Api {
             'meta_title', 'meta_desc', 'meta_keywords', 'seo_og_image',
             'head_scripts', 'footer_scripts', 'google_analytics',
             'non_delivery_pincode_ranges',
+            'pincode_extra_charge_ranges',
         ])->get('settings')->result_array();
 
         $map = [];
@@ -54,27 +56,12 @@ class Sk_Settings extends Sk_Base_Api {
         }
 
         $nonDeliveryRaw = trim((string)($map['non_delivery_pincode_ranges'] ?? ''));
-        $nonDeliveryList = [];
-        if ($nonDeliveryRaw !== '') {
-            $parts = preg_split('/[\r\n,;]+/', $nonDeliveryRaw);
-            foreach ($parts as $part) {
-                $token = trim((string)$part);
-                if ($token === '') continue;
-                if (preg_match('/^\s*(\d+)\s*(?:to|-)\s*(\d+)\s*$/i', $token, $m)) {
-                    $start = (int)$m[1];
-                    $end = (int)$m[2];
-                    if ($end < $start) { [$start, $end] = [$end, $start]; }
-                    $nonDeliveryList[] = ['from' => $start, 'to' => $end];
-                    continue;
-                }
-                if (preg_match('/^\s*(\d+)\s*$/', $token, $m)) {
-                    $n = (int)$m[1];
-                    $nonDeliveryList[] = ['from' => $n, 'to' => $n];
-                }
-            }
-        }
         $map['non_delivery_pincode_ranges_raw'] = $nonDeliveryRaw;
-        $map['non_delivery_pincodes'] = $nonDeliveryList;
+        $map['non_delivery_pincodes'] = sk_pincode_parse_block_ranges($nonDeliveryRaw);
+
+        $extraRaw = trim((string)($map['pincode_extra_charge_ranges'] ?? ''));
+        $map['pincode_extra_charge_ranges_raw'] = $extraRaw;
+        $map['pincode_extra_charge_ranges'] = sk_pincode_parse_extra_ranges($extraRaw);
 
         $this->set_cache('site_settings_v2', $map);
         $this->success($map);

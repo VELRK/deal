@@ -12,6 +12,32 @@ class Sk_Shipping extends Sk_Base_Api {
     }
 
     /**
+     * GET/POST /shopkart-api/shipping/quote
+     * Quote shipping for a pincode + goods amount. Public — used by checkout later.
+     * GET query: pincode, amount
+     * POST body: { pincode, amount }
+     */
+    public function quote() {
+        $this->load->helper('sk_pincode_shipping');
+        $body = $this->body();
+        $pincode = trim((string)($this->input->get('pincode')
+            ?? $this->input->get('postcode')
+            ?? $body['pincode']
+            ?? $body['postcode']
+            ?? ''));
+        $amount = $this->input->get('amount');
+        if ($amount === null || $amount === '') {
+            $amount = $body['amount'] ?? $body['goods_amount'] ?? $body['subtotal'] ?? 0;
+        }
+        $settings = $this->get_settings();
+        $quote = sk_pincode_shipping_quote($pincode, $amount, $settings);
+        if (empty($quote['deliverable'])) {
+            return $this->error($quote['message'] ?: 'Sorry, we do not deliver to this postcode.', 400, $quote);
+        }
+        $this->success($quote);
+    }
+
+    /**
      * POST /shopkart-api/shipping/track
      * Body: { tracking_number } and/or { order_number }
      * Public — customers can track with AWB / tracking ID even without login.

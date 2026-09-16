@@ -283,6 +283,16 @@ class Sk_Cart extends Sk_Base_Api {
         $this->success([], 'Cart cleared.');
     }
 
+    /** Optional pincode from query or JSON body so cart can quote extra-charge areas. */
+    private function _request_pincode(): string {
+        $fromGet = trim((string)($this->input->get('pincode') ?? $this->input->get('postcode') ?? ''));
+        if ($fromGet !== '') {
+            return $fromGet;
+        }
+        $body = $this->body();
+        return trim((string)($body['pincode'] ?? $body['postcode'] ?? ''));
+    }
+
     /**
      * GET /shopkart-api/cart/products
      * Alias for mobile apps: returns cart line items with full product details + summary.
@@ -413,18 +423,16 @@ class Sk_Cart extends Sk_Base_Api {
     private function _summary($items) {
         $subtotal = array_sum(array_column($items, 'subtotal'));
         $settings = $this->get_settings();
-        $threshold = (float)($settings['free_shipping_above'] ?? 999);
-        $shipCharge = (float)($settings['shipping_charge'] ?? 50);
-        $eligible = $subtotal > 0 && $subtotal >= $threshold;
-        // Empty cart: no shipping charge (avoid RM50 total with Subtotal RM0)
-        $shipping = ($subtotal <= 0 || empty($items))
-            ? 0
-            : ($eligible ? 0 : $shipCharge);
+        $this->load->helper('sk_pincode_shipping');
+        $pincode = $this->_request_pincode();
+        $quote = sk_pincode_shipping_quote($pincode, $subtotal, $settings);
+        $threshold = (float)$quote['free_threshold'];
+        $shipCharge = (float)$quote['charged_shipping'];
+        $eligible = !empty($quote['free_eligible']);
+        $shipping = (empty($items) || $subtotal <= 0) ? 0.0 : (float)$quote['shipping'];
         // Storefront does not charge/show GST
         $tax      = 0;
-        $amountToFree = ($subtotal <= 0 || $eligible)
-            ? 0.0
-            : round(max(0, $threshold - $subtotal), 2);
+        $amountToFree = (float)$quote['amount_remaining'];
 
         $summary = [
             'subtotal'     => round($subtotal, 2),
@@ -433,18 +441,19 @@ class Sk_Cart extends Sk_Base_Api {
             'discount'     => 0,
             'total'        => round($subtotal + $shipping + $tax, 2),
             'item_count'   => array_sum(array_column($items, 'quantity')),
+            'pincode'      => $quote,
             'free_delivery' => [
                 'eligible'           => $eligible,
                 'threshold'          => $threshold,
                 'shipping_charge'    => $shipCharge,
                 'amount_remaining'   => $amountToFree,
                 'currency'           => sk_currency_symbol($settings),
+                'scenario'           => $quote['scenario'],
+                'deliverable'        => !empty($quote['deliverable']),
+                'extra_charge'       => (float)$quote['extra_charge'],
                 'message'            => empty($items)
                     ? null
-                    : ($eligible
-                        ? 'You qualify for free delivery.'
-                        : ('Add ' . sk_currency_symbol($settings) . number_format($amountToFree, 2)
-                            . ' more for free delivery.')),
+                    : ($quote['message'] ?? null),
             ],
         ];
 

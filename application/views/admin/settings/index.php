@@ -79,6 +79,17 @@
               <div class="form-text mt-2">Any pincode in these ranges will be blocked from delivery. e.g. From 1 To 30 means pincodes 1 through 30 are not delivered.</div>
             </div>
             <div class="col-12">
+              <label class="form-label">Extra charge pincode areas</label>
+              <textarea name="pincode_extra_charge_ranges" id="extraChargePincodeRanges" class="form-control d-none" rows="4"><?= htmlspecialchars($settings['pincode_extra_charge_ranges'] ?? '') ?></textarea>
+              <div id="extraPincodeRangesContainer"></div>
+              <button type="button" id="addExtraPincodeRangeBtn" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-plus-circle me-1"></i>Add Pincode Area
+              </button>
+              <div class="form-text mt-2">
+                Add multiple From–To areas. Each area has its own extra charge (added on top of the default Shipping Charge) and its own Free above amount. When the cart reaches that area’s Free above, delivery is free. Postcodes not listed here keep the default shipping / free-shipping rules above. Non-delivery ranges are unchanged.
+              </div>
+            </div>
+            <div class="col-12">
               <div class="alert alert-secondary small mb-0 py-2">
                 Phone, email and address are edited in the yellow box above this form (always visible).
               </div>
@@ -764,6 +775,117 @@
   var form = hiddenField.closest('form');
   if (form) {
     form.addEventListener('submit', serializeRanges);
+  }
+})();
+
+(function () {
+  var hiddenField = document.getElementById('extraChargePincodeRanges');
+  var container = document.getElementById('extraPincodeRangesContainer');
+  var addBtn = document.getElementById('addExtraPincodeRangeBtn');
+  if (!hiddenField || !container || !addBtn) return;
+
+  function parseExtraRanges(raw) {
+    var text = (raw || '').trim();
+    if (text === '') return [];
+    try {
+      var data = JSON.parse(text);
+      if (!Array.isArray(data)) return [];
+      return data.map(function (row) {
+        var from = parseInt(row.from, 10);
+        var to = parseInt(row.to, 10);
+        if (isNaN(from) && isNaN(to)) return null;
+        if (isNaN(from)) from = to;
+        if (isNaN(to)) to = from;
+        if (to < from) { var t = from; from = to; to = t; }
+        return {
+          from: from,
+          to: to,
+          extra_charge: row.extra_charge != null ? row.extra_charge : '',
+          free_above: row.free_above != null ? row.free_above : ''
+        };
+      }).filter(Boolean);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function serializeExtraRanges() {
+    var rows = container.querySelectorAll('.extra-pincode-range-row');
+    var list = [];
+    for (var i = 0; i < rows.length; i++) {
+      var from = rows[i].querySelector('.extra-pincode-from').value.trim();
+      var to = rows[i].querySelector('.extra-pincode-to').value.trim();
+      var charge = rows[i].querySelector('.extra-pincode-charge').value.trim();
+      var freeAbove = rows[i].querySelector('.extra-pincode-free-above').value.trim();
+      if (from === '' && to === '') continue;
+      var s = from !== '' ? parseInt(from, 10) : parseInt(to, 10);
+      var e = to !== '' ? parseInt(to, 10) : s;
+      if (isNaN(s) && isNaN(e)) continue;
+      if (isNaN(s)) s = e;
+      if (isNaN(e)) e = s;
+      if (e < s) { var tmp = s; s = e; e = tmp; }
+      list.push({
+        from: s,
+        to: e,
+        extra_charge: charge === '' ? 0 : parseFloat(charge) || 0,
+        free_above: freeAbove === '' ? 0 : parseFloat(freeAbove) || 0
+      });
+    }
+    hiddenField.value = list.length ? JSON.stringify(list) : '';
+  }
+
+  function addExtraRow(fromVal, toVal, chargeVal, freeVal) {
+    var row = document.createElement('div');
+    row.className = 'extra-pincode-range-row row g-2 mb-2 align-items-end';
+    row.innerHTML =
+      '<div class="col-md-2">' +
+        '<label class="form-label small mb-1">From</label>' +
+        '<input type="number" name="extra_pincode_from[]" class="form-control extra-pincode-from" placeholder="From" min="0" value="' + (fromVal != null ? fromVal : '') + '">' +
+      '</div>' +
+      '<div class="col-md-2">' +
+        '<label class="form-label small mb-1">To</label>' +
+        '<input type="number" name="extra_pincode_to[]" class="form-control extra-pincode-to" placeholder="To" min="0" value="' + (toVal != null ? toVal : '') + '">' +
+      '</div>' +
+      '<div class="col-md-3">' +
+        '<label class="form-label small mb-1">Extra charge (RM)</label>' +
+        '<input type="number" name="extra_pincode_charge[]" class="form-control extra-pincode-charge" placeholder="0.00" min="0" step="0.01" value="' + (chargeVal != null && chargeVal !== '' ? chargeVal : '') + '">' +
+      '</div>' +
+      '<div class="col-md-3">' +
+        '<label class="form-label small mb-1">Free above (RM)</label>' +
+        '<input type="number" name="extra_pincode_free_above[]" class="form-control extra-pincode-free-above" placeholder="0.00" min="0" step="0.01" value="' + (freeVal != null && freeVal !== '' ? freeVal : '') + '">' +
+      '</div>' +
+      '<div class="col-auto pb-1">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm remove-extra-pincode-range" title="Remove this area">' +
+          '<i class="bi bi-trash"></i>' +
+        '</button>' +
+      '</div>';
+    container.appendChild(row);
+    row.querySelector('.remove-extra-pincode-range').addEventListener('click', function () {
+      row.remove();
+      serializeExtraRanges();
+    });
+    row.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('input', serializeExtraRanges);
+      inp.addEventListener('change', serializeExtraRanges);
+    });
+  }
+
+  var initial = parseExtraRanges(hiddenField.value);
+  if (initial.length === 0) {
+    addExtraRow('', '', '', '');
+  } else {
+    for (var i = 0; i < initial.length; i++) {
+      addExtraRow(initial[i].from, initial[i].to, initial[i].extra_charge, initial[i].free_above);
+    }
+  }
+
+  addBtn.addEventListener('click', function () {
+    addExtraRow('', '', '', '');
+  });
+
+  var form = hiddenField.closest('form');
+  if (form) {
+    form.addEventListener('submit', serializeExtraRanges);
   }
 })();
 </script>
