@@ -16,7 +16,7 @@ import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, roya
 import { removeLineFromCart, removePaidProductsFromCart } from "@/utils/cartSync";
 import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/utils/userProfile";
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
-import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
+import { quotePincodeShipping, pincodeServiceMessage, type PincodeShipSettings } from "@/utils/pincodeShipping";
 
 /* Razorpay global type */
 declare global {
@@ -203,15 +203,23 @@ export default function Checkout() {
   const [promoLoading, setPromoLoading] = useState(false);
 
   /* ── Site Settings (shipping only; GST hidden on storefront) ── */
-  const [shippingCharge, setShippingCharge] = useState(50);
-  const [freeShippingAbove, setFreeShippingAbove] = useState(999);
+  const [shipSettings, setShipSettings] = useState<PincodeShipSettings>({
+    shipping_charge: 50,
+    free_shipping_above: 999,
+    non_delivery_pincodes: [],
+    pincode_extra_charge_ranges: [],
+  });
 
   useEffect(() => {
     siteSettingsAPI.get().then(res => {
       if (res.data.success && res.data.data) {
         const s = res.data.data;
-        if (typeof s.shipping_charge === 'number') setShippingCharge(s.shipping_charge);
-        if (typeof s.free_shipping_above === 'number') setFreeShippingAbove(s.free_shipping_above);
+        setShipSettings({
+          shipping_charge: typeof s.shipping_charge === "number" ? s.shipping_charge : 50,
+          free_shipping_above: typeof s.free_shipping_above === "number" ? s.free_shipping_above : 999,
+          non_delivery_pincodes: s.non_delivery_pincodes ?? [],
+          pincode_extra_charge_ranges: s.pincode_extra_charge_ranges ?? [],
+        });
       }
     }).catch(err => console.error("Failed to load site settings", err));
   }, []);
@@ -388,11 +396,22 @@ export default function Checkout() {
     sessionStorage.setItem("checkout_payment_method", paymentMethod);
   }, [paymentMethod]);
 
-  // Shipping / free-shipping threshold use amount after coupon or affiliate discount
+  // Shipping uses THIS delivery postcode only (extra charge + free-above from admin ranges).
+  const deliveryPincode = (selectedAddr >= 0 && addresses[selectedAddr]?.pincode)
+    ? addresses[selectedAddr].pincode
+    : addrZip;
   const subtotalAfterPromo = Math.max(0, totalPrice - promoDiscount);
+  const pinQuote = quotePincodeShipping(deliveryPincode, subtotalAfterPromo, shipSettings);
+  const pincodeNotice = deliveryPincode.replace(/\D/g, "").length >= 5
+    ? pincodeServiceMessage(deliveryPincode, shipSettings)
+    : null;
   const baseShippingCost = subtotalAfterPromo <= 0
     ? 0
-    : (subtotalAfterPromo >= freeShippingAbove ? 0 : shippingCharge);
+    : (pinQuote.deliverable ? pinQuote.shipping : 0);
+  const extraChargeShown = pinQuote.deliverable
+    && pinQuote.scenario === "extra_charge"
+    && pinQuote.extra_charge > 0
+    && baseShippingCost > 0;
   // Wallet is a separate full-pay method: optional % off (from min RM) + free delivery only if admin enabled it.
   // Works alone or together with coupon / affiliate / royalty (wallet covers the remainder).
   const walletPct = walletInfo?.discount_percent ?? 0;
@@ -526,6 +545,12 @@ export default function Checkout() {
       return;
     }
     if (!/^\d{5}$/.test(addr.pincode)) { setZipError(true); setOrderError("Enter a valid 5-digit postcode."); return; }
+    const liveQuote = quotePincodeShipping(addr.pincode, subtotalAfterPromo, shipSettings);
+    if (!liveQuote.deliverable) {
+      setZipError(true);
+      setOrderError(liveQuote.message || "Sorry, delivery is not available for this postcode.");
+      return;
+    }
     if (!billingSame) {
       if (!billing.full_name || !billing.line1 || !billing.city || !billing.state || !billing.pincode) {
         setOrderError("Please complete the billing address.");
@@ -599,9 +624,12 @@ export default function Checkout() {
             applyAddress(list[idx]);
           }
         } catch (addrErr: unknown) {
-          // Backend checkout also persists the address; only block if we have no address book yet
-          // and the order path would leave My Addresses empty without a save.
           const msg = (addrErr as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          if (msg && /not available|do not deliver/i.test(msg)) {
+            setOrderError(msg);
+            setOrderPlacing(false);
+            return;
+          }
           console.warn("Checkout address save failed:", msg || addrErr);
         }
       }
@@ -926,6 +954,11 @@ export default function Checkout() {
                             {a.line1}{a.line2 ? `, ${a.line2}` : ""}<br />
                             {a.city}, {a.state} – {a.pincode}
                           </div>
+                          {isSelected && pincodeNotice && (
+                            <div className={`small mt-2 ${pinQuote.deliverable ? "text-warning" : "text-danger"}`}>
+                              {pincodeNotice}
+                            </div>
+                          )}
                           <div className="address-card-phone">
                             📞 {a.phone}
                           </div>
@@ -1132,6 +1165,11 @@ export default function Checkout() {
                         placeholder="12345"
                         maxLength={5}
                       />
+                      {pincodeNotice && (
+                        <div className={`small mt-1 ${pinQuote.deliverable ? "text-warning" : "text-danger"}`}>
+                          {pincodeNotice}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1489,11 +1527,27 @@ export default function Checkout() {
                 <span className="fw-semibold text-dark">{
                   totalPrice <= 0
                     ? formatPrice(0)
-                    : shippingCost === 0
-                      ? <span className="text-success">{paymentMethod === 'wallet' && walletFreeShipping ? 'Free (wallet)' : 'Free'}</span>
-                      : formatPrice(shippingCost)
+                    : !pinQuote.deliverable && deliveryPincode.replace(/\D/g, "").length >= 5
+                      ? <span className="text-danger">Not available</span>
+                      : extraChargeShown
+                        ? formatPrice(pinQuote.base_charge)
+                        : shippingCost === 0
+                          ? <span className="text-success">{paymentMethod === 'wallet' && walletFreeShipping ? 'Free (wallet)' : 'Free'}</span>
+                          : formatPrice(shippingCost)
                 }</span>
               </div>
+              {extraChargeShown && (
+                <div className="summary-row">
+                  <span>Postcode extra{deliveryPincode ? ` (${deliveryPincode})` : ""}</span>
+                  <span className="fw-semibold text-dark">{formatPrice(pinQuote.extra_charge)}</span>
+                </div>
+              )}
+              {pinQuote.deliverable && pinQuote.scenario === "extra_charge" && pinQuote.free_eligible && shippingCost === 0 && (
+                <div className="summary-row small text-success">
+                  <span>Free delivery for this postcode</span>
+                  <span></span>
+                </div>
+              )}
               <div className="summary-row fw-semibold">
                 <span>Bill total</span>
                 <span>{formatPrice(billTotal)}</span>
@@ -1528,7 +1582,7 @@ export default function Checkout() {
                 </div>
               )}
               {isLoggedIn ? (
-                <button type="submit" className="btn-premium mt-4" disabled={cartProducts.length === 0 || orderPlacing}>
+                <button type="submit" className="btn-premium mt-4" disabled={cartProducts.length === 0 || orderPlacing || (!pinQuote.deliverable && deliveryPincode.replace(/\D/g, "").length >= 5)}>
                   {orderPlacing
                     ? "Processing..."
                     : amountDue <= 0.009 && royaltyRm > 0

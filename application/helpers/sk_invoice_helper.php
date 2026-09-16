@@ -159,6 +159,8 @@ function sk_invoice_build(array $order, array $settings = [], ?array $sellerOver
         'discount_breakdown' => $discountBreakdown,
         'promo_code'     => $promoLabel,
         'shipping'       => $shipping,
+        'shipping_extra' => (float)($order['shipping_extra'] ?? 0),
+        'shipping_base'  => (float)($order['shipping_base'] ?? 0),
         'tax'            => $tax,
         'taxable_amount' => $taxable,
         'gst'            => $gst,
@@ -449,7 +451,23 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
             . "<td style='padding:6px 8px;text-align:right;'>{$cur}" . number_format($taxAmt, 2) . '</td></tr>';
     }
 
-    $shipLabel = $invoice['shipping'] == 0 ? '<span style="color:#16a34a;">Free</span>' : $cur . number_format($invoice['shipping'], 2);
+    $shipTotal = (float)($invoice['shipping'] ?? 0);
+    $shipExtra = (float)($invoice['shipping_extra'] ?? 0);
+    $shipBase  = (float)($invoice['shipping_base'] ?? 0);
+    $shipRows = '';
+    if ($shipTotal <= 0) {
+        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
+            . "<td style='padding:8px;text-align:right;'><span style=\"color:#16a34a;\">Free</span></td></tr>";
+    } elseif ($shipExtra > 0) {
+        $baseShow = $shipBase > 0 ? $shipBase : max(0, $shipTotal - $shipExtra);
+        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
+            . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($baseShow, 2) . "</td></tr>"
+            . "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Postcode extra charge</td>"
+            . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($shipExtra, 2) . "</td></tr>";
+    } else {
+        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
+            . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($shipTotal, 2) . "</td></tr>";
+    }
 
     $sellerMeta = array_filter([
         !empty($s['phone']) ? htmlspecialchars($s['phone']) : '',
@@ -579,8 +597,7 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
         <tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Taxable Value</td>
             <td style='padding:8px;text-align:right;'>{$cur}" . number_format($invoice['taxable_amount'], 2) . "</td></tr>
         {$gstRows}
-        <tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>
-            <td style='padding:8px;text-align:right;'>{$shipLabel}</td></tr>
+        {$shipRows}
         <tr style='background:#f8fafc;'>
           <td colspan='5' style='padding:14px 8px;text-align:right;font-size:16px;font-weight:700;border-top:2px solid #0f172a;'>Grand Total</td>
           <td style='padding:14px 8px;text-align:right;font-size:16px;font-weight:700;border-top:2px solid #0f172a;'>{$cur}" . number_format($invoice['total'], 2) . "</td></tr>

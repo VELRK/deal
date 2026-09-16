@@ -25,6 +25,8 @@ interface Order {
   subtotal?: number;
   discount?: number;
   shipping?: number;
+  shipping_extra?: number;
+  shipping_base?: number;
   promo_code?: string;
   tracking_number?: string;
   courier_status?: string;
@@ -1544,10 +1546,18 @@ export default function AccountOrders() {
                       <span>Delivery</span>
                       {(selectedOrder.shipping ?? 0) === 0 ? (
                         <span style={{ color: "#2e7d32", fontWeight: 700 }}>FREE</span>
+                      ) : (selectedOrder.shipping_extra ?? 0) > 0 ? (
+                        <span>{formatPrice((selectedOrder.shipping_base ?? 0) > 0 ? selectedOrder.shipping_base! : (selectedOrder.shipping! - (selectedOrder.shipping_extra ?? 0)))}</span>
                       ) : (
                         <span>{formatPrice(selectedOrder.shipping!)}</span>
                       )}
                     </div>
+                    {(selectedOrder.shipping_extra ?? 0) > 0 && (selectedOrder.shipping ?? 0) > 0 && (
+                      <div className="summary-item-row">
+                        <span>Postcode extra</span>
+                        <span>{formatPrice(selectedOrder.shipping_extra!)}</span>
+                      </div>
+                    )}
 
                     {/* Total Row */}
                     <div className="summary-item-row total-row">

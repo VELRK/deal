@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { AccountSection } from "@/components/account/AccountSection";
-import { userAPI } from "@/services/api";
+import { userAPI, siteSettingsAPI } from "@/services/api";
 import type { ApiAddress } from "@/services/api";
+import { pincodeServiceMessage, type PincodeShipSettings } from "@/utils/pincodeShipping";
 import {
   MY_COUNTRY_CODE,
   MY_PHONE_ERROR,
@@ -115,6 +116,27 @@ export default function AccountAddresses() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [shipSettings, setShipSettings] = useState<PincodeShipSettings>({
+    shipping_charge: 50,
+    free_shipping_above: 999,
+    non_delivery_pincodes: [],
+    pincode_extra_charge_ranges: [],
+  });
+  const pincodeHint = pincodeServiceMessage(form.pincode, shipSettings);
+
+  useEffect(() => {
+    siteSettingsAPI.get().then((res) => {
+      if (res.data.success && res.data.data) {
+        const s = res.data.data;
+        setShipSettings({
+          shipping_charge: typeof s.shipping_charge === "number" ? s.shipping_charge : 50,
+          free_shipping_above: typeof s.free_shipping_above === "number" ? s.free_shipping_above : 999,
+          non_delivery_pincodes: s.non_delivery_pincodes ?? [],
+          pincode_extra_charge_ranges: s.pincode_extra_charge_ranges ?? [],
+        });
+      }
+    }).catch(() => { });
+  }, []);
 
   useEffect(() => {
     userAPI.getAddresses()
@@ -138,6 +160,8 @@ export default function AccountAddresses() {
     if (!form.state) return setError("State is required.");
     if (!form.pincode.trim() || !/^\d{5}$/.test(form.pincode.trim()))
       return setError("Enter a valid 5-digit postcode.");
+    if (pincodeHint && /not available/i.test(pincodeHint))
+      return setError(pincodeHint);
 
     setSaving(true);
     try {
@@ -155,8 +179,9 @@ export default function AccountAddresses() {
           navigate(redirectPath);
         }
       }
-    } catch {
-      setError("Failed to save address. Please try again.");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || "Failed to save address. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -780,6 +805,11 @@ export default function AccountAddresses() {
                     placeholder="5-digit Postcode"
                     required
                   />
+                  {pincodeHint && (
+                    <div className={`small mt-1 ${/not available/i.test(pincodeHint) ? "text-danger" : "text-warning"}`}>
+                      {pincodeHint}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -732,6 +732,13 @@ export interface ApiSiteSettings {
   tax_rate?: number;
   shipping_charge?: number;
   free_shipping_above?: number;
+  non_delivery_pincodes?: { from: number; to: number }[];
+  pincode_extra_charge_ranges?: {
+    from: number;
+    to: number;
+    extra_charge: number;
+    free_above: number;
+  }[];
   /** When true, full wallet pay gets free delivery */
   wallet_free_shipping?: boolean;
   wallet_enabled?: boolean;

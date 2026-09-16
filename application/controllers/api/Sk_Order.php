@@ -209,8 +209,12 @@ class Sk_Order extends Sk_Base_Api {
             ]);
         }
         $shipping = (float)$shipQuote['shipping'];
+        $shippingExtra = 0.0;
+        $shippingBase = (float)$shipQuote['base_charge'];
         if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
             $shipping = 0;
+        } elseif ($shipping > 0 && ($shipQuote['scenario'] ?? '') === 'extra_charge') {
+            $shippingExtra = (float)$shipQuote['extra_charge'];
         }
         $taxable_amount = max(0, $subtotal - $discount);
         // Storefront does not charge/show GST
@@ -285,6 +289,7 @@ class Sk_Order extends Sk_Base_Api {
         $this->_ensure_order_wallet_schema();
         $this->_ensure_order_discount_schema();
         $this->_ensure_order_source_schema();
+        $this->_ensure_order_shipping_extra_schema();
         $this->Sk_Order_model->ensure_payment_attempt_status();
         $this->load->helper(['sk_jt_express', 'sk_vendor_dashboard']);
         sk_jt_express_ensure_schema();
@@ -294,6 +299,8 @@ class Sk_Order extends Sk_Base_Api {
             'user_id'          => $user_id,
             'subtotal'         => $subtotal,
             'shipping'         => $shipping,
+            'shipping_extra'   => $shippingExtra,
+            'shipping_base'    => $shippingBase,
             'tax'              => $tax,
             'discount'         => $discount,
             'affiliate_discount' => $affiliate_id ? $code_discount : 0,
@@ -616,6 +623,20 @@ class Sk_Order extends Sk_Base_Api {
         }
         if (!$this->db->field_exists('wallet_discount', 'orders')) {
             $this->db->query('ALTER TABLE `orders` ADD COLUMN `wallet_discount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `affiliate_discount`');
+        }
+    }
+
+    private function _ensure_order_shipping_extra_schema(): void {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (!$this->db->field_exists('shipping_extra', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `shipping_extra` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `shipping`');
+        }
+        if (!$this->db->field_exists('shipping_base', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `shipping_base` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `shipping_extra`');
         }
     }
 
