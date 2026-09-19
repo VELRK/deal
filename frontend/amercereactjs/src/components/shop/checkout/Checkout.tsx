@@ -409,10 +409,6 @@ export default function Checkout() {
   const baseShippingCost = subtotalAfterPromo <= 0
     ? 0
     : (pinQuote.deliverable ? pinQuote.shipping : 0);
-  const extraChargeShown = pinQuote.deliverable
-    && pinQuote.scenario === "extra_charge"
-    && pinQuote.extra_charge > 0
-    && baseShippingCost > 0;
   // Wallet is a separate full-pay method: optional % off (from min RM) + free delivery only if admin enabled it.
   // Works alone or together with coupon / affiliate / royalty (wallet covers the remainder).
   const walletPct = walletInfo?.discount_percent ?? 0;
@@ -549,7 +545,7 @@ export default function Checkout() {
     const liveQuote = quotePincodeShipping(addr.pincode, subtotalAfterPromo, shipSettings);
     if (!liveQuote.deliverable) {
       setZipError(true);
-      setOrderError(liveQuote.message || "Sorry, delivery is not available for this postcode.");
+      setOrderError(liveQuote.message || "We are not supplied in this postcode.");
       return;
     }
     if (!billingSame) {
@@ -626,7 +622,7 @@ export default function Checkout() {
           }
         } catch (addrErr: unknown) {
           const msg = (addrErr as { response?: { data?: { message?: string } } })?.response?.data?.message;
-          if (msg && /not available|do not deliver/i.test(msg)) {
+          if (msg) {
             setOrderError(msg);
             setOrderPlacing(false);
             return;
@@ -1524,25 +1520,17 @@ export default function Checkout() {
                 </div>
               )}
               <div className="summary-row">
-                <span>Shipping</span>
+                <span>{pinQuote.scenario === "extra_charge" ? "Delivery charges" : "Shipping"}</span>
                 <span className="fw-semibold text-dark">{
                   totalPrice <= 0
                     ? formatPrice(0)
                     : !pinQuote.deliverable && deliveryPincode.replace(/\D/g, "").length >= 5
                       ? <span className="text-danger">Not available</span>
-                      : extraChargeShown
-                        ? formatPrice(pinQuote.base_charge)
-                        : shippingCost === 0
-                          ? <span className="text-success">{paymentMethod === 'wallet' && walletFreeShipping ? 'Free (wallet)' : 'Free'}</span>
-                          : formatPrice(shippingCost)
+                      : shippingCost === 0
+                        ? <span className="text-success">{paymentMethod === 'wallet' && walletFreeShipping ? 'Free (wallet)' : 'Free'}</span>
+                        : formatPrice(shippingCost)
                 }</span>
               </div>
-              {extraChargeShown && (
-                <div className="summary-row">
-                  <span>Postcode extra{deliveryPincode ? ` (${deliveryPincode})` : ""}</span>
-                  <span className="fw-semibold text-dark">{formatPrice(pinQuote.extra_charge)}</span>
-                </div>
-              )}
               {pinQuote.deliverable && pinQuote.scenario === "extra_charge" && pinQuote.free_eligible && shippingCost === 0 && (
                 <div className="summary-row small text-success">
                   <span>Free delivery for this postcode</span>

@@ -1,4 +1,4 @@
-export type PincodeRange = { from: number; to: number };
+export type PincodeRange = { from: number; to: number; message?: string };
 export type PincodeExtraRange = PincodeRange & {
   extra_charge: number;
   free_above: number;
@@ -25,6 +25,8 @@ export type PincodeShipQuote = {
   message: string | null;
 };
 
+const DEFAULT_BLOCK_MESSAGE = "We are not supplied in this postcode.";
+
 function pinInt(pincode: string | null | undefined): number | null {
   const raw = String(pincode ?? "").replace(/\D+/g, "");
   if (!raw) return null;
@@ -35,6 +37,11 @@ function inRange(pin: number, from: number, to: number): boolean {
   const a = from <= to ? from : to;
   const b = from <= to ? to : from;
   return pin >= a && pin <= b;
+}
+
+function rangeMessage(range: PincodeRange | undefined, fallback = DEFAULT_BLOCK_MESSAGE): string {
+  const msg = String(range?.message ?? "").trim();
+  return msg || fallback;
 }
 
 export function quotePincodeShipping(
@@ -72,7 +79,7 @@ export function quotePincodeShipping(
           deliverable: false,
           scenario: "blocked",
           charged_shipping: 0,
-          message: "Sorry, delivery is not available for this postcode.",
+          message: rangeMessage(range),
         };
       }
     }
@@ -81,7 +88,7 @@ export function quotePincodeShipping(
       if (!inRange(pin, Number(range.from), Number(range.to))) continue;
       const extra = Number(range.extra_charge) || 0;
       const freeAbove = Number(range.free_above) || 0;
-      const charge = Math.round((base + extra) * 100) / 100;
+      const charge = Math.round(extra * 100) / 100;
       if (freeAbove > 0 && goods >= freeAbove) {
         return {
           ...empty,
@@ -105,9 +112,9 @@ export function quotePincodeShipping(
         amount_remaining: remain,
         message:
           freeAbove > 0
-            ? `Add RM${remain.toFixed(2)} more for free delivery on this postcode.`
+            ? `Add RM${remain.toFixed(2)} more for free delivery. Delivery charges RM${extra.toFixed(2)}.`
             : extra > 0
-              ? `Extra postcode charge RM${extra.toFixed(2)}.`
+              ? `Delivery charges RM${extra.toFixed(2)}.`
               : null,
       };
     }
@@ -136,12 +143,5 @@ export function pincodeServiceMessage(pincode: string, settings: PincodeShipSett
   if (pin.length < 5) return null;
   const quote = quotePincodeShipping(pin, 1, settings);
   if (!quote.deliverable) return quote.message;
-  if (quote.scenario === "extra_charge" && quote.extra_charge > 0) {
-    const freeBit =
-      quote.free_threshold > 0
-        ? ` Free delivery above RM${quote.free_threshold.toFixed(2)} for this postcode.`
-        : "";
-    return `This postcode has an extra delivery charge of RM${quote.extra_charge.toFixed(2)}.${freeBit}`;
-  }
   return null;
 }

@@ -160,7 +160,7 @@ export default function AccountAddresses() {
     if (!form.state) return setError("State is required.");
     if (!form.pincode.trim() || !/^\d{5}$/.test(form.pincode.trim()))
       return setError("Enter a valid 5-digit postcode.");
-    if (pincodeHint && /not available/i.test(pincodeHint))
+    if (pincodeHint)
       return setError(pincodeHint);
 
     setSaving(true);
@@ -806,7 +806,7 @@ export default function AccountAddresses() {
                     required
                   />
                   {pincodeHint && (
-                    <div className={`small mt-1 ${/not available/i.test(pincodeHint) ? "text-danger" : "text-warning"}`}>
+                    <div className="small mt-1 text-danger">
                       {pincodeHint}
                     </div>
                   )}
