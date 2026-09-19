@@ -453,19 +453,13 @@ function sk_invoice_render_html(array $invoice, bool $forEmail = false): string 
 
     $shipTotal = (float)($invoice['shipping'] ?? 0);
     $shipExtra = (float)($invoice['shipping_extra'] ?? 0);
-    $shipBase  = (float)($invoice['shipping_base'] ?? 0);
+    $shipLabel = $shipExtra > 0 ? 'Delivery charges' : 'Shipping';
     $shipRows = '';
     if ($shipTotal <= 0) {
-        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
+        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>{$shipLabel}</td>"
             . "<td style='padding:8px;text-align:right;'><span style=\"color:#16a34a;\">Free</span></td></tr>";
-    } elseif ($shipExtra > 0) {
-        $baseShow = $shipBase > 0 ? $shipBase : max(0, $shipTotal - $shipExtra);
-        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
-            . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($baseShow, 2) . "</td></tr>"
-            . "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Postcode extra charge</td>"
-            . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($shipExtra, 2) . "</td></tr>";
     } else {
-        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>Shipping</td>"
+        $shipRows = "<tr><td colspan='5' style='padding:8px;text-align:right;color:#64748b;'>{$shipLabel}</td>"
             . "<td style='padding:8px;text-align:right;'>{$cur}" . number_format($shipTotal, 2) . "</td></tr>";
     }
 

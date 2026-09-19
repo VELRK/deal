@@ -69,7 +69,7 @@
               <input type="number" name="free_shipping_above" class="form-control" value="<?= $settings['free_shipping_above'] ?? '999' ?>">
             </div>
             <div class="col-12">
-              <label class="form-label">Pincode ranges</label>
+              <label class="form-label">Non-supplied pincodes</label>
               <textarea name="non_delivery_pincode_ranges" id="nonDeliveryPincodeRanges" class="form-control d-none" rows="4"><?= htmlspecialchars($settings['non_delivery_pincode_ranges'] ?? '') ?></textarea>
               <textarea name="pincode_extra_charge_ranges" id="extraChargePincodeRanges" class="form-control d-none" rows="4"><?= htmlspecialchars($settings['pincode_extra_charge_ranges'] ?? '') ?></textarea>
               <div id="pincodeRangesContainer"></div>
@@ -77,7 +77,7 @@
                 <i class="bi bi-plus-circle me-1"></i>Add Pincode Range
               </button>
               <div class="form-text mt-2">
-                Same From–To list for every area. Leave Extra charge and Free above empty to <strong>block delivery</strong>. Fill Extra charge to add that fee on top of the default Shipping Charge. Fill Free above so that area becomes free when the cart reaches that amount. Add as many ranges as you need. Other postcodes keep the default shipping / free-shipping rules.
+                Same From–To list for every area. Leave Extra charge and Free above empty to <strong>block delivery</strong> — the Message on that row is shown to the customer after they save the address. Fill Extra charge to set <strong>Delivery charges</strong> for that postcode only (the common shipping charge is not used). Fill Free above so that area becomes free when the cart reaches that amount. Other postcodes keep the default shipping / free-shipping rules.
               </div>
             </div>
             <div class="col-12">
@@ -672,10 +672,34 @@
   var addBtn = document.getElementById('addPincodeRangeBtn');
   if (!blockedField || !container || !addBtn) return;
 
+  function escapeAttr(val) {
+    return String(val == null ? '' : val)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   function parseBlocked(raw) {
     var ranges = [];
     var text = (raw || '').trim();
     if (text === '') return ranges;
+    if (text.charAt(0) === '[') {
+      try {
+        var data = JSON.parse(text);
+        if (Array.isArray(data)) {
+          return data.map(function (row) {
+            var from = parseInt(row.from, 10);
+            var to = parseInt(row.to, 10);
+            if (isNaN(from) && isNaN(to)) return null;
+            if (isNaN(from)) from = to;
+            if (isNaN(to)) to = from;
+            if (to < from) { var t = from; from = to; to = t; }
+            return { from: from, to: to, extra_charge: '', free_above: '', message: row.message || '' };
+          }).filter(Boolean);
+        }
+      } catch (e) {}
+    }
     var parts = text.split(/[\r\n,;]+/);
     for (var i = 0; i < parts.length; i++) {
       var token = (parts[i] || '').trim();
@@ -685,13 +709,13 @@
         var s = parseInt(m[1], 10);
         var e = parseInt(m[2], 10);
         if (e < s) { var t = s; s = e; e = t; }
-        ranges.push({ from: s, to: e, extra_charge: '', free_above: '' });
+        ranges.push({ from: s, to: e, extra_charge: '', free_above: '', message: '' });
         continue;
       }
       var m2 = token.match(/^\s*(\d+)\s*$/);
       if (m2) {
         var n = parseInt(m2[1], 10);
-        ranges.push({ from: n, to: n, extra_charge: '', free_above: '' });
+        ranges.push({ from: n, to: n, extra_charge: '', free_above: '', message: '' });
       }
     }
     return ranges;
@@ -714,7 +738,8 @@
           from: from,
           to: to,
           extra_charge: row.extra_charge != null && row.extra_charge !== '' ? row.extra_charge : '',
-          free_above: row.free_above != null && row.free_above !== '' ? row.free_above : ''
+          free_above: row.free_above != null && row.free_above !== '' ? row.free_above : '',
+          message: row.message || ''
         };
       }).filter(Boolean);
     } catch (e) {
@@ -731,8 +756,10 @@
       var to = rows[i].querySelector('.pincode-to').value.trim();
       var chargeEl = rows[i].querySelector('.pincode-extra-charge');
       var freeEl = rows[i].querySelector('.pincode-free-above');
+      var msgEl = rows[i].querySelector('.pincode-range-message');
       var charge = chargeEl ? chargeEl.value.trim() : '';
       var freeAbove = freeEl ? freeEl.value.trim() : '';
+      var rowMsg = msgEl ? msgEl.value.trim() : '';
       if (from === '' && to === '') continue;
       var s = from !== '' ? parseInt(from, 10) : parseInt(to, 10);
       var e = to !== '' ? parseInt(to, 10) : s;
@@ -743,16 +770,16 @@
       var extraFee = charge === '' ? 0 : parseFloat(charge) || 0;
       var freeVal = freeAbove === '' ? 0 : parseFloat(freeAbove) || 0;
       if (extraFee > 0 || freeVal > 0) {
-        extra.push({ from: s, to: e, extra_charge: extraFee, free_above: freeVal });
+        extra.push({ from: s, to: e, extra_charge: extraFee, free_above: freeVal, message: rowMsg });
       } else {
-        blocked.push(s + ' to ' + e);
+        blocked.push({ from: s, to: e, message: rowMsg });
       }
     }
-    blockedField.value = blocked.join('\n');
+    blockedField.value = blocked.length ? JSON.stringify(blocked) : '';
     if (extraField) extraField.value = extra.length ? JSON.stringify(extra) : '';
   }
 
-  function addRow(fromVal, toVal, chargeVal, freeVal) {
+  function addRow(fromVal, toVal, chargeVal, freeVal, messageVal) {
     var row = document.createElement('div');
     row.className = 'pincode-range-row row g-2 mb-2 align-items-end';
     row.innerHTML =
@@ -764,13 +791,17 @@
         '<label class="form-label small mb-1">To</label>' +
         '<input type="number" name="pincode_to[]" class="form-control pincode-to" placeholder="To" min="0" value="' + (toVal != null ? toVal : '') + '">' +
       '</div>' +
-      '<div class="col-md-3">' +
-        '<label class="form-label small mb-1">Extra charge (RM)</label>' +
+      '<div class="col-md-2">' +
+        '<label class="form-label small mb-1">Delivery charges (RM)</label>' +
         '<input type="number" name="pincode_extra_charge[]" class="form-control pincode-extra-charge" placeholder="0.00" min="0" step="0.01" value="' + (chargeVal != null && chargeVal !== '' ? chargeVal : '') + '">' +
       '</div>' +
-      '<div class="col-md-3">' +
+      '<div class="col-md-2">' +
         '<label class="form-label small mb-1">Free above (RM)</label>' +
         '<input type="number" name="pincode_free_above[]" class="form-control pincode-free-above" placeholder="0.00" min="0" step="0.01" value="' + (freeVal != null && freeVal !== '' ? freeVal : '') + '">' +
+      '</div>' +
+      '<div class="col-md-3">' +
+        '<label class="form-label small mb-1">Message (not supplied)</label>' +
+        '<input type="text" name="pincode_range_message[]" class="form-control pincode-range-message" placeholder="We are not supplied in this postcode." value="' + escapeAttr(messageVal) + '">' +
       '</div>' +
       '<div class="col-auto pb-1">' +
         '<button type="button" class="btn btn-outline-danger btn-sm remove-pincode-range" title="Remove this range">' +
@@ -790,15 +821,15 @@
 
   var initial = parseBlocked(blockedField.value).concat(parseExtra(extraField ? extraField.value : ''));
   if (initial.length === 0) {
-    addRow('', '', '', '');
+    addRow('', '', '', '', '');
   } else {
     for (var i = 0; i < initial.length; i++) {
-      addRow(initial[i].from, initial[i].to, initial[i].extra_charge, initial[i].free_above);
+      addRow(initial[i].from, initial[i].to, initial[i].extra_charge, initial[i].free_above, initial[i].message || '');
     }
   }
 
   addBtn.addEventListener('click', function () {
-    addRow('', '', '', '');
+    addRow('', '', '', '', '');
   });
 
   var form = blockedField.closest('form');

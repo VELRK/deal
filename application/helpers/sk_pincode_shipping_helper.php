@@ -27,9 +27,32 @@ if (!function_exists('sk_pincode_in_range')) {
     }
 }
 
+if (!function_exists('sk_pincode_default_block_message')) {
+    function sk_pincode_default_block_message(): string {
+        return 'We are not supplied in this postcode.';
+    }
+}
+
+if (!function_exists('sk_pincode_row_message')) {
+    function sk_pincode_row_message($row, string $fallback = ''): string {
+        $msg = trim((string)($row['message'] ?? ''));
+        return $msg !== '' ? $msg : $fallback;
+    }
+}
+
 if (!function_exists('sk_pincode_parse_block_ranges')) {
-    /** @return array<int, array{from:int,to:int}> */
+    /** @return array<int, array{from:int,to:int,message:string}> */
     function sk_pincode_parse_block_ranges($raw): array {
+        if (is_string($raw)) {
+            $text = trim($raw);
+            if ($text === '') {
+                return [];
+            }
+            $decoded = json_decode($text, true);
+            if (is_array($decoded)) {
+                $raw = $decoded;
+            }
+        }
         if (is_array($raw)) {
             $list = [];
             foreach ($raw as $row) {
@@ -44,9 +67,15 @@ if (!function_exists('sk_pincode_parse_block_ranges')) {
                 if ($to < $from) {
                     [$from, $to] = [$to, $from];
                 }
-                $list[] = ['from' => $from, 'to' => $to];
+                $list[] = [
+                    'from'    => $from,
+                    'to'      => $to,
+                    'message' => trim((string)($row['message'] ?? '')),
+                ];
             }
-            return $list;
+            if ($list !== []) {
+                return $list;
+            }
         }
 
         $text = trim((string)$raw);
@@ -66,15 +95,22 @@ if (!function_exists('sk_pincode_parse_block_ranges')) {
                 if ($end < $start) {
                     [$start, $end] = [$end, $start];
                 }
-                $list[] = ['from' => $start, 'to' => $end];
+                $list[] = ['from' => $start, 'to' => $end, 'message' => ''];
                 continue;
             }
             if (preg_match('/^\s*(\d+)\s*$/', $token, $m)) {
                 $n = (int)$m[1];
-                $list[] = ['from' => $n, 'to' => $n];
+                $list[] = ['from' => $n, 'to' => $n, 'message' => ''];
             }
         }
         return $list;
+    }
+}
+
+if (!function_exists('sk_pincode_encode_block_ranges')) {
+    function sk_pincode_encode_block_ranges(array $ranges): string {
+        $clean = sk_pincode_parse_block_ranges($ranges);
+        return $clean === [] ? '' : json_encode($clean);
     }
 }
 
@@ -116,6 +152,7 @@ if (!function_exists('sk_pincode_parse_extra_ranges')) {
                 'to'           => $to,
                 'extra_charge' => round((float)($row['extra_charge'] ?? 0), 2),
                 'free_above'   => round((float)($row['free_above'] ?? 0), 2),
+                'message'      => trim((string)($row['message'] ?? '')),
             ];
         }
         return $list;
@@ -129,19 +166,36 @@ if (!function_exists('sk_pincode_encode_extra_ranges')) {
     }
 }
 
-if (!function_exists('sk_pincode_is_blocked')) {
-    function sk_pincode_is_blocked($pincode, $settings): bool {
+if (!function_exists('sk_pincode_match_block')) {
+    /** @return array{from:int,to:int,message:string}|null */
+    function sk_pincode_match_block($pincode, $settings): ?array {
         $pin = sk_pincode_int($pincode);
         if ($pin === null) {
-            return false;
+            return null;
         }
         $ranges = sk_pincode_parse_block_ranges($settings['non_delivery_pincode_ranges'] ?? '');
         foreach ($ranges as $range) {
             if (sk_pincode_in_range($pin, (int)$range['from'], (int)$range['to'])) {
-                return true;
+                return $range;
             }
         }
-        return false;
+        return null;
+    }
+}
+
+if (!function_exists('sk_pincode_is_blocked')) {
+    function sk_pincode_is_blocked($pincode, $settings): bool {
+        return sk_pincode_match_block($pincode, $settings) !== null;
+    }
+}
+
+if (!function_exists('sk_pincode_blocked_message')) {
+    function sk_pincode_blocked_message($pincode, $settings): string {
+        $matched = sk_pincode_match_block($pincode, $settings);
+        if (!$matched) {
+            return sk_pincode_default_block_message();
+        }
+        return sk_pincode_row_message($matched, sk_pincode_default_block_message());
     }
 }
 
@@ -208,7 +262,7 @@ if (!function_exists('sk_pincode_shipping_quote')) {
             $out['scenario'] = 'blocked';
             $out['shipping'] = 0.0;
             $out['charged_shipping'] = 0.0;
-            $out['message'] = 'Sorry, we do not deliver to this postcode.';
+            $out['message'] = sk_pincode_blocked_message($pinRaw, $settings);
             return $out;
         }
 
@@ -216,7 +270,8 @@ if (!function_exists('sk_pincode_shipping_quote')) {
         if ($matched) {
             $extra = (float)$matched['extra_charge'];
             $freeAbove = (float)$matched['free_above'];
-            $charge = round($base + $extra, 2);
+            // Extra-charge postcodes do not use the common/default shipping charge.
+            $charge = round($extra, 2);
             $out['scenario'] = 'extra_charge';
             $out['extra_charge'] = $extra;
             $out['charged_shipping'] = $charge;
@@ -237,12 +292,12 @@ if (!function_exists('sk_pincode_shipping_quote')) {
                 $remain = round(max(0, $freeAbove - $goods), 2);
                 $out['amount_remaining'] = $remain;
                 $out['message'] = 'Add ' . $symbol . number_format($remain, 2)
-                    . ' more for free delivery. Extra postcode charge '
+                    . ' more for free delivery. Delivery charges '
                     . $symbol . number_format($extra, 2) . '.';
             } else {
                 $out['amount_remaining'] = 0.0;
                 $out['message'] = $extra > 0
-                    ? ('Extra postcode charge ' . $symbol . number_format($extra, 2) . '.')
+                    ? ('Delivery charges ' . $symbol . number_format($extra, 2) . '.')
                     : null;
             }
             return $out;

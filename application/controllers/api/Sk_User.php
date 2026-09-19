@@ -107,8 +107,11 @@ class Sk_User extends Sk_Base_Api {
         }
         $data['phone'] = $normalized;
         $this->load->helper('sk_pincode_shipping');
-        if (sk_pincode_is_blocked($data['pincode'] ?? '', $this->get_settings())) {
-            return $this->error('Sorry, delivery is not available for this postcode.');
+        $pinSettings = $this->get_settings();
+        if (sk_pincode_is_blocked($data['pincode'] ?? '', $pinSettings)) {
+            return $this->error(sk_pincode_blocked_message($data['pincode'] ?? '', $pinSettings), 400, [
+                'pincode_blocked' => true,
+            ]);
         }
         $this->Sk_User_model->ensure_address_schema();
         $data['user_id'] = $this->user['user_id'];

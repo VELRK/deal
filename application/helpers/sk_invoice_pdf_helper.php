@@ -344,15 +344,11 @@ function sk_invoice_build_pdf(array $invoice): string {
 
     $shipTotal = (float)($invoice['shipping'] ?? 0);
     $shipExtra = (float)($invoice['shipping_extra'] ?? 0);
-    $shipBase  = (float)($invoice['shipping_base'] ?? 0);
+    $shipLabel = $shipExtra > 0 ? 'Delivery charges' : 'Shipping';
     if ($shipTotal <= 0) {
-        $addTotal('Shipping', 'Free');
-    } elseif ($shipExtra > 0) {
-        $baseShow = $shipBase > 0 ? $shipBase : max(0, $shipTotal - $shipExtra);
-        $addTotal('Shipping', $cur . number_format($baseShow, 2));
-        $addTotal('Postcode extra', $cur . number_format($shipExtra, 2));
+        $addTotal($shipLabel, 'Free');
     } else {
-        $addTotal('Shipping', $cur . number_format($shipTotal, 2));
+        $addTotal($shipLabel, $cur . number_format($shipTotal, 2));
     }
 
     $y -= 2;

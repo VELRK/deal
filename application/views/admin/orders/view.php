@@ -63,10 +63,7 @@
             <?php if ((float)($order['royalty_used_rm'] ?? 0) > 0 || (int)($order['royalty_used_points'] ?? 0) > 0): ?>
             <tr><td colspan="3" class="text-end text-warning">Royalty redeemed (<?= (int)$order['royalty_used_points'] ?> pts)</td><td class="text-warning">-<?= $currency . number_format((float)(($order['royalty_used_rm'] ?? 0) > 0 ? $order['royalty_used_rm'] : ($order['wallet_amount'] ?? 0)), 2) ?></td></tr>
             <?php endif; ?>
-            <tr><td colspan="3" class="text-end">Shipping</td><td><?= $currency . number_format((float)($order['shipping_base'] ?? 0) > 0 && (float)($order['shipping_extra'] ?? 0) > 0 && (float)$order['shipping'] > 0 ? (float)$order['shipping_base'] : (float)$order['shipping'], 2) ?></td></tr>
-            <?php if ((float)($order['shipping_extra'] ?? 0) > 0 && (float)($order['shipping'] ?? 0) > 0): ?>
-            <tr><td colspan="3" class="text-end">Postcode extra charge</td><td><?= $currency . number_format((float)$order['shipping_extra'], 2) ?></td></tr>
-            <?php endif; ?>
+            <tr><td colspan="3" class="text-end"><?= ((float)($order['shipping_extra'] ?? 0) > 0) ? 'Delivery charges' : 'Shipping' ?></td><td><?= $currency . number_format((float)$order['shipping'], 2) ?></td></tr>
             <tr><td colspan="3" class="text-end">Tax</td><td><?= $currency . number_format($order['tax'],2) ?></td></tr>
             <tr><td colspan="3" class="text-end fw-bold fs-6">Total</td><td class="fw-bold fs-6"><?= $currency . number_format($order['total'],2) ?></td></tr>
           </tfoot>

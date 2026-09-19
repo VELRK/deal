@@ -129,6 +129,7 @@ class Settings extends Sk_Base {
         $toRaw   = $this->input->post('pincode_to',   TRUE);
         $feeRaw  = $this->input->post('pincode_extra_charge', TRUE);
         $freeRaw = $this->input->post('pincode_free_above', TRUE);
+        $msgRaw  = $this->input->post('pincode_range_message', TRUE);
         if (is_array($fromRaw) && is_array($toRaw)) {
             $blocked = [];
             $extraRows = [];
@@ -146,22 +147,30 @@ class Settings extends Sk_Base {
                 }
                 $extraFee = (isset($feeRaw[$i]) && is_numeric($feeRaw[$i])) ? (float)$feeRaw[$i] : 0.0;
                 $freeAbove = (isset($freeRaw[$i]) && is_numeric($freeRaw[$i])) ? (float)$freeRaw[$i] : 0.0;
+                $rowMsg = isset($msgRaw[$i]) ? trim((string)$msgRaw[$i]) : '';
                 if ($extraFee > 0 || $freeAbove > 0) {
                     $extraRows[] = [
                         'from'         => $fs,
                         'to'           => $ts,
                         'extra_charge' => $extraFee,
                         'free_above'   => $freeAbove,
+                        'message'      => $rowMsg,
                     ];
                     continue;
                 }
-                $blocked[] = $fs . ' to ' . $ts;
+                $blocked[] = [
+                    'from'    => $fs,
+                    'to'      => $ts,
+                    'message' => $rowMsg,
+                ];
             }
-            $data['non_delivery_pincode_ranges'] = implode("\n", $blocked);
+            $data['non_delivery_pincode_ranges'] = sk_pincode_encode_block_ranges($blocked);
             $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges($extraRows);
         } else {
             if (isset($data['non_delivery_pincode_ranges'])) {
-                $data['non_delivery_pincode_ranges'] = trim((string)$data['non_delivery_pincode_ranges']);
+                $data['non_delivery_pincode_ranges'] = sk_pincode_encode_block_ranges(
+                    sk_pincode_parse_block_ranges($data['non_delivery_pincode_ranges'])
+                );
             }
             if (isset($data['pincode_extra_charge_ranges'])) {
                 $data['pincode_extra_charge_ranges'] = sk_pincode_encode_extra_ranges(

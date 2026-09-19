@@ -209,12 +209,11 @@ class Sk_Order extends Sk_Base_Api {
             ]);
         }
         $shipping = (float)$shipQuote['shipping'];
-        $shippingExtra = 0.0;
-        $shippingBase = (float)$shipQuote['base_charge'];
+        $isExtraArea = ($shipQuote['scenario'] ?? '') === 'extra_charge';
+        $shippingExtra = $isExtraArea ? (float)$shipQuote['extra_charge'] : 0.0;
+        $shippingBase = $isExtraArea ? (float)$shipQuote['shipping'] : (float)$shipQuote['base_charge'];
         if ($uses_wallet && $this->Sk_Customer_wallet_model->is_wallet_free_shipping()) {
             $shipping = 0;
-        } elseif ($shipping > 0 && ($shipQuote['scenario'] ?? '') === 'extra_charge') {
-            $shippingExtra = (float)$shipQuote['extra_charge'];
         }
         $taxable_amount = max(0, $subtotal - $discount);
         // Storefront does not charge/show GST
