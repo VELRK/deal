@@ -60,9 +60,15 @@ export default function Checkout() {
       .then((res) => {
         const list = (res.data as { data?: ApiAddress[] }).data ?? [];
         setAddresses(list);
+        const storedId = Number(sessionStorage.getItem("checkout_address_id"));
+        const storedIdx = list.findIndex((a) => a.id === storedId);
         const defIdx = list.findIndex((a) => Number(a.is_default) === 1);
-        if (defIdx >= 0) { setSelectedAddr(defIdx); applyAddress(list[defIdx]); }
-        else if (list.length > 0) { setSelectedAddr(0); applyAddress(list[0]); }
+        const initialIdx = storedIdx >= 0 ? storedIdx : defIdx >= 0 ? defIdx : list.length > 0 ? 0 : -1;
+        if (initialIdx >= 0) {
+          setSelectedAddr(initialIdx);
+          applyAddress(list[initialIdx]);
+          sessionStorage.setItem("checkout_address_id", String(list[initialIdx].id));
+        }
         else { setSelectedAddr(-1); setShowAddForm(true); }
         return list;
       })
@@ -932,7 +938,11 @@ export default function Checkout() {
                         <div
                           key={a.id}
                           className={`address-card ${isSelected ? 'selected' : ''}`}
-                          onClick={() => { setSelectedAddr(i); applyAddress(a); }}
+                          onClick={() => {
+                            setSelectedAddr(i);
+                            applyAddress(a);
+                            sessionStorage.setItem("checkout_address_id", String(a.id));
+                          }}
                         >
                           <div className="d-flex justify-content-between align-items-start mb-3">
                             <div className="fw-semibold text-dark d-flex align-items-center gap-2" style={{ fontSize: '13px' }}>

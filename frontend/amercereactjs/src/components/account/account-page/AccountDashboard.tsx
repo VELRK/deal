@@ -60,7 +60,7 @@ const IconPin = () => (
 );
 
 const STAT_CARDS = [
-  { key: "total_orders", label: "Total Orders", Icon: IconBox },
+  { key: "total_orders", label: "Successful Orders", Icon: IconBox },
   { key: "pending", label: "Pending Orders", Icon: IconClock },
   { key: "delivered", label: "Delivered", Icon: IconCheck },
   { key: "addresses", label: "Saved Addresses", Icon: IconPin },
@@ -86,7 +86,7 @@ export default function AccountDashboard() {
             const allOrders = (ordersRes.data as { data?: { status: string }[] }).data || [];
             updatedStats.total_orders = allOrders.filter(o => {
               const s = o.status?.toLowerCase();
-              return s !== "payment_attempt" && s !== "abandoned";
+              return !["payment_attempt", "abandoned", "cancelled", "returned", "failed"].includes(s || "");
             }).length;
             updatedStats.pending = allOrders.filter(o => {
               const s = o.status?.toLowerCase();

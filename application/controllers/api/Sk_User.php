@@ -153,7 +153,11 @@ class Sk_User extends Sk_Base_Api {
         $orders = $this->Sk_Order_model->get_user_orders($uid, 200, 0);
         $addrs  = $this->Sk_User_model->get_addresses($uid);
 
-        $total   = count($orders);
+        $successfulOrders = array_filter($orders, static function ($order) {
+            $status = strtolower(trim((string)($order['status'] ?? '')));
+            return !in_array($status, ['payment_attempt', 'abandoned', 'cancelled', 'returned', 'failed'], true);
+        });
+        $total   = count($successfulOrders);
         $pending = count(array_filter($orders, fn($o) => in_array($o['status'] ?? '', ['pending', 'confirmed', 'processing', 'shipped'], true)));
         $delivered = count(array_filter($orders, fn($o) => ($o['status'] ?? '') === 'delivered'));
         $spent   = array_sum(array_column(

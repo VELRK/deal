@@ -1,16 +1,17 @@
 import { Link } from "react-router-dom";
 import { apiImageUrl } from "@/hooks/useApi";
-import { useMemo, useState, memo, useEffect } from "react";
+import { useState, memo, useEffect } from "react";
 import { useStore, type CartProduct } from "@/context/store";
 import { useAuthStore } from "@/store/authStore";
 import type { ProductId } from "@/context/store";
 import { formatPrice } from "@/utils/formatPrice";
-import { promoAPI, siteSettingsAPI, cartAPI, userAPI, type RoyaltyCartInfo } from "@/services/api";
+import { promoAPI, siteSettingsAPI, cartAPI, userAPI, type ApiAddress, type RoyaltyCartInfo } from "@/services/api";
 import { useModalStore } from "@/store/modalStore";
 import { loadStoredPromo, saveStoredPromo } from "@/utils/promoStorage";
 import { saveUseRoyalty } from "@/utils/royaltyStorage";
 import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, royaltyUnlockMinRm } from "@/utils/royaltyUnlock";
 import { removeLineFromCart } from "@/utils/cartSync";
+import { quotePincodeShipping, type PincodeShipSettings } from "@/utils/pincodeShipping";
 
 export default function ShoppingCart() {
   const cartProducts = useStore((s) => s.cartProducts);
@@ -29,19 +30,49 @@ export default function ShoppingCart() {
   const [royalty, setRoyalty] = useState<RoyaltyCartInfo | null>(null);
   const [useRoyalty, setUseRoyalty] = useState(false);
 
-  /* ── Site Settings ── */
-  const [shippingCharge, setShippingCharge] = useState(50);
-  const [freeShippingAbove] = useState(100);
+  /* ── Saved delivery address + postcode shipping ── */
+  const [addresses, setAddresses] = useState<ApiAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [shipSettings, setShipSettings] = useState<PincodeShipSettings>({
+    shipping_charge: 50,
+    free_shipping_above: 999,
+    non_delivery_pincodes: [],
+    pincode_extra_charge_ranges: [],
+  });
 
-  useMemo(() => {
+  useEffect(() => {
     siteSettingsAPI.get().then(res => {
       if (res.data.success && res.data.data) {
         const s = res.data.data;
-        if (typeof s.shipping_charge === 'number') setShippingCharge(s.shipping_charge);
-        // if (typeof s.free_shipping_above === 'number') setFreeShippingAbove(s.free_shipping_above);
+        setShipSettings({
+          shipping_charge: typeof s.shipping_charge === "number" ? s.shipping_charge : 50,
+          free_shipping_above: typeof s.free_shipping_above === "number" ? s.free_shipping_above : 999,
+          non_delivery_pincodes: s.non_delivery_pincodes ?? [],
+          pincode_extra_charge_ranges: s.pincode_extra_charge_ranges ?? [],
+        });
       }
     }).catch(err => console.error("Failed to load settings", err));
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setAddresses([]);
+      setSelectedAddressId(null);
+      return;
+    }
+    userAPI.getAddresses().then((res) => {
+      const list = res.data.data ?? [];
+      setAddresses(list);
+      const storedId = Number(sessionStorage.getItem("checkout_address_id"));
+      const selected = list.find((a) => a.id === storedId)
+        ?? list.find((a) => Number(a.is_default) === 1)
+        ?? list[0];
+      setSelectedAddressId(selected?.id ?? null);
+    }).catch(() => {
+      setAddresses([]);
+      setSelectedAddressId(null);
+    });
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!isLoggedIn || totalPrice <= 0) return;
@@ -134,8 +165,10 @@ export default function ShoppingCart() {
   };
 
   const discount = promoDiscount;
-  const shippingCost = totalPrice <= 0 ? 0 : (totalPrice >= freeShippingAbove ? 0 : shippingCharge);
   const subtotalAfterPromo = Math.max(0, totalPrice - discount);
+  const selectedAddress = addresses.find((address) => address.id === selectedAddressId) ?? null;
+  const shippingQuote = quotePincodeShipping(selectedAddress?.pincode, subtotalAfterPromo, shipSettings);
+  const shippingCost = totalPrice <= 0 || !shippingQuote.deliverable ? 0 : shippingQuote.shipping;
   const billTotal = subtotalAfterPromo + shippingCost;
   const royaltyEligible =
     !!royalty
@@ -148,7 +181,12 @@ export default function ShoppingCart() {
   const royaltyRm = useRoyalty && canPayWithRoyalty
     ? Math.min(Number(royalty?.balance_rm || 0), billTotal) : 0;
   const amountDue = Math.max(0, billTotal - royaltyRm);
-  const amountToFreeship = Math.max(0, freeShippingAbove - totalPrice);
+  const amountToFreeship = shippingQuote.amount_remaining;
+
+  const chooseAddress = (id: number) => {
+    setSelectedAddressId(id);
+    sessionStorage.setItem("checkout_address_id", String(id));
+  };
 
   const removeLine = (id: ProductId, variantId?: number, index?: number) => {
     removeLineFromCart(id, variantId, index);
@@ -750,7 +788,7 @@ export default function ShoppingCart() {
           </p>
 
           {/* Free Shipping Progress Banner */}
-          {cartProducts.length > 0 && (
+          {cartProducts.length > 0 && shippingQuote.deliverable && shippingQuote.free_threshold > 0 && (
             <div className="cart-freeship-banner">
               <div className="freeship-banner-info">
                 {amountToFreeship === 0 ? (
@@ -767,7 +805,7 @@ export default function ShoppingCart() {
                 <div
                   className="freeship-progress-fill"
                   style={{
-                    width: `${Math.min(100, Math.round((totalPrice / freeShippingAbove) * 100))}%`,
+                    width: `${Math.min(100, Math.round((subtotalAfterPromo / shippingQuote.free_threshold) * 100))}%`,
                     backgroundColor: amountToFreeship === 0 ? "#22c55e" : "#3ec1bc",
                   }}
                 />
@@ -895,6 +933,36 @@ export default function ShoppingCart() {
                     </div>
                     <div className="summary-card-body">
 
+                      {isLoggedIn && addresses.length > 0 && (
+                        <div style={{ marginBottom: 18, paddingBottom: 16, borderBottom: "1px solid #edf0f2" }}>
+                          <label htmlFor="cart-delivery-address" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 7 }}>
+                            Deliver to saved address
+                          </label>
+                          <select
+                            id="cart-delivery-address"
+                            value={selectedAddressId ?? ""}
+                            onChange={(e) => chooseAddress(Number(e.target.value))}
+                            style={{ width: "100%", border: "1px solid #dfe4e8", borderRadius: 8, padding: "9px 10px", background: "#fff", fontSize: 13 }}
+                          >
+                            {addresses.map((address) => (
+                              <option key={address.id} value={address.id}>
+                                {address.label || "Address"} — {address.city}, {address.pincode}
+                              </option>
+                            ))}
+                          </select>
+                          {selectedAddress && (
+                            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, marginTop: 7 }}>
+                              {selectedAddress.line1}{selectedAddress.line2 ? `, ${selectedAddress.line2}` : ""}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                            </div>
+                          )}
+                          {!shippingQuote.deliverable && (
+                            <div style={{ fontSize: 12, color: "#dc2626", fontWeight: 600, marginTop: 7 }}>
+                              {shippingQuote.message}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="summary-line">
                         <span className="label">Subtotal ({cartProducts.length} item{cartProducts.length > 1 ? "s" : ""})</span>
                         <span className="value">{formatPrice(totalPrice)}</span>
@@ -908,13 +976,13 @@ export default function ShoppingCart() {
                       )}
 
                       <div className="summary-line">
-                        <span className="label">Shipping</span>
+                        <span className="label">{shippingQuote.scenario === "extra_charge" ? "Delivery charges" : "Shipping"}</span>
                         <span className={`value${shippingCost === 0 ? " free" : ""}`}>
-                          {shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
+                          {!shippingQuote.deliverable ? "Not available" : shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
                         </span>
                       </div>
 
-                      {totalPrice > 0 && totalPrice < freeShippingAbove && (
+                      {shippingQuote.deliverable && shippingCost > 0 && amountToFreeship > 0 && (
                         <div className="summary-freeship-note">
                           🚚 Spend {formatPrice(amountToFreeship)} more to unlock <strong>free shipping</strong>
                         </div>
@@ -944,6 +1012,8 @@ export default function ShoppingCart() {
                           if (!isLoggedIn) {
                             e.preventDefault();
                             useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
+                          } else if (!shippingQuote.deliverable) {
+                            e.preventDefault();
                           } else {
                             saveUseRoyalty(useRoyalty);
                           }

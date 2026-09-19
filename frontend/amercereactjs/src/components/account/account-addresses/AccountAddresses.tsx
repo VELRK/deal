@@ -19,6 +19,7 @@ const MALAYSIA_STATES = [
 ];
 
 const EMPTY_FORM = {
+  id: 0,
   full_name: "", phone: "", line1: "", line2: "",
   city: "", state: "", pincode: "", country: "Malaysia",
   company_name: "", label: "Home", is_default: 0, address_type: "shipping",
@@ -70,6 +71,14 @@ function IconTrash(props: { className?: string }) {
       <path d="M4 7h16" />
       <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
       <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+    </svg>
+  );
+}
+function IconEdit(props: { className?: string }) {
+  return (
+    <svg className={props.className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
     </svg>
   );
 }
@@ -149,6 +158,33 @@ export default function AccountAddresses() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function closeForm() {
+    setShowForm(false);
+    setError(null);
+    setForm({ ...EMPTY_FORM });
+  }
+
+  function handleEdit(addr: ApiAddress) {
+    setForm({
+      id: addr.id,
+      full_name: addr.full_name ?? "",
+      company_name: addr.company_name ?? "",
+      phone: addr.phone ?? "",
+      line1: addr.line1 ?? "",
+      line2: addr.line2 ?? "",
+      city: addr.city ?? "",
+      state: addr.state ?? "",
+      pincode: addr.pincode ?? "",
+      country: addr.country || "Malaysia",
+      label: addr.label || "Home",
+      is_default: Number(addr.is_default) === 1 ? 1 : 0,
+      address_type: addr.address_type || "shipping",
+    });
+    setError(null);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -171,8 +207,7 @@ export default function AccountAddresses() {
 
       if (result.success && result.data?.addresses) {
         setAddresses(result.data.addresses);
-        setShowForm(false);
-        setForm({ ...EMPTY_FORM });
+        closeForm();
 
         // If we have a redirect path, go back!
         if (redirectPath) {
@@ -417,6 +452,10 @@ export default function AccountAddresses() {
 
           .btn-remove-custom:hover {
             color: var(--danger);
+          }
+
+          .btn-edit-custom:hover {
+            color: var(--teal-dark);
           }
 
           .btn-remove-custom:disabled {
@@ -675,8 +714,8 @@ export default function AccountAddresses() {
         {showForm && (
           <div className="form-card-custom">
             <div className="form-title">
-              <span>New Delivery Address</span>
-              <button type="button" className="form-close-btn" onClick={() => setShowForm(false)} aria-label="Close form">
+              <span>{form.id ? "Edit Delivery Address" : "New Delivery Address"}</span>
+              <button type="button" className="form-close-btn" onClick={closeForm} aria-label="Close form">
                 <IconClose />
               </button>
             </div>
@@ -834,7 +873,7 @@ export default function AccountAddresses() {
                   <button
                     type="button"
                     className="btn-secondary-custom"
-                    onClick={() => setShowForm(false)}
+                    onClick={closeForm}
                   >
                     Cancel
                   </button>
@@ -893,6 +932,14 @@ export default function AccountAddresses() {
                     </div>
 
                     <div className="address-actions-custom">
+                      <button
+                        type="button"
+                        className="btn-remove-custom btn-edit-custom"
+                        onClick={() => handleEdit(addr)}
+                      >
+                        <IconEdit />
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="btn-remove-custom"
