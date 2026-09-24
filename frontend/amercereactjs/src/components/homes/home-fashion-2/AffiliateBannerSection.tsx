@@ -129,7 +129,7 @@ export default function AffiliateBannerSection() {
                   <span className="m-val" style={{ color: '#fef08a' }}>30 Days</span>
                 </div>
                 <div className="matrix-box">
-                  <span className="m-label">Minimum Payout</span>
+                  <span className="m-label">Half Month Payout</span>
                   <span className="m-val">RM 50.00</span>
                 </div>
                 <div className="matrix-box">

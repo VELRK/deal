@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import PageMeta from "@/components/common/PageMeta";
 import AffiliateHowItWorks from "@/components/pages/affiliate/AffiliateHowItWorks";
 import AffiliateRegistrationForm from "@/components/pages/affiliate/AffiliateRegistrationForm";
-import AffiliateFaqSection from "@/components/pages/affiliate/AffiliateFaqSection";
 import AffiliateCtaBanner from "@/components/pages/affiliate/AffiliateCtaBanner";
 
 export default function AffiliatePage() {

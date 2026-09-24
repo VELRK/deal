@@ -13,6 +13,7 @@ export default function AffiliateRegistrationForm() {
   const [phone, setPhone] = useState("");
   const [promoCode, setPromoCode] = useState("");
   const [message, setMessage] = useState("");
+  const [phoneFocused, setPhoneFocused] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,6 @@ export default function AffiliateRegistrationForm() {
   const nameId = useId();
   const emailId = useId();
   const phoneId = useId();
-  const promoId = useId();
   const msgId = useId();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -287,7 +287,7 @@ export default function AffiliateRegistrationForm() {
                 <form onSubmit={handleSubmit}>
                   <div className="row g-3">
                     {/* Contact / Brand Name */}
-                    <div className="col-md-6">
+                    <div className="col-12">
                       <label
                         htmlFor={nameId}
                         style={{ display: "block", fontSize: "13.5px", fontWeight: 600, color: "#334155", marginBottom: "8px" }}
@@ -303,16 +303,23 @@ export default function AffiliateRegistrationForm() {
                         onChange={(e) => setName(e.target.value)}
                         style={{
                           width: "100%",
-                          padding: "12px 14px",
+                          height: "46px",
+                          padding: "0 14px",
                           borderRadius: "8px",
                           border: "1px solid #cbd5e1",
                           fontSize: "14.5px",
                           color: "#0f172a",
                           outline: "none",
-                          transition: "border-color 0.2s ease",
+                          transition: "border-color 0.2s ease, box-shadow 0.2s ease",
                         }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "#3ec1bc")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "#cbd5e1")}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = "#3ec1bc";
+                          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(62, 193, 188, 0.15)";
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = "#cbd5e1";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
                       />
                     </div>
 
@@ -333,16 +340,23 @@ export default function AffiliateRegistrationForm() {
                         onChange={(e) => setEmail(e.target.value)}
                         style={{
                           width: "100%",
-                          padding: "12px 14px",
+                          height: "46px",
+                          padding: "0 14px",
                           borderRadius: "8px",
                           border: "1px solid #cbd5e1",
                           fontSize: "14.5px",
                           color: "#0f172a",
                           outline: "none",
-                          transition: "border-color 0.2s ease",
+                          transition: "border-color 0.2s ease, box-shadow 0.2s ease",
                         }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "#3ec1bc")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "#cbd5e1")}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = "#3ec1bc";
+                          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(62, 193, 188, 0.15)";
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = "#cbd5e1";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
                       />
                     </div>
 
@@ -354,17 +368,32 @@ export default function AffiliateRegistrationForm() {
                       >
                         Malaysian Mobile Number <span style={{ color: "#e11d48" }}>*</span>
                       </label>
-                      <div className="input-group">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "stretch",
+                          height: "46px",
+                          borderRadius: "8px",
+                          border: `1px solid ${phoneFocused ? "#3ec1bc" : "#cbd5e1"}`,
+                          backgroundColor: "#ffffff",
+                          overflow: "hidden",
+                          boxShadow: phoneFocused ? "0 0 0 3px rgba(62, 193, 188, 0.15)" : "none",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
                         <span
-                          className="input-group-text"
                           style={{
                             background: "#f8fafc",
                             fontSize: "14px",
                             fontWeight: 600,
                             color: "#475569",
-                            border: "1px solid #cbd5e1",
-                            borderRight: "none",
-                            borderRadius: "8px 0 0 8px",
+                            padding: "0 14px",
+                            borderRight: "1px solid #cbd5e1",
+                            display: "flex",
+                            alignItems: "center",
+                            userSelect: "none",
+                            flexShrink: 0,
+                            whiteSpace: "nowrap",
                           }}
                         >
                           +60
@@ -372,54 +401,26 @@ export default function AffiliateRegistrationForm() {
                         <input
                           id={phoneId}
                           type="tel"
+                          inputMode="numeric"
                           required
                           placeholder="12-345 6789"
                           value={phone}
                           onChange={(e) => setPhone(formatMalaysiaDisplay(e.target.value))}
+                          onFocus={() => setPhoneFocused(true)}
+                          onBlur={() => setPhoneFocused(false)}
                           style={{
-                            borderRadius: "0 8px 8px 0",
-                            border: "1px solid #cbd5e1",
-                            borderLeft: "none",
-                            padding: "12px 14px",
+                            flex: 1,
+                            border: "none",
+                            outline: "none",
+                            padding: "0 14px",
                             fontSize: "14.5px",
                             color: "#0f172a",
-                            outline: "none",
+                            backgroundColor: "transparent",
+                            width: "100%",
+                            height: "100%",
                           }}
                         />
                       </div>
-                    </div>
-
-                    {/* Desired Promo Code */}
-                    <div className="col-md-6">
-                      <label
-                        htmlFor={promoId}
-                        style={{ display: "block", fontSize: "13.5px", fontWeight: 600, color: "#334155", marginBottom: "8px" }}
-                      >
-                        Preferred Promo Code <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 400 }}>(Optional)</span>
-                      </label>
-                      <input
-                        id={promoId}
-                        type="text"
-                        placeholder="e.g. SITI10 or AURA10"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        style={{
-                          width: "100%",
-                          padding: "12px 14px",
-                          borderRadius: "8px",
-                          border: "1px solid #cbd5e1",
-                          fontSize: "14.5px",
-                          color: "#0f172a",
-                          textTransform: "uppercase",
-                          fontFamily: "monospace",
-                          letterSpacing: "1px",
-                          fontWeight: 600,
-                          outline: "none",
-                          transition: "border-color 0.2s ease",
-                        }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "#3ec1bc")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "#cbd5e1")}
-                      />
                     </div>
 
                     {/* Proposal / Collaboration Message */}
@@ -428,7 +429,7 @@ export default function AffiliateRegistrationForm() {
                         htmlFor={msgId}
                         style={{ display: "block", fontSize: "13.5px", fontWeight: 600, color: "#334155", marginBottom: "8px" }}
                       >
-                        Collaboration Proposal / Social Handles <span style={{ color: "#e11d48" }}>*</span>
+                        Description
                       </label>
                       <textarea
                         id={msgId}
