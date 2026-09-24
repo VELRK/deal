@@ -41,15 +41,15 @@ export default function AffiliatePage() {
           </div>
         </div>
       </section>
-
+      <AffiliateRegistrationForm />
       {/* How it works 3-step section */}
       <AffiliateHowItWorks />
 
       {/* Brand & Agency Partnership Enquiry Form (UI Improved) */}
-      <AffiliateRegistrationForm />
+
 
       {/* FAQs */}
-      <AffiliateFaqSection />
+      {/* <AffiliateFaqSection /> */}
 
       {/* CTA Banner */}
       <AffiliateCtaBanner onApplyClick={scrollToApply} />
