@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
 import { useModalStore } from "@/store/modalStore";
+import { useAuthStore } from "@/store/authStore";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/Modal";
 import { addLineToCart } from "@/utils/cartSync";
 import type { UnitVariantOption } from "@/context/productContextTypes";
@@ -19,13 +20,14 @@ function pickDefaultVariantId(variants: UnitVariantOption[]): number | null {
 }
 
 export default function QuickAdd() {
+  const navigate = useNavigate();
   const {
     quickAddProduct,
     addToWishlist,
     removeFromWishlist,
     isAddedtoWishlist,
   } = useContextElement();
-  const { activeModal, closeModal } = useModalStore();
+  const { activeModal, closeModal, openModal } = useModalStore();
   const isOpen = activeModal === "quickAdd";
 
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
@@ -91,7 +93,7 @@ export default function QuickAdd() {
     }
   };
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (openCartDrawer: boolean = true) => {
     if (!product || adding || isOutOfStock || productFullyOut) return;
     if (hasUnitVariants && !selectedVariant) return;
 
@@ -114,7 +116,11 @@ export default function QuickAdd() {
         },
         qty,
       );
-      closeModal();
+      if (openCartDrawer) {
+        openModal("cart");
+      } else {
+        closeModal();
+      }
     } finally {
       setAdding(false);
     }
@@ -395,7 +401,7 @@ export default function QuickAdd() {
         <ModalFooter
           primaryAction={{
             label: primaryLabel,
-            onClick: handleAddToCart,
+            onClick: () => handleAddToCart(true),
             disabled: isOutOfStock || productFullyOut || adding,
             variant: "gold",
           }}
@@ -405,8 +411,12 @@ export default function QuickAdd() {
               : {
                 label: "Buy It Now",
                 onClick: async () => {
-                  await handleAddToCart();
-                  window.location.href = "/checkout";
+                  await handleAddToCart(false);
+                  if (!useAuthStore.getState().isLoggedIn) {
+                    openModal("signIn", { redirect: "/checkout" });
+                  } else {
+                    navigate("/checkout");
+                  }
                 },
               }
           }

@@ -1,8 +1,9 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
 import { addLineToCart } from "@/utils/cartSync";
+import { useModalStore } from "@/store/modalStore";
 
 function Compare() {
   const { compareItem, removeFromCompareItem } =
@@ -143,7 +144,10 @@ function Compare() {
                     <td key={product.id} className="compare-col compare-value">
                       <button
                         className="tf-btn s-small animate-btn"
-                        onClick={() => void addLineToCart(product)}
+                        onClick={async () => {
+                          await addLineToCart(product);
+                          useModalStore.getState().openModal("cart");
+                        }}
                       >
                         <span className="text-caption-01"> Add To Cart </span>
                       </button>

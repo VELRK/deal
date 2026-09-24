@@ -295,6 +295,7 @@ const PageInvoice = lazy(() => import("./pages/invoice/index"));
 const PagePrivacyPolicy = lazy(() => import("./pages/pages/privacy-policy/index"));
 const PageTermsAndConditions = lazy(() => import("./pages/pages/terms-and-conditions/index"));
 const PageOrdersFaq = lazy(() => import("./pages/pages/orders-faq/index"));
+const PageAffiliate = lazy(() => import("./pages/pages/affiliate/index"));
 
 
 /* —— Product detail variants (:id) —— */
@@ -564,6 +565,14 @@ function App() {
           />
 
           {/* Marketing / utility pages */}
+          <Route
+            path="/affiliate"
+            element={<PagesSectionRoute Page={PageAffiliate} />}
+          />
+          <Route
+            path="/affiliate-program"
+            element={<Navigate to="/affiliate" replace />}
+          />
           <Route
             path="/about"
             element={<PagesSectionRoute Page={PageAbout} />}

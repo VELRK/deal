@@ -455,6 +455,11 @@ export default function Footer9({
                       </li>
                     ))}
                     <li>
+                      <Link to="/affiliate" className="luxury-footer-link">
+                        Become an Affiliate
+                      </Link>
+                    </li>
+                    <li>
                       <button
                         type="button"
                         className="luxury-footer-link bg-transparent border-0 p-0 text-start"

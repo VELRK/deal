@@ -171,7 +171,7 @@ export function ProductQuantityBuy({ product }: { product: ProductCardItem }) {
               onClick={(e) => { e.preventDefault(); void handleAddToCart(); }}
             >
               <i className="icon icon-Handbag" style={{ fontSize: "16px" }} />
-              {adding ? "Updating…" : isInCart ? "Update Cart" : "Add to Cart"}
+              {adding ? "Updating…" : isInCart ? "Add To Cart" : "Add to Cart"}
             </button>
           </div>
         </div>

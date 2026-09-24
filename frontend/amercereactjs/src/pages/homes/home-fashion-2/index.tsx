@@ -14,6 +14,7 @@ import RecentlyViewed from "@/components/shop-details/RecentlyViewed";
 import OurStory from "@/components/homes/home-fashion-2/OurStory";
 import Features from "@/components/homes/home-fashion-2/Features";
 import ServicesBanner from "@/components/homes/home-fashion-2/ServicesBanner";
+import AffiliateBannerSection from "@/components/homes/home-fashion-2/AffiliateBannerSection";
 import AppDownload from "@/components/homes/home-fashion-2/AppDownload";
 import { useSeoPage, useSiteSettings } from "@/hooks/useApi";
 
@@ -55,6 +56,7 @@ export default function HomeFashion2Page() {
         <Testimonials />
         {/* <Gallery /> */}
         <RecentlyViewed />
+        <AffiliateBannerSection />
         <ServicesBanner />
 
         <Features />

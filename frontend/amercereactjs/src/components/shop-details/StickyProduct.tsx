@@ -8,8 +8,8 @@ import { useStore } from "@/context/store";
 
 export default function StickyProduct() {
   const [isVisible, setIsVisible] = useState(false);
-  const [isMobile, setIsMobile]   = useState(false);
-  const [quantity, setQuantity]   = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -48,9 +48,9 @@ export default function StickyProduct() {
 
   if (!product) return null;
 
-  const price    = selectedVariant?.price ?? product.price;
-  const imgSrc   = selectedVariant?.img || product.img || product.images?.[0]?.src || "";
-  const sizes    = (product.sizes ?? []).map(String).filter(Boolean);
+  const price = selectedVariant?.price ?? product.price;
+  const imgSrc = selectedVariant?.img || product.img || product.images?.[0]?.src || "";
+  const sizes = (product.sizes ?? []).map(String).filter(Boolean);
 
   const changeQuantity = async (next: number) => {
     const q = Math.max(1, next);
@@ -151,7 +151,7 @@ export default function StickyProduct() {
                   : adding
                     ? "Updating…"
                     : isInCart
-                      ? "Update Cart"
+                      ? "Add To Cart"
                       : `Add To Cart — ${formatPrice(price * quantity)}`}
               </button>
             </form>

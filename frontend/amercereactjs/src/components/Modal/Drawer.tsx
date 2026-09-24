@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useModalStore } from "@/store/modalStore";
 import styles from "./modal.module.css";
 
 interface DrawerProps {
@@ -22,12 +23,16 @@ export default function Drawer({
       setShouldRender(true);
       document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "auto";
+      if (useModalStore.getState().activeModal === "none") {
+        document.body.style.overflow = "";
+      }
       const timer = setTimeout(() => setShouldRender(false), 250); // match animation duration
       return () => clearTimeout(timer);
     }
     return () => {
-      document.body.style.overflow = "auto";
+      if (useModalStore.getState().activeModal === "none") {
+        document.body.style.overflow = "";
+      }
     };
   }, [isOpen]);
 

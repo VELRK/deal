@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useModalStore } from "@/store/modalStore";
 import styles from "./modal.module.css";
 
 interface ModalProps {
@@ -32,7 +33,9 @@ export default function Modal({
       const timer = setTimeout(() => {
         setIsMounted(false);
         setIsClosing(false);
-        document.body.style.overflow = "";
+        if (useModalStore.getState().activeModal === "none") {
+          document.body.style.overflow = "";
+        }
       }, 250); // Matches var(--modal-transition)
       return () => clearTimeout(timer);
     }

@@ -8,6 +8,7 @@ import type { ApiProduct, ApiReview } from "@/services/api";
 import { apiImageUrl } from "@/hooks/useApi";
 import { formatPrice } from "@/utils/formatPrice";
 import { addLineToCart } from "@/utils/cartSync";
+import { useModalStore } from "@/store/modalStore";
 
 const LOW_STOCK = 5;
 
@@ -36,13 +37,13 @@ export default function ProductViewModal() {
   const { isAddedToCartProducts } = useContextElement();
   const navigate = useNavigate();
 
-  const [product, setProduct]   = useState<ApiProduct | null>(null);
-  const [loading, setLoading]   = useState(false);
+  const [product, setProduct] = useState<ApiProduct | null>(null);
+  const [loading, setLoading] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [adding, setAdding]     = useState(false);
-  const [reviews, setReviews]   = useState<ApiReview[]>([]);
-  const [tab, setTab]           = useState<"desc" | "specs" | "reviews">("desc");
+  const [adding, setAdding] = useState(false);
+  const [reviews, setReviews] = useState<ApiReview[]>([]);
+  const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
 
   // Fetch product when key changes
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function ProductViewModal() {
         // Fetch reviews
         reviewsAPI.getByProduct(p.id)
           .then((r) => setReviews(r.data.data ?? []))
-          .catch(() => {});
+          .catch(() => { });
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
@@ -87,26 +88,26 @@ export default function ProductViewModal() {
 
   const defaultVariant = product?.variants?.find((v) => v.is_default) ?? product?.variants?.[0];
   const variantId = defaultVariant?.id ?? product?.default_variant_id;
-  const price   = product
+  const price = product
     ? Number(defaultVariant?.sale_price ?? defaultVariant?.price ?? product.sale_price ?? product.price)
     : 0;
   const oldPrice = defaultVariant
     ? (defaultVariant.sale_price ? Number(defaultVariant.price) : undefined)
     : (product?.sale_price ? Number(product.price) : undefined);
-  const stock   = Number(defaultVariant?.stock ?? product?.stock ?? 0);
+  const stock = Number(defaultVariant?.stock ?? product?.stock ?? 0);
   const isOutOfStock = stock === 0;
-  const isLowStock   = stock > 0 && stock <= LOW_STOCK;
+  const isLowStock = stock > 0 && stock <= LOW_STOCK;
 
   const isInCart = product ? isAddedToCartProducts(product.id, variantId) : false;
 
   // Build gallery
   const gallery: string[] = product
     ? [
-        apiImageUrl(defaultVariant?.image || product.thumbnail),
-        ...(product.images ?? [])
-          .filter((img) => img.image !== product.thumbnail)
-          .map((img) => apiImageUrl(img.image)),
-      ]
+      apiImageUrl(defaultVariant?.image || product.thumbnail),
+      ...(product.images ?? [])
+        .filter((img) => img.image !== product.thumbnail)
+        .map((img) => apiImageUrl(img.image)),
+    ]
     : [];
 
   const avgRating = reviews.length
@@ -131,6 +132,8 @@ export default function ProductViewModal() {
         },
         quantity,
       );
+      closeView();
+      useModalStore.getState().openModal("cart");
     } finally {
       setAdding(false);
     }
@@ -312,18 +315,18 @@ export default function ProductViewModal() {
                   <div style={{ marginBottom: 16 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <tbody>
-                        <AttrRow label="Saree Type"   value={product.saree_type} />
-                        <AttrRow label="Fabric"       value={product.fabric} />
-                        <AttrRow label="Color"        value={product.color} />
-                        <AttrRow label="Occasion"     value={product.occasion} />
-                        <AttrRow label="Work Type"    value={product.work_type} />
-                        <AttrRow label="Origin"       value={product.origin_state} />
-                        <AttrRow label="Weave"        value={product.weave_type} />
-                        <AttrRow label="Wash Care"    value={product.wash_care} />
-                        <AttrRow label="Blouse"       value={product.blouse_included ? `Included (${product.blouse_length}m)` : "Not included"} />
-                        <AttrRow label="Length"       value={product.saree_length ? `${product.saree_length}m` : undefined} />
-                        <AttrRow label="Net Weight"   value={product.net_weight ? `${product.net_weight}g` : undefined} />
-                        <AttrRow label="Brand"        value={product.brand_name} />
+                        <AttrRow label="Saree Type" value={product.saree_type} />
+                        <AttrRow label="Fabric" value={product.fabric} />
+                        <AttrRow label="Color" value={product.color} />
+                        <AttrRow label="Occasion" value={product.occasion} />
+                        <AttrRow label="Work Type" value={product.work_type} />
+                        <AttrRow label="Origin" value={product.origin_state} />
+                        <AttrRow label="Weave" value={product.weave_type} />
+                        <AttrRow label="Wash Care" value={product.wash_care} />
+                        <AttrRow label="Blouse" value={product.blouse_included ? `Included (${product.blouse_length}m)` : "Not included"} />
+                        <AttrRow label="Length" value={product.saree_length ? `${product.saree_length}m` : undefined} />
+                        <AttrRow label="Net Weight" value={product.net_weight ? `${product.net_weight}g` : undefined} />
+                        <AttrRow label="Brand" value={product.brand_name} />
                       </tbody>
                     </table>
                   </div>
@@ -390,7 +393,7 @@ export default function ProductViewModal() {
                     border: "none", fontWeight: 700, fontSize: 14, cursor: isOutOfStock ? "not-allowed" : "pointer",
                   }}
                 >
-                  {isOutOfStock ? "Out of Stock" : adding ? "Adding…" : isInCart ? "Update Cart" : `Add to Cart — ${formatPrice(price * quantity)}`}
+                  {isOutOfStock ? "Out of Stock" : adding ? "Adding…" : isInCart ? "Add To Cart" : `Add to Cart — ${formatPrice(price * quantity)}`}
                 </button>
 
                 <button

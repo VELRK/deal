@@ -1,0 +1,1 @@
+function n(r,s){let l=r.replace(/[^a-zA-Z]/g,"").substring(0,4).toUpperCase();for(;l.length<4;)l+="0";const e=s.replace(/\D/g,"");let t;return e?e.length>=4?t=e.slice(-4):t=e.padStart(4,"0"):t="0000",l+t}export{n as g};

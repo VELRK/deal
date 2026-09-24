@@ -8,7 +8,7 @@ import { addLineToCart } from "@/utils/cartSync";
 
 export default function QuickView() {
   const { quickViewItem, isAddedToCartProducts } = useContextElement();
-  const { activeModal, closeModal } = useModalStore();
+  const { activeModal, closeModal, openModal } = useModalStore();
   const isOpen = activeModal === "quickView";
 
   const product = quickViewItem;
@@ -43,8 +43,11 @@ export default function QuickView() {
   }, [product]);
 
   const handleAddToCart = async () => {
-    if (!product || isAdded) return;
-    await addLineToCart(product, quantity);
+    if (!product) return;
+    if (!isAdded) {
+      await addLineToCart(product, quantity);
+    }
+    openModal("cart");
   };
 
   return (

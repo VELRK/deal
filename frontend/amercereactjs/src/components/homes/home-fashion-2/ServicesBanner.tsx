@@ -1,10 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { useModalStore } from "@/store/modalStore";
 
 const services = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m10.5-10.5-2.5 2.5m2.5-2.5 2.5-2.5M10.5 4.5 8 7m4 14a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9c0 2.12.74 4.07 1.97 5.61" />
+        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m10.5-10.5-2.5 2.5m2.5-2.5 2.5-2.5M10.5 4.5 8 7m4 14a9 9 0 0 0 9-9 9 9 0 0 0-9 9c0 2.12.74 4.07 1.97 5.61" />
         <path d="M22 2 11 13" />
       </svg>
     ),
@@ -43,12 +44,21 @@ const services = [
     ),
     title: "Become an Affiliate",
     description: "Join our affiliate program and earn commission on every sale.",
-    action: "affiliateEnquiry"
+    href: "/affiliate"
   }
 ];
 
 export default function ServicesBanner() {
+  const navigate = useNavigate();
   const { openModal } = useModalStore();
+
+  const handleItemClick = (svc: { href?: string; action?: string }) => {
+    if (svc.href) {
+      navigate(svc.href);
+    } else if (svc.action) {
+      openModal(svc.action as any);
+    }
+  };
 
   return (
     <div style={{ backgroundColor: '#f2f4f5', padding: '40px 0', borderTop: '1px solid #eaeaea', borderBottom: '1px solid #eaeaea' }}>
@@ -63,13 +73,14 @@ export default function ServicesBanner() {
           {services.map((svc, idx) => (
             <div
               key={idx}
-              onClick={() => svc.action && openModal(svc.action as any)}
+              onClick={() => handleItemClick(svc)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 flex: '1 1 300px',
                 gap: '20px',
-                cursor: svc.action ? 'pointer' : 'default'
+                cursor: svc.href || (svc as any).action ? 'pointer' : 'default',
+                transition: 'all 0.25s ease'
               }}
             >
               <div style={{

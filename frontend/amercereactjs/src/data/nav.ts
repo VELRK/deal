@@ -321,6 +321,10 @@ export const navBlog = [
 ];
 export const navPages = [
   {
+    "href": "/affiliate",
+    "text": "Become an Affiliate"
+  },
+  {
     "href": "/about",
     "text": "About Us"
   },
