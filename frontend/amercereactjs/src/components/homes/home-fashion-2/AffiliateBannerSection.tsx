@@ -58,7 +58,7 @@ export default function AffiliateBannerSection() {
                     </svg>
                   </div>
                   <div className="perk-text">
-                    <h5>Direct Monthly Bank Transfers</h5>
+                    <h5>Direct Bank Transfers</h5>
                     <p>Hassle-free, on-time payouts directly to Malaysian bank accounts with real-time performance analytics.</p>
                   </div>
                 </div>
@@ -101,11 +101,9 @@ export default function AffiliateBannerSection() {
               </div>
 
               <div style={{ marginBottom: '18px' }}>
-                <span style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '4px' }}>
-                  Affiliate Track
-                </span>
+
                 <h4 style={{ color: '#ffffff', fontFamily: '"Playfair Display", Georgia, serif', fontSize: '22px', margin: 0 }}>
-                  Creator & Ambassador Tier
+                  Affiliate Partner
                 </h4>
               </div>
 
@@ -126,13 +124,10 @@ export default function AffiliateBannerSection() {
                 </div>
 
                 <div className="matrix-box">
-                  <span className="m-label">Half Month Payout</span>
+                  <span className="m-label">7 Days Withdraw Payout</span>
                   <span className="m-val">RM 50.00</span>
                 </div>
-                <div className="matrix-box">
-                  <span className="m-label">Platform Fee</span>
-                  <span className="m-val" style={{ color: '#86efac' }}>RM 0 (Free)</span>
-                </div>
+
               </div>
 
               <div className="card-footer-strip">

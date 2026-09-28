@@ -530,8 +530,8 @@ export default function AffiliateRegistrationForm() {
 
                   <div className="text-center mt-3" style={{ fontSize: "12px", color: "#64748b" }}>
                     Have urgent questions? Email our affiliate team at{" "}
-                    <a href="mailto:affiliates@2deal.com.my" style={{ color: "#2da19d", fontWeight: 600 }}>
-                      affiliates@2deal.com.my
+                    <a href="mailto:golden2deal@gmail.com" style={{ color: "#2da19d", fontWeight: 600 }}>
+                      golden2deal@gmail.com
                     </a>
                   </div>
                 </form>
