@@ -157,7 +157,7 @@ export default function AffiliateRegistrationForm() {
                   textTransform: "uppercase",
                 }}
               >
-                ★ Up to 10% Commission
+                ★ Up to 5% Commission
               </div>
             </div>
 
@@ -474,13 +474,13 @@ export default function AffiliateRegistrationForm() {
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2da19d" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Up to 10% Commission
+                      Up to 5% Commission
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2da19d" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Personalized Promo Code
+                      7 Days Withdraw Payout
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2da19d" strokeWidth="2.5">
@@ -509,6 +509,10 @@ export default function AffiliateRegistrationForm() {
                       padding: "16px",
                       borderRadius: "8px",
                       border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
                       cursor: loading ? "not-allowed" : "pointer",
                       boxShadow: "0 4px 16px rgba(62, 193, 188, 0.35)",
                       transition: "all 0.25s ease",
@@ -521,7 +525,7 @@ export default function AffiliateRegistrationForm() {
                       if (!loading) e.currentTarget.style.background = "#3ec1bc";
                     }}
                   >
-                    {loading ? "Submitting Your Enquiry..." : "Submit Partnership Enquiry →"}
+                    {loading ? "Submitting Your Enquiry..." : "Submit Enquiry →"}
                   </button>
 
                   <div className="text-center mt-3" style={{ fontSize: "12px", color: "#64748b" }}>

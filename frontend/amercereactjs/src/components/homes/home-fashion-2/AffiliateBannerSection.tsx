@@ -33,7 +33,7 @@ export default function AffiliateBannerSection() {
                   </div>
                   <div className="perk-text">
                     <h5>Generous Commission Rates</h5>
-                    <p>Earn up to 10% commission on every completed order referred via your unique tracking link or promo code.</p>
+                    <p>Earn up to 5% commission on every completed order referred via your unique tracking link or promo code.</p>
                   </div>
                 </div>
 
@@ -45,8 +45,8 @@ export default function AffiliateBannerSection() {
                     </svg>
                   </div>
                   <div className="perk-text">
-                    <h5>Personalized Coupon Code</h5>
-                    <p>Get a custom vanity code that gives your audience a discount while automatically attributing the commission to your wallet.</p>
+                    <h5>7 Days Withdraw Payout</h5>
+                    <p>Enjoy the flexibility of withdrawing your earnings once every 7 days (conditions apply).</p>
                   </div>
                 </div>
 
@@ -115,14 +115,14 @@ export default function AffiliateBannerSection() {
                   <strong>YOURCODE10</strong>
                 </div>
                 <div className="badge-offer">
-                  10% OFF
+                  5% OFF
                 </div>
               </div>
 
               <div className="stats-matrix">
                 <div className="matrix-box">
                   <span className="m-label">Commission Rate</span>
-                  <span className="m-val" style={{ color: '#5eead4' }}>Up to 10%</span>
+                  <span className="m-val" style={{ color: '#5eead4' }}>Up to 5%</span>
                 </div>
                 <div className="matrix-box">
                   <span className="m-label">Cookie Lifetime</span>

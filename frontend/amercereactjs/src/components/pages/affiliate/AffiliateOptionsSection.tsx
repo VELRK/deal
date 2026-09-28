@@ -19,7 +19,7 @@ export const affiliateOptionsData: AffiliateOption[] = [
     target: "Instagram, TikTok, YouTube creators, lifestyle & home decor bloggers",
     badge: "Most Popular",
     isPopular: true,
-    rate: "10%",
+    rate: "5%",
     rateLabel: "Commission Rate",
     iconBg: "#eef8f8",
     iconColor: "#2da19d",
@@ -54,7 +54,7 @@ export const affiliateOptionsData: AffiliateOption[] = [
       </svg>
     ),
     features: [
-      "Personalized coupon code for friends to get 10% off",
+      "Personalized coupon code for friends to get 5% off",
       "Instant sign up — zero minimum followers required",
       "One-click sharing on WhatsApp, Telegram & Facebook",
       "Earn real cash rewards on every single purchase",

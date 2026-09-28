@@ -16,7 +16,7 @@ export default function AffiliatePage() {
     <div className="affiliate-page-wrapper">
       <PageMeta
         title="Become an Affiliate | 2Deal Affiliate Program"
-        description="Join our affiliate program and earn commission on every sale. Partner with 2Deal to earn up to 10% commission on handcrafted incense, sambrani, and lifestyle essentials."
+        description="Join our affiliate program and earn commission on every sale. Partner with 2Deal to earn up to 5% commission on handcrafted incense, sambrani, and lifestyle essentials."
         keywords="2deal affiliate, become an affiliate, earn commission on every sale, affiliate program malaysia, incense affiliate"
       />
 

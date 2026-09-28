@@ -10,17 +10,17 @@ export default function AffiliateEarningsCalculator({
   const ordersSliderId = useId();
 
   // Commission tier logic:
-  // Base 8%, if orders >= 50: 9%, if orders >= 100: 10%
-  let commissionRate = 0.08;
+  // Base 3%, if orders >= 50: 4%, if orders >= 100: 5%
+  let commissionRate = 0.03;
   let tierName = "Silver Ambassador";
   let tierBadgeColor = "#fef08a";
 
   if (ordersPerMonth >= 100) {
-    commissionRate = 0.10;
+    commissionRate = 0.05;
     tierName = "VIP Platinum Partner";
     tierBadgeColor = "#5eead4";
   } else if (ordersPerMonth >= 50) {
-    commissionRate = 0.09;
+    commissionRate = 0.04;
     tierName = "Gold Premier Partner";
     tierBadgeColor = "#fed7aa";
   }
