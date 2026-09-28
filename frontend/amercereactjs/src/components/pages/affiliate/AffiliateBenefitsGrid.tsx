@@ -11,16 +11,7 @@ export default function AffiliateBenefitsGrid() {
         </svg>
       ),
     },
-    {
-      title: "30-Day Cookie Window",
-      desc: "Even if your referred visitor browses today and buys three weeks later, you still receive full attribution and commission.",
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      ),
-    },
+
     {
       title: "7 Days Withdraw Payout",
       desc: "Enjoy the flexibility of withdrawing your earnings once every 7 days (conditions apply).",
