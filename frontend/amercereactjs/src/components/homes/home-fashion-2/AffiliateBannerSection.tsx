@@ -45,8 +45,8 @@ export default function AffiliateBannerSection() {
                     </svg>
                   </div>
                   <div className="perk-text">
-                    <h5>7 Days Withdraw Payout</h5>
-                    <p>Enjoy the flexibility of withdrawing your earnings once every 7 days (conditions apply).</p>
+                    <h5>Bi-weekly Withdraw Payout</h5>
+                    <p>Enjoy the flexibility of withdrawing your earnings on a bi-weekly basis (conditions apply).</p>
                   </div>
                 </div>
 
@@ -124,7 +124,7 @@ export default function AffiliateBannerSection() {
                 </div>
 
                 <div className="matrix-box">
-                  <span className="m-label">7 Days Withdraw Payout</span>
+                  <span className="m-label">Bi-Weekly Withdraw Payout</span>
                   <span className="m-val">RM 50.00</span>
                 </div>
 
