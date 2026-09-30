@@ -1,0 +1,1 @@
+function c(){return window.fbq}function o(n,i){const e=c();typeof e=="function"&&e("track","InitiateCheckout",{content_ids:n.map(t=>String(t.id)),content_type:"product",contents:n.map(t=>({id:String(t.id),quantity:t.quantity,item_price:t.price})),currency:"MYR",num_items:n.reduce((t,u)=>t+u.quantity,0),value:Number(i.toFixed(2))})}export{o as t};
