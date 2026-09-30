@@ -18,6 +18,7 @@ import { isPlaceholderEmail, isPlaceholderName, isProfileIncomplete } from "@/ut
 import { toMalaysiaE164 } from "@/utils/malaysiaPhone";
 import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
 import { quotePincodeShipping, pincodeServiceMessage, type PincodeShipSettings } from "@/utils/pincodeShipping";
+import { trackPurchase } from "@/utils/metaPixel";
 
 /* Razorpay global type */
 declare global {
@@ -28,6 +29,19 @@ declare global {
     };
   }
 }
+
+type PaidOrderTracking = {
+  id: number;
+  order_number?: string;
+  payment_status?: string;
+  total?: number | string;
+  items?: Array<{
+    product_id?: number;
+    product_name?: string;
+    quantity?: number;
+    price?: number;
+  }>;
+};
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -712,7 +726,7 @@ export default function Checkout() {
       const result = res.data as {
         success?: boolean;
         message?: string;
-        data?: { order?: { id: number }; stock_issues?: StockIssue[] };
+        data?: { order?: PaidOrderTracking; stock_issues?: StockIssue[] };
       };
       if (!result.success || !result.data?.order?.id) {
         if (result.data?.stock_issues?.length) {
@@ -738,6 +752,9 @@ export default function Checkout() {
 
       // ── COD, Wallet, or fully paid by royalty: done ─────────────────
       if (paymentMethod === "cod" || paymentMethod === "wallet" || amountDue <= 0.009) {
+        if ((result.data.order.payment_status || "").toLowerCase() === "paid") {
+          trackPurchase(result.data.order);
+        }
         saveStoredPromo(null);
         saveUseRoyalty(false);
         await removePaidProductsFromCart(paidLines);
@@ -801,6 +818,9 @@ export default function Checkout() {
                 confirmed?: boolean;
                 pending?: boolean;
                 failed?: boolean;
+                order_id?: number;
+                total?: number | string;
+                order?: PaidOrderTracking;
                 cart_clear_lines?: { product_id: number; variant_id?: number | null }[];
               };
             };
@@ -813,6 +833,14 @@ export default function Checkout() {
               setOrderError(body.message || curlecUserMessage().message);
               setOrderPlacing(false);
               return;
+            }
+            if (body.data?.order) {
+              trackPurchase(body.data.order);
+            } else if (body.data?.order_id && body.data?.total != null) {
+              trackPurchase({
+                id: body.data.order_id,
+                total: body.data.total,
+              });
             }
             saveStoredPromo(null);
             saveUseRoyalty(false);

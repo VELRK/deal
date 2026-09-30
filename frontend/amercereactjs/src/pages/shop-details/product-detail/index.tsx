@@ -9,6 +9,7 @@ import type { ColorOption, SizeOption } from "@/context/ProductContext";
 import { useCurrentProductStore } from "@/store/currentProductStore";
 import { useEffect } from "react";
 import { trackView } from "@/hooks/useRecentlyViewed";
+import { trackViewContent } from "@/utils/metaPixel";
 
 export default function Page() {
   const { id = "" } = useParams<{ id: string }>();
@@ -82,6 +83,7 @@ export default function Page() {
   useEffect(() => {
     if (!card) return;
     setCurrentProduct(card);
+    trackViewContent(card);
     return () => setCurrentProduct(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiProduct?.id]);

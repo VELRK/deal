@@ -4,6 +4,7 @@ import { persist, type StorageValue } from "zustand/middleware";
 
 import type { ProductCardItem } from "@/types/productCard";
 import { products } from "@/data/products/products";
+import { trackAddToCart } from "@/utils/metaPixel";
 
 export type Product = ProductCardItem;
 export type CartProduct = Product & {
@@ -107,6 +108,7 @@ export const useStore = create<StoreState>()(
         };
         const next = [...cartProducts, cartItem];
         set({ cartProducts: next, totalPrice: getTotalPrice(next) });
+        trackAddToCart(item, qty);
       },
 
       updateQuantity: (id, qty, variantId) => {

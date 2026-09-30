@@ -10,6 +10,7 @@ declare global {
 import { paymentAPI } from "@/services/api";
 import { curlecCheckoutRedirect, curlecUserMessage } from "@/utils/curlecPayment";
 import { removePaidProductsFromCart, type PaidCartLine } from "@/utils/cartSync";
+import { trackPurchase } from "@/utils/metaPixel";
 
 export function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -96,6 +97,19 @@ export async function completeOrderPayment(
               confirmed?: boolean;
               pending?: boolean;
               failed?: boolean;
+              order_id?: number;
+              total?: number | string;
+              order?: {
+                id: number;
+                order_number?: string;
+                total?: number | string;
+                items?: Array<{
+                  product_id?: number;
+                  product_name?: string;
+                  quantity?: number;
+                  price?: number;
+                }>;
+              };
               cart_clear_lines?: PaidCartLine[];
             };
           };
@@ -109,6 +123,14 @@ export async function completeOrderPayment(
               onMessage(body.message || curlecUserMessage().message);
               resolve("failed");
               return;
+            }
+            if (body.data?.order) {
+              trackPurchase(body.data.order);
+            } else if (body.data?.order_id && body.data?.total != null) {
+              trackPurchase({
+                id: body.data.order_id,
+                total: body.data.total,
+              });
             }
             if (body?.data?.cart_clear_lines?.length) {
               await removePaidProductsFromCart(body.data.cart_clear_lines);
