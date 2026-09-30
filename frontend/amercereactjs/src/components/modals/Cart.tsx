@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { cartAPI, siteSettingsAPI } from "@/services/api";
 import { removeLineFromCart } from "@/utils/cartSync";
 import { apiImageUrl } from "@/hooks/useApi";
+import { trackInitiateCheckout } from "@/utils/metaPixel";
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -192,6 +193,7 @@ export default function Cart() {
                 type="button"
                 id="side-cart-checkout-btn"
                 onClick={() => {
+                  trackInitiateCheckout(cartProducts, totalPrice);
                   if (!useAuthStore.getState().isLoggedIn) {
                     useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
                   } else {

@@ -12,6 +12,7 @@ import { saveUseRoyalty } from "@/utils/royaltyStorage";
 import { royaltyIsUnlocked, royaltyRemainingToUnlock, royaltyUnlockMessage, royaltyUnlockMinRm } from "@/utils/royaltyUnlock";
 import { removeLineFromCart } from "@/utils/cartSync";
 import { quotePincodeShipping, type PincodeShipSettings } from "@/utils/pincodeShipping";
+import { trackInitiateCheckout } from "@/utils/metaPixel";
 
 export default function ShoppingCart() {
   const cartProducts = useStore((s) => s.cartProducts);
@@ -1009,11 +1010,15 @@ export default function ShoppingCart() {
                         id="checkout-btn"
                         className="checkout-action-btn"
                         onClick={(e) => {
+                          if (!shippingQuote.deliverable) {
+                            e.preventDefault();
+                            return;
+                          }
+
+                          trackInitiateCheckout(cartProducts, amountDue);
                           if (!isLoggedIn) {
                             e.preventDefault();
                             useModalStore.getState().openModal("signIn", { redirect: "/checkout" });
-                          } else if (!shippingQuote.deliverable) {
-                            e.preventDefault();
                           } else {
                             saveUseRoyalty(useRoyalty);
                           }
@@ -1050,6 +1055,7 @@ export default function ShoppingCart() {
             to="/checkout"
             className="mobile-bar-checkout-btn"
             onClick={(e) => {
+              trackInitiateCheckout(cartProducts, amountDue);
               if (!isLoggedIn) {
                 e.preventDefault();
                 useModalStore.getState().openModal("signIn", { redirect: "/checkout" });

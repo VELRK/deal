@@ -411,10 +411,35 @@ function RouteScrollToTop() {
   return null;
 }
 
+let lastMetaPixelPage: string | null = null;
+
+function MetaPixelPageView() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const page = location.pathname + location.search;
+    if (lastMetaPixelPage === page) return;
+
+    const fbq = (
+      window as Window & {
+        fbq?: (action: string, event: string) => void;
+      }
+    ).fbq;
+
+    if (typeof fbq === "function") {
+      fbq("track", "PageView");
+      lastMetaPixelPage = page;
+    }
+  }, [location.pathname, location.search]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter basename={routerBasename}>
       <RouteScrollToTop />
+      <MetaPixelPageView />
       <Suspense fallback={routeSuspenseFallback}>
         <Routes>
           <Route path="/" element={<IndexPage />} />
