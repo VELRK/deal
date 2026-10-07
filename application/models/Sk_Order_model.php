@@ -17,6 +17,8 @@ class Sk_Order_model extends CI_Model {
     }
 
     public function create($data, $items) {
+        $this->load->helper('sk_invoice');
+        sk_invoice_ensure_schema();
         $data['created_at'] = date('Y-m-d H:i:s');
         // Temporary unique value until we have insert_id for G2D10001-style number.
         $data['order_number'] = 'TMP' . strtoupper(substr(md5(uniqid((string)mt_rand(), true)), 0, 12));
@@ -25,6 +27,10 @@ class Sk_Order_model extends CI_Model {
 
         $order_number = $this->format_order_number($order_id);
         $this->db->where('id', $order_id)->update('orders', ['order_number' => $order_number]);
+
+        if (sk_invoice_is_sequence_order($data)) {
+            sk_invoice_assign_seq($order_id);
+        }
 
         foreach ($items as $item) {
             $item['order_id'] = $order_id;
@@ -367,11 +373,23 @@ class Sk_Order_model extends CI_Model {
     }
 
     public function recent_orders($limit = 5) {
-        return $this->db->select('o.*, u.name as customer_name')
-                        ->from('orders o')
-                        ->join('users u', 'u.id = o.user_id', 'left')
-                        ->order_by('o.created_at', 'DESC')
+        $this->db->select('o.*, u.name as customer_name')
+                 ->from('orders o')
+                 ->join('users u', 'u.id = o.user_id', 'left');
+        $this->apply_successful_order_scope('o');
+        return $this->db->order_by('o.created_at', 'DESC')
                         ->limit($limit)->get()->result_array();
+    }
+
+    /** Dashboard counts and lists: real orders only, not abandoned or failed checkouts. */
+    public function apply_successful_order_scope(string $alias = ''): void {
+        $status = ($alias !== '' ? $alias . '.' : '') . 'status';
+        $pay    = ($alias !== '' ? $alias . '.' : '') . 'payment_status';
+        $this->db->where_not_in($status, ['payment_attempt', 'abandoned', 'failed']);
+        $this->db->group_start()
+                 ->where($pay . ' IS NULL', null, false)
+                 ->or_where($pay . ' !=', 'failed')
+                 ->group_end();
     }
 
     /**

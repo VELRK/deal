@@ -81,7 +81,7 @@ class Seo_resolve extends CI_Controller {
             if ($path !== $canonical) {
                 return $this->redirect_permanent($canonical);
             }
-            return $this->serve_spa(200);
+            return $this->serve_spa(200, $product, 'product');
         }
         // Inactive / missing — still try id lookup for old bookmarks
         if (ctype_digit($segment)) {
@@ -107,7 +107,7 @@ class Seo_resolve extends CI_Controller {
             if ($path !== $canonical) {
                 return $this->redirect_permanent($canonical);
             }
-            return $this->serve_spa(200);
+            return $this->serve_spa(200, $row, 'blog');
         }
         return $this->serve_spa(404);
     }
@@ -125,16 +125,18 @@ class Seo_resolve extends CI_Controller {
         exit;
     }
 
-    protected function serve_spa(int $status = 200) {
-        $spa = FCPATH . 'frontend' . DIRECTORY_SEPARATOR . 'index.html';
-        if (!is_file($spa)) {
-            show_404();
-            return;
+    protected function serve_spa(int $status = 200, ?array $entity = null, string $type = '') {
+        $this->load->helper('sk_seo_html');
+        $seo = [];
+        if ($status === 200 && $entity && ($type === 'product' || $type === 'blog')) {
+            $this->load->model('Sk_Seo_model');
+            $seo = sk_seo_html_from_entity($entity, $type, $this->Sk_Seo_model->get_global_seo());
+        } elseif ($status === 404) {
+            $seo = [
+                'title' => 'Page not found',
+                'robots' => 'noindex,follow',
+            ];
         }
-        http_response_code($status);
-        header('Content-Type: text/html; charset=UTF-8');
-        header('Cache-Control: no-cache, no-store, must-revalidate');
-        readfile($spa);
-        exit;
+        sk_seo_html_serve($seo, $status);
     }
 }

@@ -82,8 +82,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(product|blog|product-detail|blog-single)/([^/]+)/?$ index.php?/$1/$2 [L,QSA]
 
+# Homepage through PHP so description, keywords, canonical, and OG image are in the HTML.
+RewriteRule ^$ index.php [L]
+
 # SPA
-RewriteRule ^$ frontend/index.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ frontend/index.html [L]

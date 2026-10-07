@@ -9,8 +9,13 @@ class Sk_Dashboard_model extends CI_Model {
             'approved_vendors' => $this->db->where('status', 'approved')->where('deleted_at IS NULL', null, false)->count_all_results('vendors'),
             'pending_vendors'  => $this->db->where('status', 'pending')->where('deleted_at IS NULL', null, false)->count_all_results('vendors'),
             'total_products'   => $this->db->count_all('products'),
-            'total_orders'     => $this->db->count_all('orders'),
-            'pending_orders'   => $this->db->where_in('status', ['pending', 'payment_attempt'])->count_all_results('orders'),
+            'total_orders'     => $this->successful_order_count(),
+            'pending_orders'   => $this->db->where('status', 'pending')
+                ->group_start()
+                    ->where('payment_status IS NULL', null, false)
+                    ->or_where('payment_status !=', 'failed')
+                ->group_end()
+                ->count_all_results('orders'),
             'total_customers'  => $this->db->count_all('users'),
             'total_revenue'    => (float)($this->db->select_sum('total')->where('payment_status', 'paid')->get('orders')->row()->total ?? 0),
             'monthly_revenue'  => (float)($this->db->select_sum('total')
@@ -47,8 +52,10 @@ class Sk_Dashboard_model extends CI_Model {
 
         $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
                  ->from('order_items oi')
+                 ->join('orders o', 'o.id = oi.order_id')
                  ->join('products p', 'p.id = oi.product_id', 'left');
         $vendorScope();
+        $this->apply_successful_order_scope('o');
         $orders = (int)($this->db->get()->row()->cnt ?? 0);
 
         $this->db->select('COUNT(DISTINCT oi.order_id) as cnt', false)
@@ -56,7 +63,12 @@ class Sk_Dashboard_model extends CI_Model {
                  ->join('orders o', 'o.id = oi.order_id')
                  ->join('products p', 'p.id = oi.product_id', 'left');
         $vendorScope();
-        $pending = (int)($this->db->where_in('o.status', ['pending', 'payment_attempt'])->get()->row()->cnt ?? 0);
+        $pending = (int)($this->db->where('o.status', 'pending')
+            ->group_start()
+                ->where('o.payment_status IS NULL', null, false)
+                ->or_where('o.payment_status !=', 'failed')
+            ->group_end()
+            ->get()->row()->cnt ?? 0);
 
         $this->db->select_sum('oi.subtotal', 'total')
                  ->from('order_items oi')
@@ -121,18 +133,35 @@ class Sk_Dashboard_model extends CI_Model {
     }
 
     public function vendor_recent_orders(int $vendor_id, int $limit = 8): array {
-        return $this->db->select('o.*, u.name as customer_name, SUM(oi.subtotal) as vendor_total')
-                        ->from('order_items oi')
-                        ->join('orders o', 'o.id = oi.order_id')
-                        ->join('users u', 'u.id = o.user_id', 'left')
-                        ->join('products p', 'p.id = oi.product_id', 'left')
-                        ->group_start()
-                            ->where('oi.vendor_id', $vendor_id)
-                            ->or_where('p.vendor_id', $vendor_id)
-                        ->group_end()
-                        ->group_by('o.id')
+        $this->db->select('o.*, u.name as customer_name, SUM(oi.subtotal) as vendor_total')
+                 ->from('order_items oi')
+                 ->join('orders o', 'o.id = oi.order_id')
+                 ->join('users u', 'u.id = o.user_id', 'left')
+                 ->join('products p', 'p.id = oi.product_id', 'left')
+                 ->group_start()
+                     ->where('oi.vendor_id', $vendor_id)
+                     ->or_where('p.vendor_id', $vendor_id)
+                 ->group_end();
+        $this->apply_successful_order_scope('o');
+        return $this->db->group_by('o.id')
                         ->order_by('o.created_at', 'DESC')
                         ->limit($limit)
                         ->get()->result_array();
+    }
+
+    private function successful_order_count(): int {
+        $this->apply_successful_order_scope();
+        return (int)$this->db->count_all_results('orders');
+    }
+
+    /** Real orders only. Abandoned checkouts and failed payments are left out. */
+    private function apply_successful_order_scope(string $alias = ''): void {
+        $status = ($alias !== '' ? $alias . '.' : '') . 'status';
+        $pay    = ($alias !== '' ? $alias . '.' : '') . 'payment_status';
+        $this->db->where_not_in($status, ['payment_attempt', 'abandoned', 'failed']);
+        $this->db->group_start()
+                 ->where($pay . ' IS NULL', null, false)
+                 ->or_where($pay . ' !=', 'failed')
+                 ->group_end();
     }
 }

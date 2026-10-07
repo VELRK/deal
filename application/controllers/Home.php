@@ -8,13 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Home extends CI_Controller {
 
     public function index() {
-        $spa = FCPATH . 'frontend' . DIRECTORY_SEPARATOR . 'index.html';
-        if (is_file($spa)) {
-            header('Content-Type: text/html; charset=UTF-8');
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            readfile($spa);
-            return;
-        }
-        show_404();
+        $this->load->helper('sk_seo_html');
+        sk_seo_html_serve(sk_seo_html_from_home(), 200);
     }
 }

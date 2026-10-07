@@ -358,11 +358,107 @@ function sk_invoice_seller_from_vendor(array $vendor, array $store, array $setti
     ];
 }
 
+/** Checkout rows that must not take an invoice sequence number. */
+function sk_invoice_is_sequence_order(array $order): bool {
+    $status = strtolower(trim((string)($order['status'] ?? '')));
+    $pay    = strtolower(trim((string)($order['payment_status'] ?? '')));
+    if (in_array($status, ['payment_attempt', 'abandoned', 'failed'], true)) {
+        return false;
+    }
+    if ($pay === 'failed') {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * One-time lock of invoices already issued: proper orders keep INV-(100000+id).
+ * Abandoned / failed rows are left empty so later numbers skip them.
+ */
+function sk_invoice_ensure_schema(): void {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+
+    $CI =& get_instance();
+    $CI->db->query("SELECT GET_LOCK('sk_invoice_seq', 15)");
+    try {
+        if (!$CI->db->field_exists('invoice_seq', 'orders')) {
+            $CI->db->query(
+                "ALTER TABLE `orders` ADD COLUMN `invoice_seq` INT UNSIGNED NULL DEFAULT NULL AFTER `order_number`, ADD UNIQUE KEY `uq_orders_invoice_seq` (`invoice_seq`)"
+            );
+        }
+
+        $migrated = $CI->db->where('key', 'invoice_seq_migrated')->get('settings')->row_array();
+        if (!empty($migrated['value'])) {
+            $done = true;
+            return;
+        }
+
+        $CI->db->query(
+            "UPDATE `orders`
+             SET `invoice_seq` = 100000 + `id`
+             WHERE `invoice_seq` IS NULL
+               AND `status` NOT IN ('payment_attempt', 'abandoned', 'failed')
+               AND (`payment_status` IS NULL OR `payment_status` <> 'failed')"
+        );
+
+        if (!isset($CI->Sk_Admin_model)) {
+            $CI->load->model('Sk_Admin_model');
+        }
+        $CI->Sk_Admin_model->save_settings(['invoice_seq_migrated' => '1']);
+        $done = true;
+    } finally {
+        $CI->db->query("SELECT RELEASE_LOCK('sk_invoice_seq')");
+    }
+}
+
+/** Next invoice sequence for a real order. Existing invoice_seq is never replaced. */
+function sk_invoice_assign_seq(int $orderId): int {
+    $orderId = (int)$orderId;
+    if ($orderId <= 0) {
+        return 0;
+    }
+
+    sk_invoice_ensure_schema();
+    $CI =& get_instance();
+    $CI->db->query("SELECT GET_LOCK('sk_invoice_seq', 15)");
+    try {
+        $row = $CI->db->select('id, invoice_seq, status, payment_status')
+            ->where('id', $orderId)
+            ->get('orders')
+            ->row_array();
+        if (!$row || !sk_invoice_is_sequence_order($row)) {
+            return 0;
+        }
+        $existing = (int)($row['invoice_seq'] ?? 0);
+        if ($existing > 0) {
+            return $existing;
+        }
+
+        $max = (int)($CI->db->select_max('invoice_seq')->get('orders')->row()->invoice_seq ?? 0);
+        $next = max(100000, $max) + 1;
+        $CI->db->where('id', $orderId)
+            ->where('invoice_seq IS NULL', null, false)
+            ->update('orders', ['invoice_seq' => $next]);
+
+        $saved = $CI->db->select('invoice_seq')->where('id', $orderId)->get('orders')->row_array();
+        return (int)($saved['invoice_seq'] ?? 0);
+    } finally {
+        $CI->db->query("SELECT RELEASE_LOCK('sk_invoice_seq')");
+    }
+}
+
 function sk_invoice_number(array $order, array $seller): string {
     $prefix = preg_replace('/[^A-Z0-9\-]/i', '', $seller['invoice_prefix'] ?? 'INV') ?: 'INV';
-    $id     = max(1, (int)($order['id'] ?? 0));
-    // Sequential display: order #1 → INV-100001, #2 → INV-100002, …
-    $seq    = 100000 + $id;
+    $seq = (int)($order['invoice_seq'] ?? 0);
+    if ($seq <= 0 && !empty($order['id']) && sk_invoice_is_sequence_order($order)) {
+        $seq = sk_invoice_assign_seq((int)$order['id']);
+    }
+    if ($seq <= 0) {
+        return '';
+    }
     return strtoupper($prefix) . '-' . $seq;
 }
 

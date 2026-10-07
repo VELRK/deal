@@ -24,6 +24,7 @@ interface RecentOrder {
   id: number;
   order_number?: string;
   status: string;
+  payment_status?: string;
   total: number;
   created_at: string;
   items?: OrderItem[];
@@ -83,14 +84,19 @@ export default function AccountDashboard() {
         if (d) {
           const updatedStats = { ...d.stats };
           if (ordersRes && ordersRes.data) {
-            const allOrders = (ordersRes.data as { data?: { status: string }[] }).data || [];
+            const allOrders = (ordersRes.data as { data?: { status: string; payment_status?: string }[] }).data || [];
+            const isFailed = (o: { status?: string; payment_status?: string }) => {
+              const s = o.status?.toLowerCase() || "";
+              const pay = o.payment_status?.toLowerCase() || "";
+              return pay === "failed" || ["payment_attempt", "abandoned", "failed"].includes(s);
+            };
             updatedStats.total_orders = allOrders.filter(o => {
-              const s = o.status?.toLowerCase();
-              return !["payment_attempt", "abandoned", "cancelled", "returned", "failed"].includes(s || "");
+              const s = o.status?.toLowerCase() || "";
+              return !isFailed(o) && !["cancelled", "returned"].includes(s);
             }).length;
             updatedStats.pending = allOrders.filter(o => {
-              const s = o.status?.toLowerCase();
-              return ["pending", "confirmed", "processing", "shipped"].includes(s || "");
+              const s = o.status?.toLowerCase() || "";
+              return !isFailed(o) && ["pending", "confirmed", "processing", "shipped"].includes(s);
             }).length;
             updatedStats.delivered = allOrders.filter(o => {
               const s = o.status?.toLowerCase();
@@ -99,8 +105,9 @@ export default function AccountDashboard() {
           }
           setStats(updatedStats);
           setRecent(d.recent_orders.filter(o => {
-            const s = o.status?.toLowerCase();
-            return s !== "payment_attempt" && s !== "abandoned";
+            const s = o.status?.toLowerCase() || "";
+            const pay = o.payment_status?.toLowerCase() || "";
+            return pay !== "failed" && !["payment_attempt", "abandoned", "failed"].includes(s);
           }));
         }
       })

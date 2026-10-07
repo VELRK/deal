@@ -155,17 +155,35 @@ class Sk_User extends Sk_Base_Api {
 
         $successfulOrders = array_filter($orders, static function ($order) {
             $status = strtolower(trim((string)($order['status'] ?? '')));
+            $pay = strtolower(trim((string)($order['payment_status'] ?? '')));
+            if ($pay === 'failed') {
+                return false;
+            }
             return !in_array($status, ['payment_attempt', 'abandoned', 'cancelled', 'returned', 'failed'], true);
         });
         $total   = count($successfulOrders);
-        $pending = count(array_filter($orders, fn($o) => in_array($o['status'] ?? '', ['pending', 'confirmed', 'processing', 'shipped'], true)));
+        $pending = count(array_filter($orders, function ($o) {
+            $pay = strtolower(trim((string)($o['payment_status'] ?? '')));
+            if ($pay === 'failed') {
+                return false;
+            }
+            return in_array($o['status'] ?? '', ['pending', 'confirmed', 'processing', 'shipped'], true);
+        }));
         $delivered = count(array_filter($orders, fn($o) => ($o['status'] ?? '') === 'delivered'));
         $spent   = array_sum(array_column(
             array_filter($orders, fn($o) => in_array($o['payment_status'] ?? '', ['paid','captured'])),
             'total'
         ));
 
-        $recent = array_slice($orders, 0, 5);
+        $recentPool = array_values(array_filter($orders, static function ($order) {
+            $status = strtolower(trim((string)($order['status'] ?? '')));
+            $pay = strtolower(trim((string)($order['payment_status'] ?? '')));
+            if ($pay === 'failed') {
+                return false;
+            }
+            return !in_array($status, ['payment_attempt', 'abandoned', 'failed'], true);
+        }));
+        $recent = array_slice($recentPool, 0, 5);
         foreach ($recent as &$o) {
             $o['items'] = $this->Sk_Order_model->get_items($o['id']);
         }
