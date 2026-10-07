@@ -31,7 +31,7 @@ function BestSellerCard({ product }: { product: ProductCardItem }) {
             style={{ width: "34px", height: "34px", border: "1px solid rgba(0,0,0,0.06)" }}
           />
         </div>
-        <Link to={`/product-detail/${product.id}`} style={{ width: "100%", height: "100%", display: "block" }}>
+        <Link to={`/product/${product.slug ?? product.id}`} style={{ width: "100%", height: "100%", display: "block" }}>
           {discountPercent > 0 && (
             <div
               style={{
@@ -67,7 +67,7 @@ function BestSellerCard({ product }: { product: ProductCardItem }) {
 
         {/* Title */}
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           style={{
             fontSize: "14px",
             fontWeight: "500",

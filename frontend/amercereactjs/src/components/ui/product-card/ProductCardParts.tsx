@@ -8,6 +8,7 @@ import React from "react";
 
 export function ProductCardDualImageLink({
   productId,
+  productSlug,
   activeImage,
   hoverImage,
   alt,
@@ -15,6 +16,7 @@ export function ProductCardDualImageLink({
   height,
 }: {
   productId: number;
+  productSlug?: string;
   activeImage: string;
   hoverImage: string;
   alt: string;
@@ -23,7 +25,7 @@ export function ProductCardDualImageLink({
 }) {
   return (
     <Link
-      to={`/product-detail/${productId}`}
+      to={`/product/${productSlug || productId}`}
       className="product-img"
       style={{ display: "block", aspectRatio: "3/4", overflow: "hidden", position: "relative", width: "100%" }}
     >

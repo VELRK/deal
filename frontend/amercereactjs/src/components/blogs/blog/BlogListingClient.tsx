@@ -65,7 +65,7 @@ export default function BlogListingClient() {
         <article className="featured-blog-post hover-img mb-5">
           <div className="row align-items-center">
             <div className="col-md-7">
-              <Link to={`/blog-single/${featuredPost.slug}`} className="blog-image img-style d-block overflow-hidden">
+              <Link to={`/blog/${featuredPost.slug}`} className="blog-image img-style d-block overflow-hidden">
                 <img
                   loading="lazy"
                   className="w-100"
@@ -81,12 +81,12 @@ export default function BlogListingClient() {
                   FEATURED ARTICLE — {featuredPost.date}
                 </p>
                 <h3 className="entry-title font-classic mt-2 mb-3">
-                  <Link to={`/blog-single/${featuredPost.slug}`} className="link">
+                  <Link to={`/blog/${featuredPost.slug}`} className="link">
                     {featuredPost.title}
                   </Link>
                 </h3>
                 <p className="entry-desc cl-text-2 mb-4">{featuredPost.excerpt}</p>
-                <Link to={`/blog-single/${featuredPost.slug}`} className="btn-read-more">
+                <Link to={`/blog/${featuredPost.slug}`} className="btn-read-more">
                   Read Article <i className="icon icon-ArrowRight" />
                 </Link>
               </div>
@@ -98,7 +98,7 @@ export default function BlogListingClient() {
       <div className="tf-grid-layout sm-col-2">
         {gridPosts.map((post) => (
           <article key={post.id} className="article-blog hover-img">
-            <Link to={`/blog-single/${post.slug}`} className="blog-image img-style">
+            <Link to={`/blog/${post.slug}`} className="blog-image img-style">
               <img
                 loading="lazy"
                 width={450}
@@ -112,12 +112,12 @@ export default function BlogListingClient() {
                 LATEST — {post.date}
               </p>
               <h5 className="entry-title font-classic">
-                <Link to={`/blog-single/${post.slug}`} className="link">
+                <Link to={`/blog/${post.slug}`} className="link">
                   {post.title}
                 </Link>
               </h5>
               <p className="entry-desc cl-text-2">{post.excerpt}</p>
-              <Link to={`/blog-single/${post.slug}`} className="btn-read-more mt-2">
+              <Link to={`/blog/${post.slug}`} className="btn-read-more mt-2">
                 Read More <i className="icon icon-ArrowRight" />
               </Link>
             </div>

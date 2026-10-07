@@ -81,6 +81,13 @@ class Sk_Seo_model extends CI_Model {
             $ogImage = $row['thumbnail'];
         }
 
+        $slug = trim((string)($row['slug'] ?? ''));
+        $path = $slug
+            ? (($type === 'blog' ? '/blog/' : '/product/') . $slug)
+            : '';
+        $canonical = $path ? $this->_abs_url(ltrim($path, '/')) : '';
+        $faqs = $this->normalize_faqs($row['faqs'] ?? $row['faq_json'] ?? []);
+
         return [
             'entity_type'      => $type,
             'meta_title'       => $title,
@@ -90,7 +97,58 @@ class Sk_Seo_model extends CI_Model {
             'og_description'   => $desc,
             'og_image'         => $ogImage ? $this->_abs_url($ogImage) : (trim($globals['seo_og_image'] ?? '') ? $this->_abs_url($globals['seo_og_image']) : ''),
             'robots'           => 'index,follow',
+            'canonical_url'    => $canonical,
+            'canonical_path'   => $path,
+            'faqs'             => $faqs,
         ];
+    }
+
+    /** Normalize FAQ entries from JSON string, arrays, or POST question/answer lists. */
+    public function normalize_faqs($raw): array {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($raw)) return [];
+
+        $out = [];
+        // Associative list of {question, answer}
+        $isList = array_keys($raw) === range(0, count($raw) - 1);
+        if ($isList) {
+            foreach ($raw as $item) {
+                if (!is_array($item)) continue;
+                $q = trim(strip_tags((string)($item['question'] ?? $item['q'] ?? '')));
+                $a = trim((string)($item['answer'] ?? $item['a'] ?? ''));
+                $a = trim(strip_tags($a, '<p><br><ul><ol><li><strong><em><a>'));
+                if ($q === '' || $a === '') continue;
+                $out[] = ['question' => $q, 'answer' => $a];
+            }
+            return $out;
+        }
+        return [];
+    }
+
+    /** Build FAQ JSON from admin POST faq_question[] / faq_answer[]. */
+    public function faqs_from_post($questions, $answers): ?string {
+        $questions = is_array($questions) ? $questions : [];
+        $answers   = is_array($answers) ? $answers : [];
+        $items = [];
+        $n = max(count($questions), count($answers));
+        for ($i = 0; $i < $n; $i++) {
+            $q = trim(strip_tags((string)($questions[$i] ?? '')));
+            $a = trim(strip_tags((string)($answers[$i] ?? '')));
+            if ($q === '' || $a === '') continue;
+            $items[] = ['question' => $q, 'answer' => $a];
+        }
+        return $items ? json_encode($items, JSON_UNESCAPED_UNICODE) : null;
+    }
+
+    public function sanitize_slug(string $raw): string {
+        $slug = strtolower(trim($raw));
+        $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
+        $slug = preg_replace('/[\s_]+/', '-', $slug);
+        $slug = preg_replace('/-+/', '-', $slug);
+        return trim($slug, '-');
     }
 
     public function get_global_seo(): array {

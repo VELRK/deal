@@ -1,12 +1,15 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import PageMeta from "@/components/common/PageMeta";
+import FaqSection from "@/components/common/FaqSection";
 import { useBlog, useBlogs } from "@/hooks/useApi";
+import { absoluteUrl, blogPath } from "@/utils/seoPaths";
 
 const PLACEHOLDER = "/frontend/assets/images/blog/img-blog-1.jpg";
 
 export default function BlogSingleDynamicPage() {
-  const { id: slug = "" } = useParams<{ id: string }>();
+  const { slug: slugParam = "", id = "" } = useParams<{ slug?: string; id?: string }>();
+  const slug = slugParam || id;
   const { blog, loading, error } = useBlog(slug);
   const { blogs } = useBlogs();
 
@@ -20,11 +23,16 @@ export default function BlogSingleDynamicPage() {
 
   if (error || !blog) return <Navigate to="/404" replace />;
 
-  const currentIndex = blogs.findIndex((b) => b.slug === slug);
+  const currentIndex = blogs.findIndex((b) => b.slug === blog.slug);
   const prevPost = currentIndex > 0 ? blogs[currentIndex - 1] : null;
-  const nextPost = currentIndex < blogs.length - 1 ? blogs[currentIndex + 1] : null;
+  const nextPost = currentIndex >= 0 && currentIndex < blogs.length - 1 ? blogs[currentIndex + 1] : null;
 
   const tagList = blog.tags ? blog.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  const faqs = (blog.faqs ?? blog.seo?.faqs ?? []).filter(
+    (f) => f?.question?.trim() && f?.answer?.trim(),
+  );
+  const canonical =
+    blog.seo?.canonical_url || absoluteUrl(blogPath({ slug: blog.slug, id: blog.id }));
 
   return (
     <>
@@ -34,6 +42,8 @@ export default function BlogSingleDynamicPage() {
         keywords={blog.seo?.meta_keywords || blog.meta_keywords}
         image={blog.seo?.og_image || blog.og_image || blog.image_url || undefined}
         ogType="article"
+        canonical={canonical}
+        faqs={faqs}
       />
 
       {/* Page Title / Breadcrumb */}
@@ -123,13 +133,13 @@ export default function BlogSingleDynamicPage() {
                   {(prevPost || nextPost) && (
                     <div className="d-flex justify-content-between align-items-start mt-5 pt-4 border-top gap-3">
                       {prevPost ? (
-                        <Link to={`/blog-single/${prevPost.slug}`} className="link fw-medium d-flex align-items-center gap-2" style={{ maxWidth: "45%" }}>
+                        <Link to={blogPath(prevPost)} className="link fw-medium d-flex align-items-center gap-2" style={{ maxWidth: "45%" }}>
                           <i className="icon icon-ArrowLeft flex-shrink-0" />
                           <span>{prevPost.title}</span>
                         </Link>
                       ) : <span />}
                       {nextPost && (
-                        <Link to={`/blog-single/${nextPost.slug}`} className="link fw-medium d-flex align-items-center gap-2 text-end" style={{ maxWidth: "45%" }}>
+                        <Link to={blogPath(nextPost)} className="link fw-medium d-flex align-items-center gap-2 text-end" style={{ maxWidth: "45%" }}>
                           <span>{nextPost.title}</span>
                           <i className="icon icon-ArrowRight flex-shrink-0" />
                         </Link>
@@ -142,6 +152,8 @@ export default function BlogSingleDynamicPage() {
           </div>
         </div>
       </section>
+
+      <FaqSection faqs={faqs} />
     </>
   );
 }

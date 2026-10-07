@@ -48,7 +48,7 @@ function Recent({ query = "" }: { query?: string }) {
                       style={{ width: "34px", height: "34px", border: "1px solid rgba(0,0,0,0.06)" }}
                     />
                   </div>
-                  <Link to={`/product-detail/${p.id}`} className="product-img" style={{ display: "block", aspectRatio: "3/4", overflow: "hidden" }}>
+                  <Link to={`/product/${p.slug ?? p.id}`} className="product-img" style={{ display: "block", aspectRatio: "3/4", overflow: "hidden" }}>
                     <img
                       src={p.img || apiImageUrl(null)}
                       alt={p.name}
@@ -58,7 +58,7 @@ function Recent({ query = "" }: { query?: string }) {
                   </Link>
                 </div>
                 <div className="card-product_info mt-12">
-                  <Link to={`/product-detail/${p.id}`} className="product-name fw-semibold link">
+                  <Link to={`/product/${p.slug ?? p.id}`} className="product-name fw-semibold link">
                     {p.name}
                   </Link>
                   <div className="product-infor-price mt-4">

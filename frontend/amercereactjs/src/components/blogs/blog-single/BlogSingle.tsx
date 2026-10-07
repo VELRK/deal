@@ -194,7 +194,7 @@ export default function BlogSingle({
                   <div className="group-direc">
                     {prevPost ? (
                       <Link
-                        to={`/blog-single/${prevPost.id}`}
+                        to={`/blog/${prevPost.id}`}
                         className="btn-direc prev link"
                       >
                         <p className="fw-semibold text-decoration-underline">
@@ -213,7 +213,7 @@ export default function BlogSingle({
                     <span className="br-line type-vertical" />
                     {nextPost ? (
                       <Link
-                        to={`/blog-single/${nextPost.id}`}
+                        to={`/blog/${nextPost.id}`}
                         className="btn-direc next link"
                       >
                         <p className="fw-semibold text-decoration-underline">

@@ -82,7 +82,7 @@ function Blog() {
                     <ul className="sb-recent">
                       {recentSidebar.map((post) => (
                         <li key={post.id} className="recent-item">
-                          <Link to={`/blog-single/${post.slug}`} className="image">
+                          <Link to={`/blog/${post.slug}`} className="image">
                             <img
                               loading="lazy"
                               width={90}
@@ -93,7 +93,7 @@ function Blog() {
                           </Link>
                           <div className="meta">
                             <p className="meta-date text-caption-01 cl-text-2">{post.date}</p>
-                            <Link to={`/blog-single/${post.slug}`} className="meta-name link-underline link fw-medium">
+                            <Link to={`/blog/${post.slug}`} className="meta-name link-underline link fw-medium">
                               {post.title}
                             </Link>
                           </div>

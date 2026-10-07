@@ -53,7 +53,9 @@ class Sk_Blog extends Sk_Base_Api {
         $row['date']      = date('d M Y', strtotime($row['created_at']));
 
         $this->load->model('Sk_Seo_model');
+        $row['faqs'] = $this->Sk_Seo_model->normalize_faqs($row['faq_json'] ?? []);
         $row['seo'] = $this->Sk_Seo_model->format_entity($row, 'blog', $this->Sk_Seo_model->get_global_seo());
+        unset($row['faq_json']);
 
         $this->set_cache($key, $row);
         $this->success($row);

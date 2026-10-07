@@ -76,7 +76,7 @@ function CompareOffcanvasItem({
 
   return (
     <div className="tf-compare-item file-delete">
-      <Link to={`/product-detail/${item.id}`}>
+      <Link to={`/product/${item.slug ?? item.id}`}>
         <button
           type="button"
           className="icon remove border-0 p-0"

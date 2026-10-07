@@ -41,7 +41,14 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         // Clean URLs: blank index_page + root .htaccess rewrite to single index.php
         $config['index_page'] = '';
     } elseif (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
-        $config['base_url'] = $scheme . '://' . $host . '/deal/';
+        $reqPath = (string)(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+        if (preg_match('#^/(deal1)(/|$)#i', $reqPath, $m)) {
+            $config['base_url'] = $scheme . '://' . $host . '/' . strtolower($m[1]) . '/';
+        } elseif (preg_match('#^/(deal)(/|$)#i', $reqPath, $m)) {
+            $config['base_url'] = $scheme . '://' . $host . '/' . strtolower($m[1]) . '/';
+        } else {
+            $config['base_url'] = $scheme . '://' . $host . '/deal1/';
+        }
     } else {
         $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
         // XAMPP on Windows can expose a filesystem path in SCRIPT_NAME — never use that in URLs

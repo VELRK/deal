@@ -151,11 +151,15 @@ export interface ApiProduct {
   meta_desc?: string;
   meta_keywords?: string;
   og_image?: string;
+  faqs?: { question: string; answer: string }[];
   seo?: {
     meta_title?: string;
     meta_description?: string;
     meta_keywords?: string;
     og_image?: string;
+    canonical_url?: string;
+    canonical_path?: string;
+    faqs?: { question: string; answer: string }[];
   };
   colors_json?: { name: string; hex?: string; image?: string }[];
   related?: ApiProduct[];
@@ -808,11 +812,15 @@ export interface ApiBlog {
   meta_desc?: string;
   meta_keywords?: string;
   og_image?: string;
+  faqs?: { question: string; answer: string }[];
   seo?: {
     meta_title?: string;
     meta_description?: string;
     meta_keywords?: string;
     og_image?: string;
+    canonical_url?: string;
+    canonical_path?: string;
+    faqs?: { question: string; answer: string }[];
   };
   date: string;
   created_at: string;

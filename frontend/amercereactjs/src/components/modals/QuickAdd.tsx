@@ -153,7 +153,7 @@ export default function QuickAdd() {
             {/* Product Summary Header Card */}
             <div className={styles.productHeaderCard}>
               <div className={styles.imageWrapper}>
-                <Link to={`/product-detail/${product.id}`} onClick={closeModal}>
+                <Link to={`/product/${product.slug ?? product.id}`} onClick={closeModal}>
                   <img
                     className={styles.productImg}
                     src={previewImage}
@@ -173,7 +173,7 @@ export default function QuickAdd() {
                 )}
 
                 <Link
-                  to={`/product-detail/${product.id}`}
+                  to={`/product/${product.slug ?? product.id}`}
                   className={styles.productTitle}
                   onClick={closeModal}
                   title={product.name}
@@ -380,7 +380,7 @@ export default function QuickAdd() {
                 </button> */}
 
                 <Link
-                  to={`/product-detail/${product.id}`}
+                  to={`/product/${product.slug ?? product.id}`}
                   onClick={closeModal}
                   className={styles.viewDetailsLink}
                   title="View Full Product Page"

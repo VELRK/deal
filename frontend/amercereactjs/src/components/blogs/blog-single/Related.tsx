@@ -29,7 +29,7 @@ export default function Related({ currentId }: { currentId: string }) {
           {related.map((post) => (
             <article key={post.id} className="article-blog hover-img">
               <Link
-                to={`/blog-single/${post.id}`}
+                to={`/blog/${post.id}`}
                 className="blog-image img-style"
               >
                 <img
@@ -46,7 +46,7 @@ export default function Related({ currentId }: { currentId: string }) {
                 </p>
                 <h5 className="entry-title">
                   <Link
-                    to={`/blog-single/${post.id}`}
+                    to={`/blog/${post.id}`}
                     className="link-underline link"
                   >
                     {post.title}

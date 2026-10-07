@@ -409,7 +409,7 @@ export default function ProductViewModal() {
                 </button>
 
                 <Link
-                  to={`/product-detail/${product.id}`}
+                  to={`/product/${product.slug ?? product.id}`}
                   onClick={handleClose}
                   style={{ display: "block", textAlign: "center", fontSize: 13, color: "#0f172a", fontWeight: 600, textDecoration: "underline" }}
                 >

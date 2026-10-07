@@ -137,7 +137,7 @@ function ProductThumbs() {
                     </div>
                     <div className="mini-infor">
                       <Link
-                        to={`/product-detail/${card.slug ?? card.id}`}
+                        to={`/product/${card.slug ?? card.id}`}
                         className="info_name text-body-1 fw-medium link-underline-primary text-line-clamp-2"
                       >
                         {card.name}

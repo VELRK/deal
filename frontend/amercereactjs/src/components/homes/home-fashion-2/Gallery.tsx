@@ -34,7 +34,7 @@ function Gallery() {
             data-wow-delay={`${0.1 * (index % 5)}s`}
           >
             <Link
-              to={`/product-detail/${product.id}`}
+              to={`/product/${product.slug ?? product.id}`}
               className="classic-gallery-item"
             >
               <div style={{ aspectRatio: "3/4" }}>

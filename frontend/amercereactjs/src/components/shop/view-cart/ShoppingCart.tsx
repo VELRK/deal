@@ -1095,12 +1095,12 @@ const CartTableRow = memo(function CartTableRow({
       <td>
         <div className="cart-product-cell">
           <div className="cart-product-img">
-            <Link to={`/product-detail/${item.id}`}>
+            <Link to={`/product/${item.slug ?? item.id}`}>
               <img loading="lazy" src={imgSrc} alt={item.name} />
             </Link>
           </div>
           <div className="cart-product-info">
-            <Link to={`/product-detail/${item.id}`} className="product-name">
+            <Link to={`/product/${item.slug ?? item.id}`} className="product-name">
               {item.name}
             </Link>
             {item.category && (

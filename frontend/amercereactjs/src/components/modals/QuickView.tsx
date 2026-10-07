@@ -229,7 +229,7 @@ export default function QuickView() {
               </div>
               
               <Link
-                to={`/product-detail/${product.id}`}
+                to={`/product/${product.slug ?? product.id}`}
                 onClick={closeModal}
                 className="w-100 text-center text-uppercase fw-semibold mt-3 py-3"
                 style={{

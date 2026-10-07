@@ -2,7 +2,8 @@ Options -MultiViews
 DirectoryIndex index.php index.html
 
 RewriteEngine On
-RewriteBase /
+# Omit RewriteBase so subdirectory installs (e.g. /deal1) keep rewrites inside this app.
+# At document-root hosts (2deal.my) relative index.php still resolves to /index.php.
 
 # Browser: /index.php/admin/login → /admin/login (one root index.php only)
 RewriteCond %{THE_REQUEST} \s/+index\.php/([^\s?]*) [NC]
@@ -73,6 +74,13 @@ RewriteRule ^ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(admin|shopkart-api|invoice)(/.*)?$ index.php?/$1$2 [L,QSA]
+
+# Product/blog SEO: canonical paths, legacy URLs, and redirect history (real HTTP 301/404)
+# CI uri_protocol=REQUEST_URI — keep the public path; routes.php maps to Seo_resolve.
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(product|blog|product-detail|blog-single)/([^/]+)/?$ index.php?/$1/$2 [L,QSA]
 
 # SPA
 RewriteRule ^$ frontend/index.html [L]

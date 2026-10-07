@@ -65,7 +65,9 @@ class Sk_Product extends Sk_Base_Api {
         $product['related'] = $this->Sk_Product_model->get_related($product['id'], $product['category_id']);
 
         $this->load->model('Sk_Seo_model');
+        $product['faqs'] = $this->Sk_Seo_model->normalize_faqs($product['faq_json'] ?? []);
         $product['seo'] = $this->Sk_Seo_model->format_entity($product, 'product', $this->Sk_Seo_model->get_global_seo());
+        unset($product['faq_json']);
 
         $this->set_cache($key, $product);
         $this->success($product);

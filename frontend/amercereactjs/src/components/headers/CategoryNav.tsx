@@ -209,7 +209,7 @@ export default function CategoryNav() {
                   {/* Right Panel with Featured Products */}
                   <div className="mega-right d-none d-lg-flex">
                     {featuredProducts.map(prod => (
-                      <Link key={prod.id} to={`/product-detail/${prod.id}`} className="mega-prod-card">
+                      <Link key={prod.id} to={`/product/${prod.slug ?? prod.id}`} className="mega-prod-card">
                         <img src={apiImageUrl(prod.thumbnail)} alt={prod.name} className="mega-prod-img" />
                         <span className="mega-prod-name text-line-clamp-1">{prod.name}</span>
                         <div className="d-flex align-items-center gap-1">

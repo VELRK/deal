@@ -39,7 +39,7 @@
           </td>
           <td>
             <div class="fw-semibold"><?= htmlspecialchars($b['title']) ?></div>
-            <small class="text-muted">/blog-single/<?= htmlspecialchars($b['slug']) ?></small>
+            <small class="text-muted">/blog/<?= htmlspecialchars($b['slug']) ?></small>
           </td>
           <td class="text-muted small"><?= htmlspecialchars($b['author']) ?></td>
           <td class="small text-muted"><?= htmlspecialchars((string)$b['tags']) ?></td>
@@ -119,6 +119,14 @@
 
             <div class="tab-pane fade" id="blogTabSeo">
               <div class="mb-3">
+                <label class="form-label">URL Slug</label>
+                <div class="input-group">
+                  <span class="input-group-text text-muted">/blog/</span>
+                  <input type="text" class="form-control" id="blogSlug" name="slug" maxlength="200" autocomplete="off" placeholder="auto-from-title">
+                </div>
+                <div class="form-text">Canonical: <code>/blog/<span id="blogSlugPreview">…</span></code> · Changing the slug records a 301.</div>
+              </div>
+              <div class="mb-3">
                 <label class="form-label">Meta Title</label>
                 <input type="text" class="form-control" id="blogMetaTitle" name="meta_title" maxlength="255">
               </div>
@@ -130,9 +138,16 @@
                 <label class="form-label">Meta Keywords</label>
                 <input type="text" class="form-control" id="blogMetaKeywords" name="meta_keywords">
               </div>
-              <div>
+              <div class="mb-4">
                 <label class="form-label">OG Image URL</label>
                 <input type="text" class="form-control" id="blogOgImage" name="og_image" placeholder="Leave blank to use featured image">
+              </div>
+              <div class="border-top pt-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label mb-0 fw-semibold">FAQ <small class="text-muted fw-normal">(FAQPage schema)</small></label>
+                  <button type="button" class="btn btn-sm btn-outline-primary" id="blogFaqAddBtn"><i class="bi bi-plus-lg"></i> Add FAQ</button>
+                </div>
+                <div id="blogFaqList"></div>
               </div>
             </div>
           </div>
@@ -167,12 +182,46 @@ document.getElementById('blogImage').addEventListener('change', function() {
   }
 });
 
+function sanitizeBlogSlug(v) {
+  return String(v || '').toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function syncBlogSlugPreview() {
+  const el = document.getElementById('blogSlug');
+  const prev = document.getElementById('blogSlugPreview');
+  if (!el || !prev) return;
+  const clean = sanitizeBlogSlug(el.value);
+  if (el.value !== clean) el.value = clean;
+  prev.textContent = clean || '…';
+}
+
+function renderBlogFaqs(faqs) {
+  const list = document.getElementById('blogFaqList');
+  if (!list) return;
+  const items = (Array.isArray(faqs) && faqs.length) ? faqs : [{ question: '', answer: '' }];
+  list.innerHTML = items.map((f, i) => `
+    <div class="blog-faq-row border rounded p-3 mb-2 bg-light">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span class="small text-muted">FAQ #${i + 1}</span>
+        <button type="button" class="btn btn-sm btn-link text-danger p-0 blog-faq-remove">Remove</button>
+      </div>
+      <div class="mb-2"><input type="text" name="faq_question[]" class="form-control form-control-sm" value="${(f.question || '').replace(/"/g, '&quot;')}" placeholder="Question"></div>
+      <div><textarea name="faq_answer[]" class="form-control form-control-sm" rows="2" placeholder="Answer">${f.answer || ''}</textarea></div>
+    </div>`).join('');
+}
+
 function openAdd() {
   document.getElementById('blogModalTitle').textContent = 'Add Blog';
   document.getElementById('blogForm').reset();
   document.getElementById('blogId').value = '';
   document.getElementById('imagePreview').classList.add('d-none');
   if (window.blogQuill) window.blogQuill.setContents([]);
+  renderBlogFaqs([]);
+  syncBlogSlugPreview();
 }
 
 function openEdit(id) {
@@ -186,11 +235,14 @@ function openEdit(id) {
       document.getElementById('blogTitle').value = b.title;
       document.getElementById('blogAuthor').value = b.author || 'Admin';
       document.getElementById('blogExcerpt').value = b.excerpt || '';
+      document.getElementById('blogSlug').value = b.slug || '';
       document.getElementById('blogMetaTitle').value = b.meta_title || '';
       document.getElementById('blogMetaDesc').value = b.meta_desc || '';
       document.getElementById('blogMetaKeywords').value = b.meta_keywords || '';
       document.getElementById('blogOgImage').value = b.og_image || '';
       document.getElementById('blogTags').value = b.tags || '';
+      renderBlogFaqs(b.faqs || []);
+      syncBlogSlugPreview();
       if (window.blogQuill) {
         window.blogQuill.root.innerHTML = b.content || '';
       }
@@ -267,6 +319,26 @@ function deleteBlog(id) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const slugInput = document.getElementById('blogSlug');
+  if (slugInput) slugInput.addEventListener('input', syncBlogSlugPreview);
+  const faqList = document.getElementById('blogFaqList');
+  const faqAdd = document.getElementById('blogFaqAddBtn');
+  if (faqAdd && faqList) {
+    faqAdd.addEventListener('click', () => {
+      const n = faqList.querySelectorAll('.blog-faq-row').length + 1;
+      const wrap = document.createElement('div');
+      wrap.className = 'blog-faq-row border rounded p-3 mb-2 bg-light';
+      wrap.innerHTML = `<div class="d-flex justify-content-between align-items-start mb-2"><span class="small text-muted">FAQ #${n}</span><button type="button" class="btn btn-sm btn-link text-danger p-0 blog-faq-remove">Remove</button></div><div class="mb-2"><input type="text" name="faq_question[]" class="form-control form-control-sm" placeholder="Question"></div><div><textarea name="faq_answer[]" class="form-control form-control-sm" rows="2" placeholder="Answer"></textarea></div>`;
+      faqList.appendChild(wrap);
+    });
+    faqList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.blog-faq-remove');
+      if (!btn) return;
+      btn.closest('.blog-faq-row')?.remove();
+      if (!faqList.querySelector('.blog-faq-row')) faqAdd.click();
+    });
+  }
+  renderBlogFaqs([]);
   const editId = sessionStorage.getItem('editBlogId');
   if (editId) {
     sessionStorage.removeItem('editBlogId');

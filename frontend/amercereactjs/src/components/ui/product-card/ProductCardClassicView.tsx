@@ -136,7 +136,7 @@ export function ProductCardClassicView() {
 
         {/* Product Image Link */}
         <Link
-          to={`/product-detail/${product.slug ?? product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="product-img d-block w-100 h-100"
           style={{
             overflow: "hidden",
@@ -230,7 +230,7 @@ export function ProductCardClassicView() {
 
         {/* Product Title - Fixed 2-line clamp for exact alignment */}
         <Link
-          to={`/product-detail/${product.slug ?? product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="name-product"
           style={{
             fontSize: "13.5px",

@@ -164,7 +164,7 @@ export const navProduct = [
     "title": "PRODUCT LAYOUT",
     "links": [
       {
-        "href": "/product-detail/1",
+        "href": "/product/1",
         "text": "Product Default"
       },
       {
@@ -315,7 +315,7 @@ export const navBlog = [
     "text": "Blog"
   },
   {
-    "href": "/blog-single/1",
+    "href": "/blog/1",
     "text": "Blog Single"
   }
 ];

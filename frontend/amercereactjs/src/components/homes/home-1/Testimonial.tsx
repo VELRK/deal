@@ -75,7 +75,7 @@ function Testimonial() {
                   </div>
                   <div className="product-infor">
                     <Link
-                      to={`/product-detail/${slide.product?.id}`}
+                      to={`/product/${slide.product?.id}`}
                       className="link fw-medium lh-24"
                     >
                       {slide.product?.name}

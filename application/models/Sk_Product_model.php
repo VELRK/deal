@@ -160,18 +160,54 @@ class Sk_Product_model extends CI_Model {
     }
 
     public function create($data) {
-        $data['slug'] = $this->make_unique_slug($data['name'], 'products');
+        if (empty($data['slug'])) {
+            $data['slug'] = $this->make_unique_slug($data['name'], 'products');
+        } else {
+            $data['slug'] = $this->make_unique_slug($data['slug'], 'products');
+        }
         $data['created_at'] = date('Y-m-d H:i:s');
         $this->db->insert('products', $data);
         return $this->db->insert_id();
     }
 
     public function update($id, $data) {
-        // Never regenerate slug on update — changing slug breaks existing product URLs.
-        // Slug is fixed at creation and stays stable for the product's lifetime.
-        unset($data['slug']);
+        $id = (int)$id;
+        $current = $this->db->select('id, slug')->where('id', $id)->get('products')->row_array();
+        if (!$current) {
+            return 0;
+        }
+
+        $oldSlug = (string)($current['slug'] ?? '');
+        $newSlug = null;
+
+        if (array_key_exists('slug', $data)) {
+            $requested = trim((string)$data['slug']);
+            if ($requested === '') {
+                unset($data['slug']);
+            } else {
+                $newSlug = $this->make_unique_slug($requested, 'products', $id);
+                $data['slug'] = $newSlug;
+            }
+        }
+
         $this->db->where('id', $id)->update('products', $data);
+
+        if ($newSlug !== null && $oldSlug !== '' && $newSlug !== $oldSlug) {
+            $this->load->model('Sk_Url_Redirect_model');
+            $this->Sk_Url_Redirect_model->record_change(
+                'product',
+                $id,
+                $this->Sk_Url_Redirect_model->product_path($oldSlug),
+                $this->Sk_Url_Redirect_model->product_path($newSlug)
+            );
+        }
+
         return $this->db->affected_rows();
+    }
+
+    /** Public wrapper so controllers can sanitize uniqueness the same way. */
+    public function unique_slug(string $source, $exclude_id = null): string {
+        return $this->make_unique_slug($source, 'products', $exclude_id);
     }
 
     public function delete($id) {

@@ -16,7 +16,7 @@ export default function ProductCardMiniList({
   return (
     <div className="card-product product-style_mini_list wow fadeInUp">
       <div className="card-product_wrapper">
-        <Link to={`/product-detail/${product.id}`} className="product-img">
+        <Link to={`/product/${product.slug ?? product.id}`} className="product-img">
           <img
             className="img-product"
             src={`${product.img}`}
@@ -37,7 +37,7 @@ export default function ProductCardMiniList({
       </div>
       <div className="card-product_info">
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="name-product lh-24 fw-medium link-underline-text"
         >
           {product.name}

@@ -72,7 +72,7 @@ export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { 
                           {cat.nav_products.slice(0, 4).map((prod) => (
                             <Link
                               key={prod.id}
-                              to={`/product-detail/${prod.id}`}
+                              to={`/product/${prod.slug ?? prod.id}`}
                               style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
                             >
                               <img

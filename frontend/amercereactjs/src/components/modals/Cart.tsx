@@ -150,7 +150,7 @@ export default function Cart() {
                     item={item}
                     onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
                     onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
-                    onProductClick={() => goTo(`/product-detail/${item.id}`)}
+                    onProductClick={() => goTo(`/product/${item.slug ?? item.id}`)}
                   />
                   {idx < cartProducts.length - 1 && (
                     <div style={styles.itemDivider} />

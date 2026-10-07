@@ -28,7 +28,7 @@ export default function PageTileSingle({
             <div className="nav-post-list">
               {prevId ? (
                 <Link
-                  to={`/blog-single/${prevId}`}
+                  to={`/blog/${prevId}`}
                   className="link nav-post-item nav-post-prev"
                   aria-label="Previous post"
                 >
@@ -44,7 +44,7 @@ export default function PageTileSingle({
               </Link>
               {nextId ? (
                 <Link
-                  to={`/blog-single/${nextId}`}
+                  to={`/blog/${nextId}`}
                   className="link nav-post-item nav-post-next"
                   aria-label="Next post"
                 >

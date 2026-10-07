@@ -447,7 +447,7 @@ function App() {
           {/* Legacy / convenience redirects */}
           <Route
             path="/product-detail"
-            element={<Navigate to="/product-detail/1" replace />}
+            element={<Navigate to="/shop-default" replace />}
           />
           <Route
             path="/product-deals"
@@ -457,6 +457,7 @@ function App() {
             path="/blog-single"
             element={<Navigate to="/blog" replace />}
           />
+          <Route path="/product" element={<Navigate to="/shop-default" replace />} />
 
           {/* Shop */}
           <Route
@@ -585,6 +586,10 @@ function App() {
           {/* Blog */}
           <Route path="/blog" element={<BlogsRoute Page={BlogIndex} />} />
           <Route
+            path="/blog/:slug"
+            element={<BlogsRoute Page={BlogSingleById} />}
+          />
+          <Route
             path="/blog-single/:id"
             element={<BlogsRoute Page={BlogSingleById} />}
           />
@@ -638,6 +643,10 @@ function App() {
 
 
           {/* Product pages */}
+          <Route
+            path="/product/:slug"
+            element={<ShopDetailsRoute Page={ProductDetail} />}
+          />
           <Route
             path="/product-detail/:id"
             element={<ShopDetailsRoute Page={ProductDetail} />}

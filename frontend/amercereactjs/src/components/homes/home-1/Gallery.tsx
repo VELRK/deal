@@ -37,7 +37,7 @@ function Gallery() {
                     alt={item.alt ?? "Image"}
                   />
                 </div>
-                <Link to="/product-detail/1" className="box-icon hover-tooltip">
+                <Link to="/product/1" className="box-icon hover-tooltip">
                   <span className="icon icon-Eye" />
                   <span className="tooltip">View product</span>
                 </Link>

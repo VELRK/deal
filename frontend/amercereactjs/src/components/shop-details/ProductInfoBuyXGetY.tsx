@@ -57,7 +57,7 @@ export default function ProductInfoBuyXGetY({
                 </div>
                 <div className="info-product">
                   <Link
-                    to="/product-detail/1"
+                    to="/product/1"
                     className="name-product lh-24 fw-medium link-underline-text text-line-clamp-2"
                   >
                     Buttons Cotton Top
@@ -94,7 +94,7 @@ export default function ProductInfoBuyXGetY({
                 </div>
                 <div className="info-product">
                   <Link
-                    to="/product-detail/2"
+                    to="/product/2"
                     className="name-product lh-24 fw-medium link-underline-text text-line-clamp-2"
                   >
                     Wool Midi Coat

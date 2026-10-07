@@ -49,6 +49,7 @@ export function ProductCardShopList() {
       <div className={`card-product_wrapper ${wrapperClass}`.trim()}>
         <ProductCardDualImageLink
           productId={product.id}
+          productSlug={product.slug}
           activeImage={activeImage}
           hoverImage={activeHoverImage}
           alt={product.name}
@@ -61,7 +62,7 @@ export function ProductCardShopList() {
         )}
       </div>
       <div className={`card-product_info ${infoClassName}`.trim()}>
-        <Link to={`/product-detail/${product.id}`} className={nameLinkClasses}>
+        <Link to={`/product/${product.slug ?? product.id}`} className={nameLinkClasses}>
           {product.name}
         </Link>
         {showRatting ? (

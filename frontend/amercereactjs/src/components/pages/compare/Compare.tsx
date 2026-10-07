@@ -56,7 +56,7 @@ function Compare() {
                           </button>
                         </div>
                         <Link
-                          to={`/product-detail/${product.id}`}
+                          to={`/product/${product.slug ?? product.id}`}
                           className="item_name fw-medium lh-24 link"
                         >
                           {product.name}

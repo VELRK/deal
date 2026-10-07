@@ -31,6 +31,7 @@ export function ProductCardMiniList() {
       <div className={`card-product_wrapper ${wrapperClass}`.trim()}>
         <ProductCardDualImageLink
           productId={product.id}
+          productSlug={product.slug}
           activeImage={activeImage}
           hoverImage={activeHoverImage}
           alt={product.name}
@@ -40,7 +41,7 @@ export function ProductCardMiniList() {
       </div>
       <div className="card-product_info">
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="name-product lh-24 fw-medium link-underline-text"
         >
           {product.name}

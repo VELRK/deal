@@ -23,12 +23,12 @@ function WishlistTableRow({
   return (
     <div className="classic-wishlist-item">
       <div className="wishlist-item-image">
-        <Link to={`/product-detail/${product.id}`}>
+        <Link to={`/product/${product.slug ?? product.id}`}>
           <img loading="lazy" src={imgSrc} alt={product.name} />
         </Link>
       </div>
       <div className="wishlist-item-details">
-        <Link to={`/product-detail/${product.id}`} className="wishlist-item-name">
+        <Link to={`/product/${product.slug ?? product.id}`} className="wishlist-item-name">
           {product.name}
         </Link>
         <div className="wishlist-item-price">

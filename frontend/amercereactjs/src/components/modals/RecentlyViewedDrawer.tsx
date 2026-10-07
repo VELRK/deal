@@ -105,7 +105,7 @@ export default function RecentlyViewedDrawer({
                   <li key={p.id} style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <button
                       type="button"
-                      onClick={() => goTo(`/product-detail/${p.id}`)}
+                      onClick={() => goTo(`/product/${p.slug ?? p.id}`)}
                       style={{ flexShrink: 0, background: "none", border: "none", padding: 0, cursor: "pointer" }}
                     >
                       <img
@@ -121,7 +121,7 @@ export default function RecentlyViewedDrawer({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <button
                         type="button"
-                        onClick={() => goTo(`/product-detail/${p.id}`)}
+                        onClick={() => goTo(`/product/${p.slug ?? p.id}`)}
                         style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", width: "100%" }}
                       >
                         <span style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 4, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -143,7 +143,7 @@ export default function RecentlyViewedDrawer({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => goTo(`/product-detail/${p.id}`)}
+                          onClick={() => goTo(`/product/${p.slug ?? p.id}`)}
                           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: "#666", marginTop: 4, display: "block", textDecoration: "underline" }}
                         >
                           View Product

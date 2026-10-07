@@ -2,6 +2,11 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSiteSettings } from "@/hooks/useApi";
 import { formatDocumentTitle, setLiveSiteName } from "@/lib/siteBrand";
 
+export type FaqMetaItem = {
+  question: string;
+  answer: string;
+};
+
 export type PageMetaProps = {
   title: string;
   description?: string;
@@ -10,6 +15,8 @@ export type PageMetaProps = {
   canonical?: string;
   robots?: string;
   ogType?: string;
+  /** Visible FAQ entries — also emitted as FAQPage JSON-LD when non-empty */
+  faqs?: FaqMetaItem[];
 };
 
 function upsertHeadMeta(
@@ -40,6 +47,39 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
+const FAQ_LD_ATTR = "data-page-meta-faq";
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function upsertFaqJsonLd(faqs: FaqMetaItem[]) {
+  const existing = document.head.querySelectorAll(`script[${FAQ_LD_ATTR}]`);
+  existing.forEach((n) => n.remove());
+
+  const valid = faqs.filter((f) => f.question?.trim() && f.answer?.trim());
+  if (!valid.length) return;
+
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: valid.map((f) => ({
+      "@type": "Question",
+      name: stripHtml(f.question),
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: stripHtml(f.answer),
+      },
+    })),
+  };
+
+  const el = document.createElement("script");
+  el.type = "application/ld+json";
+  el.setAttribute(FAQ_LD_ATTR, "1");
+  el.text = JSON.stringify(payload);
+  document.head.appendChild(el);
+}
+
 /**
  * Sets document.title from admin site_name and locks it against late SEO/script overwrites.
  */
@@ -51,10 +91,12 @@ export default function PageMeta({
   canonical = "",
   robots = "index,follow",
   ogType = "website",
+  faqs = [],
 }: PageMetaProps) {
   const { settings, loading: settingsLoading } = useSiteSettings();
   const siteName = settings?.site_name?.trim() || "";
   const desiredRef = useRef("");
+  const faqsKey = JSON.stringify(faqs ?? []);
 
   useLayoutEffect(() => {
     if (siteName) setLiveSiteName(siteName);
@@ -82,7 +124,12 @@ export default function PageMeta({
     upsertHeadMeta("name", "twitter:description", description);
     if (image) upsertHeadMeta("name", "twitter:image", image);
     if (canonical) upsertLink("canonical", canonical);
-  }, [finalTitle, description, keywords, image, canonical, robots, ogType]);
+    try {
+      upsertFaqJsonLd(JSON.parse(faqsKey) as FaqMetaItem[]);
+    } catch {
+      upsertFaqJsonLd([]);
+    }
+  }, [finalTitle, description, keywords, image, canonical, robots, ogType, faqsKey]);
 
   // Re-assert if SEO scripts / injected head HTML change <title> after load
   useEffect(() => {

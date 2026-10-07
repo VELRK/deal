@@ -139,6 +139,8 @@ class Products extends Sk_Base {
             'meta_desc'        => $this->input->post('meta_desc', TRUE),
             'meta_keywords'    => $this->input->post('meta_keywords', TRUE),
             'og_image'         => $this->input->post('og_image', TRUE),
+            'slug'             => $this->_posted_seo_slug(),
+            'faq_json'         => $this->_posted_faq_json(),
             'tags'             => $this->input->post('tags', TRUE),
             'thumbnail'        => $thumbnail,
             // Saree attributes
@@ -304,6 +306,8 @@ class Products extends Sk_Base {
             'meta_desc'        => $this->input->post('meta_desc', TRUE),
             'meta_keywords'    => $this->input->post('meta_keywords', TRUE),
             'og_image'         => $this->input->post('og_image', TRUE),
+            'slug'             => $this->_posted_seo_slug(),
+            'faq_json'         => $this->_posted_faq_json(),
             'tags'             => $this->input->post('tags', TRUE),
             'thumbnail'        => $thumbnail,
             // Saree attributes
@@ -537,6 +541,19 @@ class Products extends Sk_Base {
         if (!is_dir($dir)) return;
         foreach (glob($dir . 'product*.json') as $f) @unlink($f);
         foreach (glob($dir . 'products*.json') as $f) @unlink($f);
+    }
+
+    private function _posted_seo_slug(): string {
+        $this->load->model('Sk_Seo_model');
+        return $this->Sk_Seo_model->sanitize_slug((string)$this->input->post('slug', TRUE));
+    }
+
+    private function _posted_faq_json(): ?string {
+        $this->load->model('Sk_Seo_model');
+        return $this->Sk_Seo_model->faqs_from_post(
+            $this->input->post('faq_question'),
+            $this->input->post('faq_answer')
+        );
     }
 
     private function _save_product_images($product_id) {

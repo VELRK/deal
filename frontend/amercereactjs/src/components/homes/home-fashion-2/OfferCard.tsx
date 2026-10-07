@@ -41,7 +41,7 @@ export function OfferCard({ product }: { product: any }) {
           />
         </div>
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="d-block"
           style={{ aspectRatio: "1/1", overflow: "hidden", backgroundColor: "#f7f7f7" }}
         >
@@ -78,7 +78,7 @@ export function OfferCard({ product }: { product: any }) {
         style={{ padding: "12px 14px 14px", flexGrow: 1 }}
       >
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="text-decoration-none text-dark"
           style={{
             fontSize: "14px",

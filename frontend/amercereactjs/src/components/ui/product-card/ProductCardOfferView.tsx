@@ -72,7 +72,7 @@ export function ProductCardOfferView() {
         )}
 
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="product-img"
           style={{ display: "block", width: "100%", height: "100%", overflow: "hidden", position: "relative" }}
         >
@@ -109,7 +109,7 @@ export function ProductCardOfferView() {
 
         {/* Title */}
         <Link
-          to={`/product-detail/${product.id}`}
+          to={`/product/${product.slug ?? product.id}`}
           className="name-product text-dark text-decoration-none"
           style={{
             fontSize: "14px",

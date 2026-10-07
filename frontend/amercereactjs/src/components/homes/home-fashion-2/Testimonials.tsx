@@ -107,7 +107,7 @@ function Testimonials() {
                       </div>
                       <div className="product-infor">
                         <Link
-                          to={`/product-detail/${t.product_slug ?? t.product_id}`}
+                          to={`/product/${t.product_slug ?? t.product_id}`}
                           className="link-underline-primary fw-semibold lh-20"
                           style={{ fontSize: "13px", color: "#111", display: "block" }}
                         >
@@ -189,7 +189,7 @@ function Testimonials() {
                         <img src={slide.product.img} alt={slide.product.name} width={45} height={45} style={{ borderRadius: "6px", objectFit: "cover" }} loading="lazy" />
                       </div>
                       <div className="product-infor">
-                        <Link to={`/product-detail/${slide.product.id}`} className="link-underline-primary fw-semibold lh-20" style={{ fontSize: "13px", color: "#111", display: "block" }}>
+                        <Link to={`/product/${slide.product.id}`} className="link-underline-primary fw-semibold lh-20" style={{ fontSize: "13px", color: "#111", display: "block" }}>
                           {slide.product.name}
                         </Link>
                         <div className="prd_price text-caption-01" style={{ color: "#666", fontWeight: "500", marginTop: "2px", fontSize: "12px" }}>

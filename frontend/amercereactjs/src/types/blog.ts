@@ -1,5 +1,5 @@
 export interface BlogPost {
-  /** Stable id for `/blog-single/:id` */
+  /** Stable id for blog detail routes */
   id: string;
   img: string;
   alt?: string;

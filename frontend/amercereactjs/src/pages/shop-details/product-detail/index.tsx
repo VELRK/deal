@@ -4,22 +4,25 @@ import RecentlyViewed from "@/components/shop-details/RecentlyViewed";
 import ProductSection from "@/components/shop-details/ProductSection";
 import { useParams } from "react-router-dom";
 import PageMeta from "@/components/common/PageMeta";
+import FaqSection from "@/components/common/FaqSection";
 import { useProduct, toProductCard, apiImageUrl } from "@/hooks/useApi";
 import type { ColorOption, SizeOption } from "@/context/ProductContext";
 import { useCurrentProductStore } from "@/store/currentProductStore";
 import { useEffect } from "react";
 import { trackView } from "@/hooks/useRecentlyViewed";
 import { trackViewContent } from "@/utils/metaPixel";
+import { absoluteUrl, productPath } from "@/utils/seoPaths";
 
 export default function Page() {
-  const { id = "" } = useParams<{ id: string }>();
-  const { product: apiProduct, loading } = useProduct(id);
+  const { slug = "", id = "" } = useParams<{ slug?: string; id?: string }>();
+  const key = slug || id;
+  const { product: apiProduct, loading } = useProduct(key);
   const setCurrentProduct = useCurrentProductStore((s) => s.setCurrentProduct);
 
   // Track this product as recently viewed
   useEffect(() => {
-    if (id) trackView(id);
-  }, [id]);
+    if (key) trackView(key);
+  }, [key]);
 
   // Robustly collect all product images without duplicates
   const extraImages = (() => {
@@ -147,6 +150,13 @@ export default function Page() {
   const initialColor = colors[0]?.label ?? "";
   const initialSize = sizes[0]?.value ?? "";
 
+  const faqs = (apiProduct.faqs ?? apiProduct.seo?.faqs ?? []).filter(
+    (f) => f?.question?.trim() && f?.answer?.trim(),
+  );
+  const canonical =
+    apiProduct.seo?.canonical_url ||
+    absoluteUrl(productPath({ slug: apiProduct.slug, id: apiProduct.id }));
+
   return (
     <>
       <PageMeta
@@ -155,6 +165,8 @@ export default function Page() {
         keywords={apiProduct.seo?.meta_keywords || apiProduct.meta_keywords}
         image={apiProduct.seo?.og_image || apiProduct.og_image || apiImageUrl(apiProduct.thumbnail)}
         ogType="product"
+        canonical={canonical}
+        faqs={faqs}
       />
       <Breadcrumb product={card} />
       <ProductSection
@@ -167,8 +179,9 @@ export default function Page() {
         initialSize={initialSize}
         extraImages={extraImages}
       />
+      <FaqSection faqs={faqs} />
       <RelatedProducts />
-      <RecentlyViewed excludeSlug={id} />
+      <RecentlyViewed excludeSlug={key} />
     </>
   );
 }

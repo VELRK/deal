@@ -53,6 +53,13 @@ $route['default_controller'] = 'Home';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
+// SEO URL resolver (canonical /product|/blog + legacy + redirect history)
+// Must stay above catch-all SPA behavior; more specific blog/* admin routes remain above/below as needed.
+$route['product/(:any)'] = 'Seo_resolve/handle/product/$1';
+$route['product-detail/(:any)'] = 'Seo_resolve/handle/product-detail/$1';
+$route['blog-single/(:any)'] = 'Seo_resolve/handle/blog-single/$1';
+// Public blog detail — keep after more specific blog/* routes below if those must win for old CI blog admin URLs.
+
 // Additional routes
 $route['home'] = 'Home/index';
 $route['listing'] = 'Listing/index';
@@ -65,6 +72,8 @@ $route['blog/edit/(:num)'] = 'Blog/edit/$1';
 $route['blog/delete/(:num)'] = 'Blog/delete/$1';
 $route['blog/manage'] = 'Blog/manage';
 $route['blog/search'] = 'Blog/search';
+// Storefront blog detail (after specific blog/* routes above)
+$route['blog/(:any)'] = 'Seo_resolve/handle/blog/$1';
 $route['contact'] = 'Contact/index';
 $route['blog-detail'] = 'Blog_detail/index';
 $route['property-detail'] = 'Property_detail/index';
