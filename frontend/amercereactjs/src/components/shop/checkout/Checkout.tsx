@@ -739,7 +739,12 @@ export default function Checkout() {
               : `Not enough stock for these items:\n${parts.map((m) => `• ${m}`).join("\n")}`,
           );
         } else {
-          setOrderError(result.message || "Failed to place order. Please try again.");
+          setOrderError(
+            result.message
+              || (result.success && !result.data?.order?.id
+                ? "Order could not be saved on the server. Please try again or contact support."
+                : "Failed to place order. Please try again."),
+          );
         }
         return;
       }

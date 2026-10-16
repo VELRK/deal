@@ -369,6 +369,13 @@ class Sk_Order extends Sk_Base_Api {
         $this->_sync_user_from_checkout($user_id, $addr, $data);
 
         $order_id = $this->Sk_Order_model->create($order_data, $order_items);
+        if ($order_id <= 0) {
+            log_message('error', 'Checkout create() returned 0 for user #' . $user_id);
+            return $this->error(
+                'Could not save your order on the server. Please try again in a moment. If it keeps failing, contact support.',
+                500
+            );
+        }
 
         if ($wallet_amount > 0) {
             $payDesc = 'Wallet full payment for order #' . $order_id;
@@ -425,23 +432,39 @@ class Sk_Order extends Sk_Base_Api {
         $this->db->where('user_id', $user_id)->delete('cart');
 
         $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
+        if (!$order || empty($order['id'])) {
+            log_message('error', 'Checkout created order #' . $order_id . ' but get_by_id failed for user #' . $user_id);
+            return $this->error(
+                'Order #' . $order_id . ' was saved but could not be loaded. Please check My Orders before trying again.',
+                500
+            );
+        }
 
         // Royalty earn after paid order, or immediately for COD
         if (($order['payment_status'] ?? '') === 'paid'
             || strtolower((string)($order['payment_method'] ?? '')) === 'cod') {
-            sk_royalty_credit_for_order($order);
-            $order = $this->Sk_Order_model->get_by_id($order_id, $user_id);
+            try {
+                sk_royalty_credit_for_order($order);
+            } catch (Throwable $e) {
+                log_message('error', 'Checkout royalty credit failed for order #' . $order_id . ': ' . $e->getMessage());
+            }
+            $order = $this->Sk_Order_model->get_by_id($order_id, $user_id) ?: $order;
         }
 
         // Email + WhatsApp only when order is paid now or COD/wallet.
         // Unpaid Razorpay (payment_attempt): notify after payment/verify only.
-        $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
-        sk_invoice_ensure_vendor_schema();
-        $settings = $this->get_settings();
-        if (in_array($payment_method, ['cod', 'wallet'], true) || $is_paid_now) {
-            sk_mail_order_invoice($order, $settings);
-            $waStatus = ($order['status'] ?? '') ?: 'confirmed';
-            sk_whatsapp_notify_order_status($order, $waStatus, $settings);
+        // Never let mail/WA config on a new host abort a successful checkout response.
+        try {
+            $this->load->helper(['sk_mailer', 'sk_invoice', 'sk_whatsapp']);
+            sk_invoice_ensure_vendor_schema();
+            $settings = $this->get_settings();
+            if (in_array($payment_method, ['cod', 'wallet'], true) || $is_paid_now) {
+                sk_mail_order_invoice($order, $settings);
+                $waStatus = ($order['status'] ?? '') ?: 'confirmed';
+                sk_whatsapp_notify_order_status($order, $waStatus, $settings);
+            }
+        } catch (Throwable $e) {
+            log_message('error', 'Checkout notify failed for order #' . $order_id . ': ' . $e->getMessage());
         }
 
         $confirmMsg = 'Order placed successfully.';
@@ -622,6 +645,16 @@ class Sk_Order extends Sk_Base_Api {
         }
         if (!$this->db->field_exists('wallet_discount', 'orders')) {
             $this->db->query('ALTER TABLE `orders` ADD COLUMN `wallet_discount` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `affiliate_discount`');
+        }
+        // Affiliate checkout attribution — missing after incomplete DB restores
+        if (!$this->db->field_exists('affiliate_id', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `affiliate_id` INT UNSIGNED NULL DEFAULT NULL AFTER `promo_code`');
+        }
+        if (!$this->db->field_exists('affiliate_promo', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `affiliate_promo` VARCHAR(60) NULL DEFAULT NULL AFTER `affiliate_id`');
+        }
+        if (!$this->db->field_exists('promo_code', 'orders')) {
+            $this->db->query('ALTER TABLE `orders` ADD COLUMN `promo_code` VARCHAR(60) NULL DEFAULT NULL AFTER `discount`');
         }
     }
 

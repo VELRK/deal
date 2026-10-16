@@ -385,9 +385,21 @@ function sk_invoice_ensure_schema(): void {
     $CI->db->query("SELECT GET_LOCK('sk_invoice_seq', 15)");
     try {
         if (!$CI->db->field_exists('invoice_seq', 'orders')) {
-            $CI->db->query(
+            // Prefer AFTER order_number; fall back if column order / privileges differ on new host.
+            $ok = $CI->db->query(
                 "ALTER TABLE `orders` ADD COLUMN `invoice_seq` INT UNSIGNED NULL DEFAULT NULL AFTER `order_number`, ADD UNIQUE KEY `uq_orders_invoice_seq` (`invoice_seq`)"
             );
+            if (!$ok && !$CI->db->field_exists('invoice_seq', 'orders')) {
+                $CI->db->query(
+                    "ALTER TABLE `orders` ADD COLUMN `invoice_seq` INT UNSIGNED NULL DEFAULT NULL, ADD UNIQUE KEY `uq_orders_invoice_seq` (`invoice_seq`)"
+                );
+            }
+        }
+
+        if (!$CI->db->field_exists('invoice_seq', 'orders')) {
+            // Cannot migrate without the column — do not block checkout.
+            log_message('error', 'sk_invoice_ensure_schema: invoice_seq column missing and ALTER failed');
+            return;
         }
 
         $migrated = $CI->db->where('key', 'invoice_seq_migrated')->get('settings')->row_array();
@@ -409,6 +421,8 @@ function sk_invoice_ensure_schema(): void {
         }
         $CI->Sk_Admin_model->save_settings(['invoice_seq_migrated' => '1']);
         $done = true;
+    } catch (Throwable $e) {
+        log_message('error', 'sk_invoice_ensure_schema: ' . $e->getMessage());
     } finally {
         $CI->db->query("SELECT RELEASE_LOCK('sk_invoice_seq')");
     }
@@ -437,7 +451,8 @@ function sk_invoice_assign_seq(int $orderId): int {
             return $existing;
         }
 
-        $max = (int)($CI->db->select_max('invoice_seq')->get('orders')->row()->invoice_seq ?? 0);
+        $maxRow = $CI->db->select_max('invoice_seq')->get('orders')->row();
+        $max = (int)($maxRow->invoice_seq ?? 0);
         $next = max(100000, $max) + 1;
         $CI->db->where('id', $orderId)
             ->where('invoice_seq IS NULL', null, false)

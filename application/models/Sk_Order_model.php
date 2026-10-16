@@ -18,23 +18,40 @@ class Sk_Order_model extends CI_Model {
 
     public function create($data, $items) {
         $this->load->helper('sk_invoice');
-        sk_invoice_ensure_schema();
+        try {
+            sk_invoice_ensure_schema();
+        } catch (Throwable $e) {
+            log_message('error', 'sk_invoice_ensure_schema: ' . $e->getMessage());
+        }
+
         $data['created_at'] = date('Y-m-d H:i:s');
         // Temporary unique value until we have insert_id for G2D10001-style number.
         $data['order_number'] = 'TMP' . strtoupper(substr(md5(uniqid((string)mt_rand(), true)), 0, 12));
-        $this->db->insert('orders', $data);
-        $order_id = (int)$this->db->insert_id();
+        $data = $this->filter_table_row('orders', $data);
+
+        $order_id = $this->insert_order_row($data);
+        if ($order_id <= 0) {
+            return 0;
+        }
 
         $order_number = $this->format_order_number($order_id);
         $this->db->where('id', $order_id)->update('orders', ['order_number' => $order_number]);
 
         if (sk_invoice_is_sequence_order($data)) {
-            sk_invoice_assign_seq($order_id);
+            try {
+                sk_invoice_assign_seq($order_id);
+            } catch (Throwable $e) {
+                log_message('error', 'sk_invoice_assign_seq order #' . $order_id . ': ' . $e->getMessage());
+            }
         }
 
         foreach ($items as $item) {
             $item['order_id'] = $order_id;
-            $this->db->insert('order_items', $item);
+            $item = $this->filter_table_row('order_items', $item);
+            if (!$this->db->insert('order_items', $item)) {
+                $err = $this->db->error();
+                log_message('error', 'order_items insert failed for order #' . $order_id . ': ' . json_encode($err));
+            }
             $this->load->model('Sk_Product_model');
             $this->Sk_Product_model->reduce_stock(
                 $item['product_id'],
@@ -43,6 +60,51 @@ class Sk_Order_model extends CI_Model {
             );
         }
         return $order_id;
+    }
+
+    /**
+     * Insert an orders row; if status=payment_attempt is rejected by ENUM (ALTER failed
+     * on a restricted MySQL user after server move), retry once as pending.
+     */
+    private function insert_order_row(array $data): int {
+        if ($this->db->insert('orders', $data)) {
+            return (int)$this->db->insert_id();
+        }
+
+        $err = $this->db->error();
+        log_message('error', 'orders insert failed: ' . json_encode($err) . ' keys=' . implode(',', array_keys($data)));
+
+        $status = strtolower((string)($data['status'] ?? ''));
+        $msg = strtolower((string)($err['message'] ?? ''));
+        if ($status === 'payment_attempt' && (strpos($msg, 'payment_attempt') !== false || strpos($msg, 'enum') !== false || strpos($msg, 'truncated') !== false)) {
+            $data['status'] = 'pending';
+            if ($this->db->insert('orders', $data)) {
+                log_message('error', 'orders insert retried with status=pending after payment_attempt rejection');
+                return (int)$this->db->insert_id();
+            }
+            $err2 = $this->db->error();
+            log_message('error', 'orders insert retry failed: ' . json_encode($err2));
+        }
+
+        return 0;
+    }
+
+    /** Drop keys that are not real columns (avoids silent insert failure after DB restore). */
+    private function filter_table_row(string $table, array $row): array {
+        if (!$this->db->table_exists($table)) {
+            return $row;
+        }
+        $allowed = [];
+        foreach ($this->db->list_fields($table) as $field) {
+            $allowed[$field] = true;
+        }
+        $filtered = [];
+        foreach ($row as $key => $value) {
+            if (isset($allowed[$key])) {
+                $filtered[$key] = $value;
+            }
+        }
+        return $filtered;
     }
 
     public function get_by_id($id, $user_id = null) {
