@@ -7,6 +7,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+// Buffer early so UTF-8 BOMs from included PHP files never leak into API JSON
+// (Flutter: FormatException Unexpected character at character 1).
+if (ob_get_level() === 0) {
+    ob_start();
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**

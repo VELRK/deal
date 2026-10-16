@@ -6,6 +6,10 @@ class Sk_Base_Api extends CI_Controller {
     protected $user = null;
 
     public function __construct() {
+        // Catch accidental UTF-8 BOM / whitespace from included PHP files (breaks Flutter jsonDecode).
+        if (ob_get_level() === 0) {
+            ob_start();
+        }
         parent::__construct();
         $this->load->model(['Sk_Product_model','Sk_Order_model','Sk_User_model','Sk_Promo_model','Sk_Admin_model']);
         $this->load->library('Sk_JWT');
@@ -26,12 +30,18 @@ class Sk_Base_Api extends CI_Controller {
     }
 
     private function _json($payload, $status) {
+        // Discard any buffered BOM/notices so mobile clients get pure JSON.
         while (ob_get_level() > 0) {
             @ob_end_clean();
         }
-        http_response_code($status);
-        header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-store, no-cache, must-revalidate');
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store, no-cache, must-revalidate');
+        } else {
+            // Headers already sent (e.g. file BOM) — still emit clean JSON body.
+            http_response_code($status);
+        }
         $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
         if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
             $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
