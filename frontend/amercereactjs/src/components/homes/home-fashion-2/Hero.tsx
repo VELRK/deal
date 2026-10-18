@@ -106,6 +106,7 @@ function Hero() {
       >
         {slides.map((slide, idx) => {
           const titleParts = slide.title.split("\n");
+          const isLcp = idx === 0;
           return (
             <div key={idx} className="slideshow-wrap">
               <Link to={slide.ctaLink} style={{ display: "block", width: "100%", height: "100%" }}>
@@ -115,7 +116,9 @@ function Hero() {
                     alt={slide.alt}
                     width={817}
                     height={311}
-                    loading="lazy"
+                    loading={isLcp ? "eager" : "lazy"}
+                    fetchPriority={isLcp ? "high" : "low"}
+                    decoding={isLcp ? "sync" : "async"}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "/frontend/assets/images/slider/fashion-2/slider-1.jpg";

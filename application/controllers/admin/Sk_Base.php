@@ -206,7 +206,10 @@ class Sk_Base extends CI_Controller {
         $this->upload->initialize($config);
 
         if ($this->upload->do_upload($field)) {
-            return 'assets/uploads/' . $dir . '/' . $this->upload->data('file_name');
+            $fileName = $this->upload->data('file_name');
+            $absolute = $path . $fileName;
+            $this->_optimize_uploaded_image($absolute, $dir);
+            return 'assets/uploads/' . $dir . '/' . $fileName;
         }
         $err = strip_tags((string)$this->upload->display_errors('', ''));
         $this->session->set_flashdata(
@@ -214,5 +217,75 @@ class Sk_Base extends CI_Controller {
             $err !== '' ? $err : 'Image upload failed. Use JPG, PNG, GIF or WebP under 8MB.'
         );
         return null;
+    }
+
+    /**
+     * Resize/compress admin uploads so storefront LCP stays light.
+     * Banners max 1600px / q75; product thumbs max 1200px / q80.
+     */
+    protected function _optimize_uploaded_image(string $absolutePath, string $dir): void {
+        if (!is_file($absolutePath) || !function_exists('getimagesize')) {
+            return;
+        }
+        $info = @getimagesize($absolutePath);
+        if (!$info || empty($info[0]) || empty($info[1])) {
+            return;
+        }
+        $maxW = ($dir === 'banners') ? 1600 : 1200;
+        $quality = ($dir === 'banners') ? 75 : 80;
+        if (!in_array($dir, ['banners', 'products', 'categories', 'subcategories', 'blogs', 'seo'], true)) {
+            $maxW = 1400;
+            $quality = 80;
+        }
+
+        $w = (int)$info[0];
+        $h = (int)$info[1];
+        $type = (int)$info[2];
+        $needsResize = $w > $maxW;
+        // Always recompress large files (>350 KB)
+        $needsCompress = filesize($absolutePath) > 350 * 1024;
+        if (!$needsResize && !$needsCompress) {
+            return;
+        }
+
+        if ($type === IMAGETYPE_JPEG) {
+            $src = @imagecreatefromjpeg($absolutePath);
+        } elseif ($type === IMAGETYPE_PNG) {
+            $src = @imagecreatefrompng($absolutePath);
+        } elseif ($type === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+            $src = @imagecreatefromwebp($absolutePath);
+        } else {
+            return;
+        }
+        if (!$src) {
+            return;
+        }
+
+        $nw = $w;
+        $nh = $h;
+        if ($needsResize) {
+            $nw = $maxW;
+            $nh = max(1, (int) round($h * ($maxW / $w)));
+        }
+        $dst = imagecreatetruecolor($nw, $nh);
+        if ($type === IMAGETYPE_PNG || $type === IMAGETYPE_WEBP) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+        }
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+
+        if ($type === IMAGETYPE_JPEG) {
+            imagejpeg($dst, $absolutePath, $quality);
+        } elseif ($type === IMAGETYPE_PNG) {
+            // PNG compression 0-9 (higher = smaller)
+            imagepng($dst, $absolutePath, 6);
+        } elseif ($type === IMAGETYPE_WEBP && function_exists('imagewebp')) {
+            imagewebp($dst, $absolutePath, $quality);
+        }
+
+        imagedestroy($src);
+        imagedestroy($dst);
     }
 }

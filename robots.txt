@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Block admin / API from indexing
+Disallow: /admin/
+Disallow: /shopkart-api/
+Disallow: /application/
+Disallow: /system/
+
+Sitemap: https://2deal.my/sitemap.xml

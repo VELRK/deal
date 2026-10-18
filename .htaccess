@@ -57,8 +57,30 @@ RewriteRule ^shopkart/(.+)$ /admin/$1 [R=301,L]
     </IfModule>
 </Files>
 
+# Long cache for hashed Vite assets (filenames change on rebuild)
+<IfModule mod_headers.c>
+    <IfModule mod_rewrite.c>
+        # no-op: keep headers module available for FilesMatch below
+    </IfModule>
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(?:js|css|woff2?|ttf|otf|eot|svg|png|jpe?g|gif|webp|avif|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+# Uploads: 30-day public cache (images may be replaced in place)
+<IfModule mod_headers.c>
+    <If "%{REQUEST_URI} =~ m#^/assets/uploads/#">
+        Header set Cache-Control "public, max-age=2592000"
+    </If>
+</IfModule>
+
 # Real files/folders under static trees → Apache (missing file = real 404)
 RewriteRule ^(frontend|assets|images|css|js|fonts|webfonts|uploads)/ - [L]
+
+# Sitemap + robots must never become SPA HTML
+RewriteRule ^sitemap\.xml$ index.php?/sitemap.xml [L,QSA]
+RewriteRule ^sitemap/?$ index.php?/sitemap [L,QSA]
 
 # Missing hashed frontend assets must NOT become SPA HTML (breaks module MIME)
 RewriteCond %{REQUEST_URI} ^/frontend/assets/
@@ -84,6 +106,9 @@ RewriteRule ^(product|blog|product-detail|blog-single)/([^/]+)/?$ index.php?/$1/
 
 # Homepage through PHP so description, keywords, canonical, and OG image are in the HTML.
 RewriteRule ^$ index.php [L]
+
+# Explicit static SEO files (belt-and-suspenders if -f rule missed)
+RewriteRule ^robots\.txt$ - [L]
 
 # SPA
 RewriteCond %{REQUEST_FILENAME} !-f

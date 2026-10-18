@@ -51,10 +51,10 @@ $font-classic: "Playfair Display", Georgia, serif;
     --cl-1: #0BE7B4;
     --cl-2: #FDB900;
 
-    /* Same --font-* names as next/font/google; stacks completed via $font-* in this file */
+    /* Primary loaded fonts: DM Sans + Playfair. Aliases avoid extra Google Font requests. */
     --font-dm-sans: "DM Sans";
-    --font-urbanist: "Urbanist";
-    --font-outfit: "Outfit";
-    --font-kumbh-sans: "Kumbh Sans";
-    --font-red-hat-display: "Red Hat Display";
+    --font-urbanist: "DM Sans";
+    --font-outfit: "DM Sans";
+    --font-kumbh-sans: "DM Sans";
+    --font-red-hat-display: "DM Sans";
 }

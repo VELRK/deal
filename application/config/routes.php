@@ -53,6 +53,10 @@ $route['default_controller'] = 'Home';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
+// Public SEO sitemap (must not fall through to SPA HTML)
+$route['sitemap.xml'] = 'Sitemap/index';
+$route['sitemap'] = 'Sitemap/index';
+
 // SEO URL resolver (canonical /product|/blog + legacy + redirect history)
 // Must stay above catch-all SPA behavior; more specific blog/* admin routes remain above/below as needed.
 $route['product/(:any)'] = 'Seo_resolve/handle/product/$1';
