@@ -57,12 +57,17 @@ $route['translate_uri_dashes'] = FALSE;
 $route['sitemap.xml'] = 'Sitemap/index';
 $route['sitemap'] = 'Sitemap/index';
 
-// SEO URL resolver (canonical /product|/blog + legacy + redirect history)
+// SEO URL resolver (canonical /products|/collections|/blog + legacy + redirect history)
 // Must stay above catch-all SPA behavior; more specific blog/* admin routes remain above/below as needed.
+$route['products/(:any)'] = 'Seo_resolve/handle/products/$1';
 $route['product/(:any)'] = 'Seo_resolve/handle/product/$1';
 $route['product-detail/(:any)'] = 'Seo_resolve/handle/product-detail/$1';
+$route['collections/(:any)'] = 'Seo_resolve/handle/collections/$1';
 $route['blog-single/(:any)'] = 'Seo_resolve/handle/blog-single/$1';
+// Old shop query URLs → 301 to pretty paths
+$route['shop-default'] = 'Shop_redirect/index';
 // Public blog detail — keep after more specific blog/* routes below if those must win for old CI blog admin URLs.
+// NOTE: /{category}/{subcategory} catch-all is registered at the END of this file.
 
 // Additional routes
 $route['home'] = 'Home/index';
@@ -759,3 +764,6 @@ foreach ($route as $pattern => $target) {
     }
 }
 $route = array_merge($route, $admin_route_aliases);
+
+// Last: category/subcategory pretty URLs (must not shadow admin/api/blog routes above)
+$route['(:any)/(:any)'] = 'Seo_resolve/nest/$1/$2';

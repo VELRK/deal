@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import TfSwiper from "@/components/ui/TfSwiper";
 import { testimonialSlides } from "@/data/testimonials";
 
@@ -75,7 +76,7 @@ function Testimonial() {
                   </div>
                   <div className="product-infor">
                     <Link
-                      to={`/product/${slide.product?.id}`}
+                      to={productPath({ id: slide.product?.id })}
                       className="link fw-medium lh-24"
                     >
                       {slide.product?.name}

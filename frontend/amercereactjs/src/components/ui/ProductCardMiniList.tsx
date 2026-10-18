@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import type { ProductCardItem } from "@/types/productCard";
 import AddToCartButton from "@/components/common/AddToCartButton";
 import WishlistButton from "@/components/common/WishlistButton";
@@ -16,7 +17,7 @@ export default function ProductCardMiniList({
   return (
     <div className="card-product product-style_mini_list wow fadeInUp">
       <div className="card-product_wrapper">
-        <Link to={`/product/${product.slug ?? product.id}`} className="product-img">
+        <Link to={productPath(product)} className="product-img">
           <img
             className="img-product"
             src={`${product.img}`}
@@ -37,7 +38,7 @@ export default function ProductCardMiniList({
       </div>
       <div className="card-product_info">
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="name-product lh-24 fw-medium link-underline-text"
         >
           {product.name}

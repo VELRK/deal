@@ -2,18 +2,18 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * Resolves product/blog SEO URLs:
- * - historical paths → HTTP 301 to current canonical
- * - legacy /product-detail/* and /blog-single/* → 301
- * - current canonical → SPA 200
- * - unknown entity → SPA with HTTP 404
+ * Resolves SEO URLs:
+ * - /products/{slug} (canonical) + legacy /product/* and /product-detail/*
+ * - /collections/{category-slug}
+ * - /{category-slug}/{subcategory-slug} via nest()
+ * - /blog/{slug} + legacy /blog-single/*
+ * - historical url_redirects → HTTP 301
  */
 class Seo_resolve extends CI_Controller {
 
     public function handle($prefix = '', $segment = '') {
         $prefix  = strtolower(trim((string)$prefix));
-        $segment = trim(rawurldecode((string)$segment));
-        $segment = trim($segment, '/');
+        $segment = trim(rawurldecode((string)$segment), '/');
 
         if ($prefix === '' || $segment === '' || strpos($segment, '/') !== false) {
             return $this->serve_spa(404);
@@ -22,7 +22,6 @@ class Seo_resolve extends CI_Controller {
         $this->load->model('Sk_Url_Redirect_model');
         $path = $this->Sk_Url_Redirect_model->normalize_path('/' . $prefix . '/' . $segment);
 
-        // Saved history first
         $redirect = $this->Sk_Url_Redirect_model->find_by_old_path($path);
         if ($redirect && !empty($redirect['new_path']) && $redirect['new_path'] !== $path) {
             $this->Sk_Url_Redirect_model->bump_hits((int)$redirect['id']);
@@ -35,8 +34,11 @@ class Seo_resolve extends CI_Controller {
         if ($prefix === 'blog-single') {
             return $this->resolve_legacy_blog($segment);
         }
-        if ($prefix === 'product') {
-            return $this->resolve_product($segment, $path);
+        if ($prefix === 'product' || $prefix === 'products') {
+            return $this->resolve_product($segment, $path, $prefix);
+        }
+        if ($prefix === 'collections') {
+            return $this->resolve_collection($segment, $path);
         }
         if ($prefix === 'blog') {
             return $this->resolve_blog($segment, $path);
@@ -45,14 +47,21 @@ class Seo_resolve extends CI_Controller {
         return $this->serve_spa(404);
     }
 
+    /** Route: /{categorySlug}/{subSlug} */
+    public function nest($categorySlug = '', $subSlug = '') {
+        return $this->resolve_subcategory(
+            trim(rawurldecode((string)$categorySlug), '/'),
+            trim(rawurldecode((string)$subSlug), '/')
+        );
+    }
+
     protected function resolve_legacy_product(string $segment) {
-        $this->load->model('Sk_Product_model');
+        $this->load->model(['Sk_Product_model', 'Sk_Url_Redirect_model']);
         $product = ctype_digit($segment)
             ? $this->Sk_Product_model->get_by_id((int)$segment)
             : $this->Sk_Product_model->get_by_slug($segment);
 
         if ($product && !empty($product['slug'])) {
-            $this->load->model('Sk_Url_Redirect_model');
             return $this->redirect_permanent($this->Sk_Url_Redirect_model->product_path($product['slug']));
         }
         return $this->serve_spa(404);
@@ -73,24 +82,85 @@ class Seo_resolve extends CI_Controller {
         return $this->serve_spa(404);
     }
 
-    protected function resolve_product(string $segment, string $path) {
-        $this->load->model('Sk_Product_model');
+    protected function resolve_product(string $segment, string $path, string $prefix) {
+        $this->load->model(['Sk_Product_model', 'Sk_Url_Redirect_model']);
         $product = $this->Sk_Product_model->get_by_slug($segment);
         if ($product && ($product['status'] ?? '') === 'active') {
-            $canonical = '/product/' . $product['slug'];
-            if ($path !== $canonical) {
+            $canonical = $this->Sk_Url_Redirect_model->product_path($product['slug']);
+            if ($prefix === 'product' || $path !== $canonical) {
                 return $this->redirect_permanent($canonical);
             }
             return $this->serve_spa(200, $product, 'product');
         }
-        // Inactive / missing — still try id lookup for old bookmarks
         if (ctype_digit($segment)) {
             $byId = $this->Sk_Product_model->get_by_id((int)$segment);
             if ($byId && !empty($byId['slug'])) {
-                return $this->redirect_permanent('/product/' . $byId['slug']);
+                return $this->redirect_permanent($this->Sk_Url_Redirect_model->product_path($byId['slug']));
             }
         }
         return $this->serve_spa(404);
+    }
+
+    protected function resolve_collection(string $segment, string $path) {
+        $this->load->model('Sk_Url_Redirect_model');
+        $cat = $this->db->where('slug', $segment)->where('status', 1)->get('categories')->row_array();
+        if (!$cat) {
+            return $this->serve_spa(404);
+        }
+        $canonical = $this->Sk_Url_Redirect_model->collection_path($cat['slug']);
+        if ($path !== $canonical) {
+            return $this->redirect_permanent($canonical);
+        }
+        return $this->serve_spa(200, $cat, 'collection');
+    }
+
+    protected function resolve_subcategory(string $catSlug, string $subSlug) {
+        $this->load->model('Sk_Url_Redirect_model');
+        if ($catSlug === '' || $subSlug === '') {
+            return $this->serve_spa(404);
+        }
+
+        $reserved = [
+            'admin', 'shopkart-api', 'invoice', 'frontend', 'assets', 'uploads',
+            'product', 'products', 'product-detail', 'collections', 'blog', 'blog-single',
+            'shop-default', 'account', 'account-orders', 'checkout', 'view-cart',
+            'wishlist', 'compare', 'contact', 'about', 'affiliate', 'sitemap',
+            'api', 'home', 'login', 'register', 'search-result',
+        ];
+        if (in_array(strtolower($catSlug), $reserved, true)) {
+            return $this->serve_spa(404);
+        }
+
+        $path = $this->Sk_Url_Redirect_model->normalize_path('/' . $catSlug . '/' . $subSlug);
+        $redirect = $this->Sk_Url_Redirect_model->find_by_old_path($path);
+        if ($redirect && !empty($redirect['new_path']) && $redirect['new_path'] !== $path) {
+            $this->Sk_Url_Redirect_model->bump_hits((int)$redirect['id']);
+            return $this->redirect_permanent($redirect['new_path']);
+        }
+
+        $cat = $this->db->where('slug', $catSlug)->where('status', 1)->get('categories')->row_array();
+        if (!$cat) {
+            return $this->serve_spa(404);
+        }
+        $sub = $this->db->where('slug', $subSlug)
+            ->where('category_id', (int)$cat['id'])
+            ->where('status', 1)
+            ->get('subcategories')
+            ->row_array();
+        if (!$sub) {
+            return $this->serve_spa(404);
+        }
+
+        $canonical = $this->Sk_Url_Redirect_model->subcategory_path($cat['slug'], $sub['slug']);
+        if ($path !== $canonical) {
+            return $this->redirect_permanent($canonical);
+        }
+
+        $entity = array_merge($sub, [
+            'category_slug' => $cat['slug'],
+            'category_name' => $cat['name'],
+        ]);
+        return $this->serve_spa(200, $entity, 'subcategory');
     }
 
     protected function resolve_blog(string $segment, string $path) {
@@ -117,7 +187,7 @@ class Seo_resolve extends CI_Controller {
         $to_path = $this->Sk_Url_Redirect_model->normalize_path($to_path);
         $target = rtrim(base_url(), '/') . $to_path;
         $qs = $_SERVER['QUERY_STRING'] ?? '';
-        if ($qs !== '') {
+        if ($qs !== '' && !preg_match('/(?:category_id|subcategory_id)=/', $qs)) {
             $target .= '?' . $qs;
         }
         header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -131,6 +201,13 @@ class Seo_resolve extends CI_Controller {
         if ($status === 200 && $entity && ($type === 'product' || $type === 'blog')) {
             $this->load->model('Sk_Seo_model');
             $seo = sk_seo_html_from_entity($entity, $type, $this->Sk_Seo_model->get_global_seo());
+        } elseif ($status === 200 && $entity && ($type === 'collection' || $type === 'subcategory')) {
+            $name = (string)($entity['name'] ?? 'Shop');
+            $seo = [
+                'title' => $name . ' | 2Deal',
+                'description' => trim((string)($entity['description'] ?? $entity['meta_desc'] ?? '')) ?: ('Shop ' . $name . ' at 2Deal.'),
+                'robots' => 'index,follow',
+            ];
         } elseif ($status === 404) {
             $seo = [
                 'title' => 'Page not found',

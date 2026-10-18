@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { productPath } from "@/utils/seoPaths";
 import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperType } from "swiper";
@@ -137,7 +138,7 @@ function ProductThumbs() {
                     </div>
                     <div className="mini-infor">
                       <Link
-                        to={`/product/${card.slug ?? card.id}`}
+                        to={productPath(card)}
                         className="info_name text-body-1 fw-medium link-underline-primary text-line-clamp-2"
                       >
                         {card.name}

@@ -1,5 +1,6 @@
 ﻿import { useProduct } from "@/context/useProduct";
 import type { ProductCardItem } from "@/types/productCard";
+import { productPath } from "@/utils/seoPaths";
 import { Link } from "react-router-dom";
 import {
   ProductTitle,
@@ -57,7 +58,7 @@ export default function ProductInfoBuyXGetY({
                 </div>
                 <div className="info-product">
                   <Link
-                    to="/product/1"
+                    to={productPath(1)}
                     className="name-product lh-24 fw-medium link-underline-text text-line-clamp-2"
                   >
                     Buttons Cotton Top
@@ -94,7 +95,7 @@ export default function ProductInfoBuyXGetY({
                 </div>
                 <div className="info-product">
                   <Link
-                    to="/product/2"
+                    to={productPath(2)}
                     className="name-product lh-24 fw-medium link-underline-text text-line-clamp-2"
                   >
                     Wool Midi Coat

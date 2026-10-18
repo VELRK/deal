@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { productPath } from "@/utils/seoPaths";
 import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useProductViewStore } from "@/store/productViewStore";
@@ -409,7 +410,7 @@ export default function ProductViewModal() {
                 </button>
 
                 <Link
-                  to={`/product/${product.slug ?? product.id}`}
+                  to={productPath(product)}
                   onClick={handleClose}
                   style={{ display: "block", textAlign: "center", fontSize: 13, color: "#0f172a", fontWeight: 600, textDecoration: "underline" }}
                 >

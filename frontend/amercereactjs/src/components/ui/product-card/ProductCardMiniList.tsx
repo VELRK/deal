@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import AddToCartButton from "@/components/common/AddToCartButton";
 import WishlistButton from "@/components/common/WishlistButton";
 import {
@@ -41,7 +42,7 @@ export function ProductCardMiniList() {
       </div>
       <div className="card-product_info">
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="name-product lh-24 fw-medium link-underline-text"
         >
           {product.name}

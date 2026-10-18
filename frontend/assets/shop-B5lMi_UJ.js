@@ -1,0 +1,1 @@
+import{I as e,a as r}from"./shop-product-BwecIW0n.js";import{S as a}from"./index-B5vdrr25.js";const c="Browse the Tops & Shirts collection with filters, sorting, and grid or list view.";function S(t,s=e){const i=s.trim().slice(0,160),o=a(r);return{title:`${t} | ${o}`,description:i}}export{c as S,S as s};

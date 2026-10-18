@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
 import { useCategories, useNavProducts, apiImageUrl } from "@/hooks/useApi";
 import type { ApiCategory } from "@/services/api";
+import { collectionPath, productPath, subcategoryPath } from "@/utils/seoPaths";
 
 function catLink(c: ApiCategory) {
-  return `/shop-default?category_id=${c.id}`;
+  return collectionPath(c);
 }
-function subLink(s: ApiCategory) {
-  return `/shop-default?subcategory_id=${s.id}`;
+function subLink(parent: ApiCategory, s: ApiCategory) {
+  return subcategoryPath(parent, s);
 }
 
 export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { variant2?: boolean; variant3?: boolean }) {
@@ -54,7 +55,7 @@ export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { 
                           <ul className="sub-menu_list">
                             {groups[gn].map((sub) => (
                               <li key={sub.id}>
-                                <Link to={subLink(sub)} className="sub-menu_link has-text">
+                                <Link to={subLink(cat, sub)} className="sub-menu_link has-text">
                                   <span className="cus-text">{sub.name}</span>
                                 </Link>
                               </li>
@@ -72,7 +73,7 @@ export default function Nav({ variant2: _v2 = false, variant3: _v3 = false }: { 
                           {cat.nav_products.slice(0, 4).map((prod) => (
                             <Link
                               key={prod.id}
-                              to={`/product/${prod.slug ?? prod.id}`}
+                              to={productPath(prod)}
                               style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
                             >
                               <img

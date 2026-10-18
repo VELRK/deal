@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { formatPrice } from "@/utils/formatPrice";
 import AddToCartButton from "@/components/common/AddToCartButton";
 import WishlistButton from "@/components/common/WishlistButton";
@@ -41,7 +42,7 @@ export function OfferCard({ product }: { product: any }) {
           />
         </div>
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="d-block"
           style={{ aspectRatio: "1/1", overflow: "hidden", backgroundColor: "#f7f7f7" }}
         >
@@ -78,7 +79,7 @@ export function OfferCard({ product }: { product: any }) {
         style={{ padding: "12px 14px 14px", flexGrow: 1 }}
       >
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="text-decoration-none text-dark"
           style={{
             fontSize: "14px",

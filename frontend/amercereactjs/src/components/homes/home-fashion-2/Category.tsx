@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import TfSwiper from "@/components/ui/TfSwiper";
 import { useCategories, apiImageUrl } from "@/hooks/useApi";
+import { collectionPath } from "@/utils/seoPaths";
 
 const PLACEHOLDER = "/frontend/assets/images/category/fashion-2/cate-1.jpg";
 
@@ -117,7 +118,7 @@ function Category() {
           {items.map((item, idx) => (
             <div key={idx} style={{ background: "#fff", borderRadius: "4px", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
               <Link
-                to={`/shop-default?category_slug=${item.slug ?? ""}`}
+                to={collectionPath(item.slug ?? "")}
                 style={{ display: "block", aspectRatio: "1/1", position: "relative", overflow: "hidden" }}
               >
                 {item.img && (item.img.toLowerCase().endsWith('.mp4') || item.img.toLowerCase().endsWith('.webm')) ? (
@@ -157,7 +158,7 @@ function Category() {
                 </div> */}
               </Link>
               <Link
-                to={`/shop-default?category_slug=${item.slug ?? ""}`}
+                to={collectionPath(item.slug ?? "")}
                 style={{ display: "block", padding: "15px", textAlign: "center", textDecoration: "none" }}
               >
                 <h6 style={{ color: "#54101d", fontSize: "16px", fontFamily: "serif", margin: 0, fontWeight: "500" }}>{item.name}</h6>

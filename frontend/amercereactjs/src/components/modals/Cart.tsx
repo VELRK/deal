@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { productPath } from "@/utils/seoPaths";
 import { useNavigate } from "react-router-dom";
 import { useStore, type CartProduct } from "@/context/store";
 import type { ProductId } from "@/context/store";
@@ -150,7 +151,7 @@ export default function Cart() {
                     item={item}
                     onRemove={() => removeLine(item.id, item.selectedVariantId, idx)}
                     onQtyChange={(qty) => setQty(item.id, qty, item.selectedVariantId, idx)}
-                    onProductClick={() => goTo(`/product/${item.slug ?? item.id}`)}
+                    onProductClick={() => goTo(productPath(item))}
                   />
                   {idx < cartProducts.length - 1 && (
                     <div style={styles.itemDivider} />

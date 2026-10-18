@@ -68,7 +68,20 @@ class Sk_Url_Redirect_model extends CI_Model {
     }
 
     public function product_path(string $slug): string {
+        return '/products/' . ltrim($slug, '/');
+    }
+
+    /** Legacy singular product path (301 → product_path). */
+    public function legacy_product_path(string $slug): string {
         return '/product/' . ltrim($slug, '/');
+    }
+
+    public function collection_path(string $categorySlug): string {
+        return '/collections/' . ltrim($categorySlug, '/');
+    }
+
+    public function subcategory_path(string $categorySlug, string $subSlug): string {
+        return '/' . ltrim($categorySlug, '/') . '/' . ltrim($subSlug, '/');
     }
 
     public function blog_path(string $slug): string {

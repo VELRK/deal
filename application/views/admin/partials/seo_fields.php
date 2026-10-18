@@ -4,7 +4,7 @@
  */
 $seo = $seo ?? [];
 $seo_entity = $seo_entity ?? 'product';
-$canonical_prefix = $seo_entity === 'blog' ? '/blog/' : '/product/';
+$canonical_prefix = $seo_entity === 'blog' ? '/blog/' : '/products/';
 $faqs = [];
 if (!empty($seo['faq_json'])) {
     $decoded = is_string($seo['faq_json']) ? json_decode($seo['faq_json'], true) : $seo['faq_json'];

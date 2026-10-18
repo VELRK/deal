@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { apiImageUrl } from "@/hooks/useApi";
 
 import { useContextElement, type Product } from "@/context/Context";
@@ -76,7 +77,7 @@ function CompareOffcanvasItem({
 
   return (
     <div className="tf-compare-item file-delete">
-      <Link to={`/product/${item.slug ?? item.id}`}>
+      <Link to={productPath(item)}>
         <button
           type="button"
           className="icon remove border-0 p-0"

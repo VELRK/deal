@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 
 import type { ProductCardItem } from "@/types/productCard";
 import { formatPrice } from "@/utils/formatPrice";
@@ -25,7 +26,7 @@ export function ProductCardDualImageLink({
 }) {
   return (
     <Link
-      to={`/product/${productSlug || productId}`}
+      to={productPath({ slug: productSlug, id: productId })}
       className="product-img"
       style={{ display: "block", aspectRatio: "3/4", overflow: "hidden", position: "relative", width: "100%" }}
     >

@@ -83,7 +83,7 @@ class Sk_Seo_model extends CI_Model {
 
         $slug = trim((string)($row['slug'] ?? ''));
         $path = $slug
-            ? (($type === 'blog' ? '/blog/' : '/product/') . $slug)
+            ? (($type === 'blog' ? '/blog/' : '/products/') . $slug)
             : '';
         $canonical = $path ? $this->_abs_url(ltrim($path, '/')) : '';
         $faqs = $this->normalize_faqs($row['faqs'] ?? $row['faq_json'] ?? []);

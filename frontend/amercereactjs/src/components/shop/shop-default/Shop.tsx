@@ -19,10 +19,17 @@ export default function Shop({
   variant,
   isFullWidth = false,
   staticProducts,
+  routeCategoryId,
+  routeSubcategoryId,
+  routeCategorySlug,
 }: {
   variant?: ShopVariantProp;
   isFullWidth?: boolean;
   staticProducts?: ShopProduct[];
+  /** From /collections/:slug or /:cat/:sub routes */
+  routeCategoryId?: string;
+  routeSubcategoryId?: string;
+  routeCategorySlug?: string;
 }) {
   const variants = useMemo(() => normalizeShopVariants(variant), [variant]);
 
@@ -33,11 +40,11 @@ export default function Shop({
   const [sortOpen, setSortOpen] = useState(false);
   const [wideEnoughForSidebar, setWideEnoughForSidebar] = useState(false);
 
-  // Read API filters from URL search params
+  // Pretty path params win; fall back to legacy query string filters
   const [searchParams] = useSearchParams();
-  const categoryId = searchParams.get("category_id");
-  const subcategoryId = searchParams.get("subcategory_id");
-  const categorySlug = searchParams.get("category_slug");
+  const categoryId = routeCategoryId || searchParams.get("category_id");
+  const subcategoryId = routeSubcategoryId || searchParams.get("subcategory_id");
+  const categorySlug = routeCategorySlug || searchParams.get("category_slug");
   const hasCategoryFilter = !!(categoryId || subcategoryId || categorySlug);
 
   const apiFilters = {

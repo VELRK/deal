@@ -7,7 +7,7 @@ import {
   type ComponentType,
   type LazyExoticComponent,
 } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
 import { useWishlistStore } from "@/store/wishlistStore";
@@ -68,6 +68,13 @@ function ShopDetailsRoute({ Page }: { Page: LazyPage }) {
       <Page />
     </ShopDetailsLayout>
   );
+}
+
+/** Soft-redirect legacy /product/:slug and /product-detail/:id → /products/:slug */
+function RedirectToProducts({ param = "slug" }: { param?: "slug" | "id" }) {
+  const params = useParams();
+  const key = params[param] ?? "";
+  return <Navigate to={key ? `/products/${key}` : "/shop-default"} replace />;
 }
 
 function BlogsRoute({ Page }: { Page: LazyPage }) {
@@ -219,6 +226,7 @@ const IndexPage = lazy(() => import("./pages/homes/home-fashion-2/index"));
 
 /* —— Shop —— */
 const ShopDefault = lazy(() => import("./pages/shop/shop-default/index"));
+const CollectionShop = lazy(() => import("./pages/shop/collections/index"));
 const ShopCheckout = lazy(() => import("./pages/shop/checkout/index"));
 const ShopRegister = lazy(() => import("./pages/shop/register/index"));
 const ShopSearchResult = lazy(() => import("./pages/shop/search-result/index"));
@@ -458,11 +466,16 @@ function App() {
             element={<Navigate to="/blog" replace />}
           />
           <Route path="/product" element={<Navigate to="/shop-default" replace />} />
+          <Route path="/products" element={<Navigate to="/shop-default" replace />} />
 
           {/* Shop */}
           <Route
             path="/shop-default"
             element={<ShopRoute Page={ShopDefault} />}
+          />
+          <Route
+            path="/collections/:categorySlug"
+            element={<ShopRoute Page={CollectionShop} />}
           />
           <Route
             path="/shop-left-sidebar"
@@ -642,14 +655,18 @@ function App() {
           />
 
 
-          {/* Product pages */}
+          {/* Product pages — canonical /products/:slug */}
           <Route
-            path="/product/:slug"
+            path="/products/:slug"
             element={<ShopDetailsRoute Page={ProductDetail} />}
           />
           <Route
+            path="/product/:slug"
+            element={<RedirectToProducts param="slug" />}
+          />
+          <Route
             path="/product-detail/:id"
-            element={<ShopDetailsRoute Page={ProductDetail} />}
+            element={<RedirectToProducts param="id" />}
           />
           <Route
             path="/product-right-thumbnail/:id"
@@ -774,6 +791,12 @@ function App() {
           <Route
             path="/product-swatch-dropdown-color/:id"
             element={<ShopDetailsRoute Page={ProductSwatchDropdownColor} />}
+          />
+
+          {/* Nested collection: /:categorySlug/:subcategorySlug (after all static two-segment routes) */}
+          <Route
+            path="/:categorySlug/:subcategorySlug"
+            element={<ShopRoute Page={CollectionShop} />}
           />
 
           <Route path="*" element={<PagesSectionRoute Page={Page404} />} />

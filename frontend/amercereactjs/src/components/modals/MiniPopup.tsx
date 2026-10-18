@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { productPath } from "@/utils/seoPaths";
 import { Link } from "react-router-dom";
 
 import type { ProductCardItem } from "@/types/productCard";
@@ -59,7 +60,7 @@ export default function MiniPopup({ product }: MiniPopupProps) {
           Nathan Collins has purchased!
         </p>
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="fw-medium link mb-12 lh-24"
         >
           {product.name}
@@ -91,7 +92,7 @@ export default function MiniPopup({ product }: MiniPopupProps) {
             <span className="text-caption-01 cl-text-2"> 12 mins ago </span>
           </div>
           <Link
-            to={`/product/${product.slug ?? product.id}`}
+            to={productPath(product)}
             className="tf-btn-line-2 style-primary"
           >
             <span className="fw-semibold text-caption-01"> View Products </span>

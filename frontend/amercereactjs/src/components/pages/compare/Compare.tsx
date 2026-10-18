@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
@@ -56,7 +57,7 @@ function Compare() {
                           </button>
                         </div>
                         <Link
-                          to={`/product/${product.slug ?? product.id}`}
+                          to={productPath(product)}
                           className="item_name fw-medium lh-24 link"
                         >
                           {product.name}

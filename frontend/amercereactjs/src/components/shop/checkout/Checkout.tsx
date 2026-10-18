@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { type FormEvent, useEffect, useState, memo } from "react";
 import "./Checkout.css";
 
@@ -1650,7 +1651,7 @@ const CheckoutOrderItemPremium = memo(function CheckoutOrderItemPremium({ item, 
       <img src={imgSrc} alt={item.name} />
       <div className="order-item-details">
         <div className="d-flex justify-content-between align-items-start">
-          <Link to={`/product/${item.slug ?? item.id}`} className="order-item-title text-decoration-none">{item.name}</Link>
+          <Link to={productPath(item)} className="order-item-title text-decoration-none">{item.name}</Link>
           <button type="button" className="btn btn-sm text-danger p-0 border-0 bg-transparent" onClick={onRemove} title="Remove">
             <i className="icon-X2" style={{ fontSize: 16 }} />
           </button>

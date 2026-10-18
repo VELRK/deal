@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import {
   lookbookBanners,
   lookbookInfiniteItems,
@@ -59,7 +60,7 @@ function Lookbook() {
                       <div className="dropdown-menu">
                         <div className="lookbook-product">
                           <Link
-                            to={`/product/${product.slug ?? product.id}`}
+                            to={productPath(product)}
                             className="image"
                           >
                             <img
@@ -71,7 +72,7 @@ function Lookbook() {
                           </Link>
                           <div className="content">
                             <Link
-                              to={`/product/${product.slug ?? product.id}`}
+                              to={productPath(product)}
                               className="name-prd link fw-medium lh-24 text-line-clamp-2"
                             >
                               {product.name}

@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
 import { useCategories, useProducts, apiImageUrl } from "@/hooks/useApi";
 import type { ApiCategory } from "@/services/api";
+import { collectionPath, productPath, subcategoryPath } from "@/utils/seoPaths";
 
 function catLink(c: ApiCategory) {
-  return `/shop-default?category_id=${c.id}`;
+  return collectionPath(c);
 }
-function subLink(s: ApiCategory) {
-  return `/shop-default?subcategory_id=${s.id}`;
+function subLink(parent: ApiCategory, s: ApiCategory) {
+  return subcategoryPath(parent, s);
 }
 
 export default function CategoryNav() {
@@ -198,7 +199,7 @@ export default function CategoryNav() {
                         <ul className="mega-list">
                           {groups[gn].map(sub => (
                             <li key={sub.id}>
-                              <Link to={subLink(sub)}>{sub.name}</Link>
+                              <Link to={subLink(cat, sub)}>{sub.name}</Link>
                             </li>
                           ))}
                         </ul>
@@ -209,7 +210,7 @@ export default function CategoryNav() {
                   {/* Right Panel with Featured Products */}
                   <div className="mega-right d-none d-lg-flex">
                     {featuredProducts.map(prod => (
-                      <Link key={prod.id} to={`/product/${prod.slug ?? prod.id}`} className="mega-prod-card">
+                      <Link key={prod.id} to={productPath(prod)} className="mega-prod-card">
                         <img src={apiImageUrl(prod.thumbnail)} alt={prod.name} className="mega-prod-img" />
                         <span className="mega-prod-name text-line-clamp-1">{prod.name}</span>
                         <div className="d-flex align-items-center gap-1">

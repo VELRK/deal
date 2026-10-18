@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { productPath } from "@/utils/seoPaths";
 import { Link } from "react-router-dom";
 import { useProductCard } from "./useProductCard";
 import { formatPrice } from "@/utils/formatPrice";
@@ -136,7 +137,7 @@ export function ProductCardClassicView() {
 
         {/* Product Image Link */}
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="product-img d-block w-100 h-100"
           style={{
             overflow: "hidden",
@@ -230,7 +231,7 @@ export function ProductCardClassicView() {
 
         {/* Product Title - Fixed 2-line clamp for exact alignment */}
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           className="name-product"
           style={{
             fontSize: "13.5px",

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import TfSwiper from "@/components/ui/TfSwiper";
 import { galleryItems } from "@/data/gallery";
 
@@ -37,7 +38,7 @@ function Gallery() {
                     alt={item.alt ?? "Image"}
                   />
                 </div>
-                <Link to="/product/1" className="box-icon hover-tooltip">
+                <Link to={productPath(1)} className="box-icon hover-tooltip">
                   <span className="icon icon-Eye" />
                   <span className="tooltip">View product</span>
                 </Link>

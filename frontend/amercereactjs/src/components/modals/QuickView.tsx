@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { useMemo, useState } from "react";
 import { useContextElement } from "@/context/Context";
 import { formatPrice } from "@/utils/formatPrice";
@@ -229,7 +230,7 @@ export default function QuickView() {
               </div>
               
               <Link
-                to={`/product/${product.slug ?? product.id}`}
+                to={productPath(product)}
                 onClick={closeModal}
                 className="w-100 text-center text-uppercase fw-semibold mt-3 py-3"
                 style={{

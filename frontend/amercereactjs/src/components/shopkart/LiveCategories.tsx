@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useCategories, apiImageUrl } from "@/hooks/useApi";
+import { collectionPath } from "@/utils/seoPaths";
 
 export default function LiveCategories() {
   const { categories, loading } = useCategories();
@@ -20,7 +21,7 @@ export default function LiveCategories() {
           {categories.slice(0, 10).map((cat) => (
             <Link
               key={cat.id}
-              to={`/shop-left-sidebar?category_id=${cat.id}`}
+              to={collectionPath(cat)}
               className="collection-item style-2 hover-img wow fadeInUp"
             >
               <div className="collection-image img-style ratio ratio-1x1 rounded-3 overflow-hidden">

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { apiImageUrl } from "@/hooks/useApi";
 import { useState, memo, useEffect } from "react";
 import { useStore, type CartProduct } from "@/context/store";
@@ -1095,12 +1096,12 @@ const CartTableRow = memo(function CartTableRow({
       <td>
         <div className="cart-product-cell">
           <div className="cart-product-img">
-            <Link to={`/product/${item.slug ?? item.id}`}>
+            <Link to={productPath(item)}>
               <img loading="lazy" src={imgSrc} alt={item.name} />
             </Link>
           </div>
           <div className="cart-product-info">
-            <Link to={`/product/${item.slug ?? item.id}`} className="product-name">
+            <Link to={productPath(item)} className="product-name">
               {item.name}
             </Link>
             {item.category && (

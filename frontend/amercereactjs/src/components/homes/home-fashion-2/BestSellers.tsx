@@ -1,4 +1,5 @@
 import TfSwiper from "@/components/ui/TfSwiper";
+import { productPath } from "@/utils/seoPaths";
 import { useProducts, toProductCard } from "@/hooks/useApi";
 import type { ProductCardItem } from "@/types/productCard";
 import { Link } from "react-router-dom";
@@ -31,7 +32,7 @@ function BestSellerCard({ product }: { product: ProductCardItem }) {
             style={{ width: "34px", height: "34px", border: "1px solid rgba(0,0,0,0.06)" }}
           />
         </div>
-        <Link to={`/product/${product.slug ?? product.id}`} style={{ width: "100%", height: "100%", display: "block" }}>
+        <Link to={productPath(product)} style={{ width: "100%", height: "100%", display: "block" }}>
           {discountPercent > 0 && (
             <div
               style={{
@@ -67,7 +68,7 @@ function BestSellerCard({ product }: { product: ProductCardItem }) {
 
         {/* Title */}
         <Link
-          to={`/product/${product.slug ?? product.id}`}
+          to={productPath(product)}
           style={{
             fontSize: "14px",
             fontWeight: "500",

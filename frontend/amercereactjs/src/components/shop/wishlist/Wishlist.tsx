@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useStore } from "@/context/store";
 import { useModalStore } from "@/store/modalStore";
@@ -23,12 +24,12 @@ function WishlistTableRow({
   return (
     <div className="classic-wishlist-item">
       <div className="wishlist-item-image">
-        <Link to={`/product/${product.slug ?? product.id}`}>
+        <Link to={productPath(product)}>
           <img loading="lazy" src={imgSrc} alt={product.name} />
         </Link>
       </div>
       <div className="wishlist-item-details">
-        <Link to={`/product/${product.slug ?? product.id}`} className="wishlist-item-name">
+        <Link to={productPath(product)} className="wishlist-item-name">
           {product.name}
         </Link>
         <div className="wishlist-item-price">

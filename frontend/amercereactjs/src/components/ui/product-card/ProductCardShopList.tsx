@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import AddToCartButton from "@/components/common/AddToCartButton";
 import CompareButton from "@/components/common/CompareButton";
 import QuickViewButton from "@/components/common/QuickViewButton";
@@ -62,7 +63,7 @@ export function ProductCardShopList() {
         )}
       </div>
       <div className={`card-product_info ${infoClassName}`.trim()}>
-        <Link to={`/product/${product.slug ?? product.id}`} className={nameLinkClasses}>
+        <Link to={productPath(product)} className={nameLinkClasses}>
           {product.name}
         </Link>
         {showRatting ? (

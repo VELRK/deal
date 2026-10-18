@@ -5,9 +5,10 @@ import type { ApiCategory } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
 import WalletHeaderIcon from "../headers/WalletHeaderIcon";
+import { collectionPath, subcategoryPath } from "@/utils/seoPaths";
 
-function catUrl(c: ApiCategory) { return `/shop-default?category_id=${c.id}`; }
-function subUrl(s: ApiCategory) { return `/shop-default?subcategory_id=${s.id}`; }
+function catUrl(c: ApiCategory) { return collectionPath(c); }
+function subUrl(parent: ApiCategory, s: ApiCategory) { return subcategoryPath(parent, s); }
 
 export default function MobileMenu({
   registerOffcanvasElement,
@@ -136,7 +137,7 @@ export default function MobileMenu({
                             <button
                               type="button"
                               className="w-100 text-start px-5 py-2 border-0 bg-transparent text-secondary"
-                              onClick={() => closeAndGo(subUrl(sub))}
+                              onClick={() => closeAndGo(subUrl(cat, sub))}
                               style={{ fontSize: "0.95rem" }}
                               onMouseEnter={(e) => e.currentTarget.classList.replace("text-secondary", "text-dark")}
                               onMouseLeave={(e) => e.currentTarget.classList.replace("text-dark", "text-secondary")}

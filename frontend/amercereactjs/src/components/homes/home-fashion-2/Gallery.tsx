@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import TfSwiper from "@/components/ui/TfSwiper";
 import { useSpecialProducts, apiImageUrl } from "@/hooks/useApi";
 
@@ -34,7 +35,7 @@ function Gallery() {
             data-wow-delay={`${0.1 * (index % 5)}s`}
           >
             <Link
-              to={`/product/${product.slug ?? product.id}`}
+              to={productPath(product)}
               className="classic-gallery-item"
             >
               <div style={{ aspectRatio: "3/4" }}>

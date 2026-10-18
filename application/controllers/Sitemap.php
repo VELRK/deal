@@ -8,12 +8,60 @@ class Sitemap extends CI_Controller {
 
     public function index() {
         $this->load->database();
+        $this->load->model('Sk_Url_Redirect_model');
         $base = rtrim(base_url(), '/');
         $urls = [];
 
         $urls[] = ['loc' => $base . '/', 'changefreq' => 'daily', 'priority' => '1.0'];
         foreach (['/shop-default', '/about', '/contact', '/blog', '/affiliate'] as $path) {
             $urls[] = ['loc' => $base . $path, 'changefreq' => 'weekly', 'priority' => '0.7'];
+        }
+
+        if ($this->db->table_exists('categories')) {
+            $cats = $this->db->select('id, slug, updated_at, created_at')
+                ->where('status', 1)
+                ->order_by('sort_order', 'ASC')
+                ->get('categories')
+                ->result_array();
+            foreach ($cats as $c) {
+                $slug = trim((string)($c['slug'] ?? ''));
+                if ($slug === '') {
+                    continue;
+                }
+                $last = $c['updated_at'] ?: $c['created_at'];
+                $urls[] = [
+                    'loc' => $base . $this->Sk_Url_Redirect_model->collection_path($slug),
+                    'lastmod' => $last ? date('Y-m-d', strtotime($last)) : null,
+                    'changefreq' => 'weekly',
+                    'priority' => '0.75',
+                ];
+            }
+        }
+
+        if ($this->db->table_exists('subcategories') && $this->db->table_exists('categories')) {
+            $subs = $this->db->select('s.slug as sub_slug, c.slug as cat_slug, s.updated_at, s.created_at')
+                ->from('subcategories s')
+                ->join('categories c', 'c.id = s.category_id')
+                ->where('s.status', 1)
+                ->where('c.status', 1)
+                ->order_by('c.sort_order', 'ASC')
+                ->order_by('s.sort_order', 'ASC')
+                ->get()
+                ->result_array();
+            foreach ($subs as $s) {
+                $catSlug = trim((string)($s['cat_slug'] ?? ''));
+                $subSlug = trim((string)($s['sub_slug'] ?? ''));
+                if ($catSlug === '' || $subSlug === '') {
+                    continue;
+                }
+                $last = $s['updated_at'] ?: $s['created_at'];
+                $urls[] = [
+                    'loc' => $base . $this->Sk_Url_Redirect_model->subcategory_path($catSlug, $subSlug),
+                    'lastmod' => $last ? date('Y-m-d', strtotime($last)) : null,
+                    'changefreq' => 'weekly',
+                    'priority' => '0.7',
+                ];
+            }
         }
 
         if ($this->db->table_exists('products')) {
@@ -30,7 +78,7 @@ class Sitemap extends CI_Controller {
                 }
                 $last = $p['updated_at'] ?: $p['created_at'];
                 $urls[] = [
-                    'loc' => $base . '/product/' . rawurlencode($slug),
+                    'loc' => $base . $this->Sk_Url_Redirect_model->product_path($slug),
                     'lastmod' => $last ? date('Y-m-d', strtotime($last)) : null,
                     'changefreq' => 'weekly',
                     'priority' => '0.8',

@@ -97,12 +97,23 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(admin|shopkart-api|invoice)(/.*)?$ index.php?/$1$2 [L,QSA]
 
-# Product/blog SEO: canonical paths, legacy URLs, and redirect history (real HTTP 301/404)
+# Product / collection / blog SEO (real HTTP 301/404 via Seo_resolve)
 # CI uri_protocol=REQUEST_URI — keep the public path; routes.php maps to Seo_resolve.
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(product|blog|product-detail|blog-single)/([^/]+)/?$ index.php?/$1/$2 [L,QSA]
+RewriteRule ^(products|product|collections|blog|product-detail|blog-single)/([^/]+)/?$ index.php?/$1/$2 [L,QSA]
+
+# Old shop listing with query filters (Shop_redirect 301s to pretty URLs)
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
+RewriteRule ^shop-default/?$ index.php?/shop-default [L,QSA]
+
+# /{category-slug}/{subcategory-slug} — only non-reserved first segments
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/(admin|shopkart-api|invoice|frontend|assets|uploads|products|product|collections|blog|account|checkout|view-cart|wishlist|compare|contact|about|affiliate|sitemap|shop-default|api)(/|$) [NC]
+RewriteRule ^([^/]+)/([^/]+)/?$ index.php?/$1/$2 [L,QSA]
 
 # Homepage through PHP so description, keywords, canonical, and OG image are in the HTML.
 RewriteRule ^$ index.php [L]

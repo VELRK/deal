@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import React from "react";
 import { useCategories, apiImageUrl } from "@/hooks/useApi";
+import { collectionPath } from "@/utils/seoPaths";
 
 const PLACEHOLDER_IMG = "/frontend/assets/images/collection/cls-34.jpg";
 
@@ -82,7 +83,7 @@ function InfiniteSlide() {
             {repeated.map((item, index) => (
               <React.Fragment key={index}>
                 <div className="infiniteSlide-item" style={{ padding: '0 15px' }}>
-                  <Link to={`/shop-default?category_slug=${item.slug}`} className="classic-slide-wrap">
+                  <Link to={collectionPath(item.slug || "")} className="classic-slide-wrap">
                     <h4>{item.name}</h4>
                     <div className="classic-img-wrap">
                       <img

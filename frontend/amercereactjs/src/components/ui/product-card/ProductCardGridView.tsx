@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { productPath } from "@/utils/seoPaths";
 import {
   ProductCardBadgeList,
   ProductCardColorSwatches,
@@ -61,7 +62,7 @@ export function ProductCardGridView() {
         {product.countdown != null && <ProductCardCountdown />}
       </div>
       <div className={`card-product_info ${infoClassName}`.trim()}>
-        <Link to={`/product/${product.slug ?? product.id}`} className={nameLinkClasses}>
+        <Link to={productPath(product)} className={nameLinkClasses}>
           {product.name}
         </Link>
         <ProductCardStars className={starWrapClassName} />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCategories } from "@/hooks/useApi";
+import { collectionPath } from "@/utils/seoPaths";
 
 
 export default function CategorySearch({
@@ -18,8 +19,8 @@ export default function CategorySearch({
 
     const params = new URLSearchParams();
     params.set("q", q);
-    if (selectedSlug) params.set("category_slug", selectedSlug);
-    navigate(`/shop-default?${params.toString()}`);
+    const base = selectedSlug ? collectionPath(selectedSlug) : "/shop-default";
+    navigate(`${base}?${params.toString()}`);
   }
 
   return (
