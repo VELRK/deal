@@ -40,6 +40,21 @@ composer.lock
 # Database credentials and config
 application/config/database.php
 
+# Live media already on the server — do not commit
+assets/banners/
+assets/blogs/
+assets/brands/
+assets/categories/
+assets/products/
+assets/reviews/
+assets/settings/
+assets/subcategories/
+assets/uploads/
+assets/uploads123/
+assets/*.zip
+php.ini
+.user.ini
+
 # ── Environment / Secrets ─────────────────────────────────────
 .env
 .env.local
